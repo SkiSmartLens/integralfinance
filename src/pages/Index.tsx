@@ -1,16 +1,62 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useMemo, useState } from "react";
+import { Header } from "@/components/Header";
+import { Ticker } from "@/components/Ticker";
+import { CategoryNav } from "@/components/CategoryNav";
+import { StockChart } from "@/components/StockChart";
+import { NewsList } from "@/components/NewsList";
+import { Watchlist } from "@/components/Watchlist";
+import { CATEGORIES, TRENDING } from "@/lib/categories";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+const Index = () => {
+  const [activeCat, setActiveCat] = useState("news");
+  const [activeSymbol, setActiveSymbol] = useState("AAPL");
+
+  const cat = useMemo(
+    () => CATEGORIES.find((c) => c.id === activeCat) ?? CATEGORIES[0],
+    [activeCat]
+  );
+
+  const watchSymbols = cat.symbols && cat.symbols.length ? cat.symbols : TRENDING;
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
+    <div className="min-h-screen bg-background">
+      <Header onSearch={(s) => setActiveSymbol(s)} />
+      <Ticker />
+      <CategoryNav active={activeCat} onChange={setActiveCat} />
+
+      <main className="container mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+          <div className="space-y-6 min-w-0">
+            <StockChart symbol={activeSymbol} />
+            <section>
+              <h2 className="text-2xl font-bold mb-4">
+                {cat.label} <span className="text-muted-foreground font-normal text-base">· latest stories</span>
+              </h2>
+              <NewsList query={cat.query} />
+            </section>
+          </div>
+          <aside className="space-y-6">
+            <Watchlist
+              symbols={watchSymbols}
+              active={activeSymbol}
+              onSelect={setActiveSymbol}
+              title={cat.label === "News" ? "Trending" : cat.label}
+            />
+            <Watchlist
+              symbols={TRENDING}
+              active={activeSymbol}
+              onSelect={setActiveSymbol}
+              title="Most Active"
+            />
+          </aside>
+        </div>
+      </main>
+
+      <footer className="border-t py-6 text-center text-xs text-muted-foreground mt-8">
+        Live data via Yahoo Finance public endpoints. Prices may be delayed. Not investment advice.
+      </footer>
     </div>
   );
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;
