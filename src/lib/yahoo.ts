@@ -42,7 +42,7 @@ export interface Quote {
 export async function fetchQuotes(symbols: string[]): Promise<Quote[]> {
   if (!symbols.length) return [];
   const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols.join(",")}`;
-  const res = await fetch(proxied(url));
+  const res = await proxiedFetch(url);
   if (!res.ok) throw new Error("Failed to fetch quotes");
   const data = await res.json();
   return data?.quoteResponse?.result ?? [];
@@ -66,7 +66,7 @@ export async function fetchChart(
   interval: string
 ): Promise<ChartResult> {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?range=${range}&interval=${interval}&includePrePost=false`;
-  const res = await fetch(proxied(url));
+  const res = await proxiedFetch(url);
   if (!res.ok) throw new Error("Failed to fetch chart");
   const data = await res.json();
   const result = data?.chart?.result?.[0];
@@ -100,7 +100,7 @@ export async function fetchNews(query = "stock market"): Promise<NewsItem[]> {
   const url = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(
     query
   )}&newsCount=20&quotesCount=0`;
-  const res = await fetch(proxied(url));
+  const res = await proxiedFetch(url);
   if (!res.ok) throw new Error("Failed to fetch news");
   const data = await res.json();
   return data?.news ?? [];
