@@ -1,22 +1,19 @@
-// Yahoo Finance fetch helpers via public CORS proxies (with fallback). No API keys, no caching.
-const PROXIES = [
-  (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-  (u: string) => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(u)}`,
-  (u: string) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
-];
+// Yahoo Finance fetch helpers via our own backend edge function (no flaky public proxies).
+import { supabase } from "@/integrations/supabase/client";
 
-async function proxiedFetch(url: string): Promise<Response> {
-  let lastErr: any;
-  for (const p of PROXIES) {
-    try {
-      const res = await fetch(p(url));
-      if (res.ok) return res;
-      lastErr = new Error(`HTTP ${res.status}`);
-    } catch (e) {
-      lastErr = e;
-    }
-  }
-  throw lastErr ?? new Error("All proxies failed");
+const FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/yahoo-proxy`;
+const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+
+async function callProxy(params: Record<string, string>): Promise<any> {
+  const qs = new URLSearchParams(params).toString();
+  const res = await fetch(`${FN_URL}?${qs}`, {
+    headers: {
+      apikey: ANON,
+      Authorization: `Bearer ${ANON}`,
+    },
+  });
+  if (!res.ok) throw new Error(`Proxy ${res.status}`);
+  return res.json();
 }
 
 export interface Quote {
@@ -41,10 +38,7 @@ export interface Quote {
 
 export async function fetchQuotes(symbols: string[]): Promise<Quote[]> {
   if (!symbols.length) return [];
-  const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols.join(",")}`;
-  const res = await proxiedFetch(url);
-  if (!res.ok) throw new Error("Failed to fetch quotes");
-  const data = await res.json();
+  const data = await callProxy({ kind: "quote", symbols: symbols.join(",") });
   return data?.quoteResponse?.result ?? [];
 }
 
@@ -65,10 +59,7 @@ export async function fetchChart(
   range: string,
   interval: string
 ): Promise<ChartResult> {
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?range=${range}&interval=${interval}&includePrePost=false`;
-  const res = await proxiedFetch(url);
-  if (!res.ok) throw new Error("Failed to fetch chart");
-  const data = await res.json();
+  const data = await callProxy({ kind: "chart", symbol, range, interval });
   const result = data?.chart?.result?.[0];
   if (!result) return { symbol, points: [] };
   const ts: number[] = result.timestamp ?? [];
@@ -79,8 +70,7 @@ export async function fetchChart(
   return {
     symbol,
     points,
-    previousClose:
-      result.meta?.chartPreviousClose ?? result.meta?.previousClose,
+    previousClose: result.meta?.chartPreviousClose ?? result.meta?.previousClose,
     meta: result.meta,
   };
 }
@@ -97,21 +87,13 @@ export interface NewsItem {
 }
 
 export async function fetchNews(query = "stock market"): Promise<NewsItem[]> {
-  const url = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(
-    query
-  )}&newsCount=20&quotesCount=0`;
-  const res = await proxiedFetch(url);
-  if (!res.ok) throw new Error("Failed to fetch news");
-  const data = await res.json();
+  const data = await callProxy({ kind: "search", q: query });
   return data?.news ?? [];
 }
 
 export function formatNumber(n?: number, opts?: Intl.NumberFormatOptions) {
   if (n == null || isNaN(n)) return "—";
-  return new Intl.NumberFormat("en-US", {
-    maximumFractionDigits: 2,
-    ...opts,
-  }).format(n);
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2, ...opts }).format(n);
 }
 
 export function formatLargeNumber(n?: number) {
@@ -123,3 +105,6 @@ export function formatLargeNumber(n?: number) {
   if (abs >= 1e3) return (n / 1e3).toFixed(2) + "K";
   return n.toString();
 }
+
+// Keep import to ensure the supabase client is initialized in the bundle
+void supabase;
