@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Header } from "@/components/Header";
 import { Ticker } from "@/components/Ticker";
 import { CategoryNav } from "@/components/CategoryNav";
@@ -14,6 +14,12 @@ const Index = () => {
   const cat = useMemo(
     () => CATEGORIES.find((c) => c.id === activeCat) ?? CATEGORIES[0],
     [activeCat]
+  );
+
+  useEffect(() => {
+    const first = cat.symbols?.[0];
+    if (first) setActiveSymbol(first);
+  }, [cat]
   );
 
   const watchSymbols = cat.symbols && cat.symbols.length ? cat.symbols : TRENDING;
