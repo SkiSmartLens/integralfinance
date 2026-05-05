@@ -1,8 +1,22 @@
-// Yahoo Finance fetch helpers via public CORS proxy. No API keys, no caching.
-const PROXY = "https://corsproxy.io/?";
+// Yahoo Finance fetch helpers via public CORS proxies (with fallback). No API keys, no caching.
+const PROXIES = [
+  (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+  (u: string) => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(u)}`,
+  (u: string) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+];
 
-function proxied(url: string) {
-  return PROXY + encodeURIComponent(url);
+async function proxiedFetch(url: string): Promise<Response> {
+  let lastErr: any;
+  for (const p of PROXIES) {
+    try {
+      const res = await fetch(p(url));
+      if (res.ok) return res;
+      lastErr = new Error(`HTTP ${res.status}`);
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr ?? new Error("All proxies failed");
 }
 
 export interface Quote {
