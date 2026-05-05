@@ -17,10 +17,9 @@ const Index = () => {
   );
 
   useEffect(() => {
-    const first = cat.symbols?.[0];
-    if (first) setActiveSymbol(first);
-  }, [cat]
-  );
+    const first = cat.symbols?.[0] ?? "^GSPC";
+    setActiveSymbol(first);
+  }, [cat]);
 
   const watchSymbols = cat.symbols && cat.symbols.length ? cat.symbols : TRENDING;
 
