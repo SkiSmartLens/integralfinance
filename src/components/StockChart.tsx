@@ -75,16 +75,17 @@ export const StockChart = ({ symbol }: Props) => {
             <span className="text-4xl font-bold tabular-nums">
               {formatNumber(lastPrice)}
             </span>
-            <span
-              className={cn(
-                "text-lg font-semibold tabular-nums",
-                isUp ? "text-up" : "text-down"
-              )}
-            >
-              {isUp ? "+" : ""}
-              {formatNumber(quote?.regularMarketChange)} (
-              {formatNumber(quote?.regularMarketChangePercent)}%)
-            </span>
+            {quote?.regularMarketChangePercent != null && (
+              <span
+                className={cn(
+                  "text-lg font-semibold tabular-nums",
+                  isUp ? "text-up" : "text-down"
+                )}
+              >
+                {isUp ? "+" : ""}
+                {formatNumber(quote.regularMarketChangePercent)}%
+              </span>
+            )}
           </div>
           <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
             <span className="inline-block w-2 h-2 rounded-full bg-success animate-pulse" />
