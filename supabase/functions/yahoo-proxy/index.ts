@@ -4,83 +4,140 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const ENDPOINTS: Record<string, string> = {
-  quote: "https://query1.finance.yahoo.com/v7/finance/quote",
-  chart: "https://query1.finance.yahoo.com/v8/finance/chart",
-  search: "https://query1.finance.yahoo.com/v1/finance/search",
-};
+const UA =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+
+// Tiny in-memory TTL cache
+const cache = new Map<string, { exp: number; body: string }>();
+function getCache(k: string) {
+  const v = cache.get(k);
+  if (v && v.exp > Date.now()) return v.body;
+  cache.delete(k);
+  return null;
+}
+function setCache(k: string, body: string, ttl: number) {
+  cache.set(k, { body, exp: Date.now() + ttl });
+}
+
+async function yahooFetch(url: string) {
+  return fetch(url, {
+    headers: { "User-Agent": UA, Accept: "application/json,text/plain,*/*" },
+  });
+}
+
+// Get a "quote-like" object derived from chart meta (works without crumb).
+async function chartMetaQuote(symbol: string): Promise<any | null> {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
+    symbol
+  )}?range=1d&interval=1m&includePrePost=false`;
+  try {
+    const r = await yahooFetch(url);
+    if (!r.ok) {
+      await r.text();
+      return { symbol, error: `HTTP ${r.status}` };
+    }
+    const j = await r.json();
+    const result = j?.chart?.result?.[0];
+    const m = result?.meta;
+    if (!m) return { symbol, error: "no meta" };
+    const price = m.regularMarketPrice;
+    const prev = m.chartPreviousClose ?? m.previousClose;
+    const change = price != null && prev != null ? price - prev : undefined;
+    const changePct =
+      change != null && prev ? (change / prev) * 100 : undefined;
+    return {
+      symbol: m.symbol ?? symbol,
+      shortName: m.shortName,
+      longName: m.longName,
+      exchange: m.exchangeName ?? m.fullExchangeName,
+      currency: m.currency,
+      regularMarketPrice: price,
+      regularMarketPreviousClose: prev,
+      regularMarketChange: change,
+      regularMarketChangePercent: changePct,
+      regularMarketOpen:
+        result?.indicators?.quote?.[0]?.open?.find((v: number) => v != null) ??
+        undefined,
+      regularMarketDayHigh: m.regularMarketDayHigh,
+      regularMarketDayLow: m.regularMarketDayLow,
+      regularMarketVolume: m.regularMarketVolume,
+      fiftyTwoWeekHigh: m.fiftyTwoWeekHigh,
+      fiftyTwoWeekLow: m.fiftyTwoWeekLow,
+    };
+  } catch (e) {
+    return { symbol, error: e instanceof Error ? e.message : "err" };
+  }
+}
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
     const url = new URL(req.url);
     const kind = url.searchParams.get("kind") ?? "quote";
-    const base = ENDPOINTS[kind];
-    if (!base) {
-      return new Response(JSON.stringify({ error: "invalid kind" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    let target = base;
-    const params = new URLSearchParams();
 
     if (kind === "quote") {
-      const symbols = url.searchParams.get("symbols") ?? "";
-      if (!symbols) {
-        return new Response(JSON.stringify({ error: "symbols required" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      const symbols = (url.searchParams.get("symbols") ?? "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (!symbols.length) {
+        return json({ error: "symbols required" }, 400);
       }
-      params.set("symbols", symbols);
-    } else if (kind === "chart") {
-      const symbol = url.searchParams.get("symbol");
-      if (!symbol) {
-        return new Response(JSON.stringify({ error: "symbol required" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      target = `${base}/${encodeURIComponent(symbol)}`;
-      params.set("range", url.searchParams.get("range") ?? "1d");
-      params.set("interval", url.searchParams.get("interval") ?? "5m");
-      params.set("includePrePost", "false");
-    } else if (kind === "search") {
-      const q = url.searchParams.get("q") ?? "stock market";
-      params.set("q", q);
-      params.set("newsCount", url.searchParams.get("newsCount") ?? "20");
-      params.set("quotesCount", "0");
+      const cacheKey = "q:" + symbols.join(",");
+      const cached = getCache(cacheKey);
+      if (cached) return new Response(cached, jsonHeaders());
+
+      const results = await Promise.all(symbols.map((s) => chartMetaQuote(s)));
+      const body = JSON.stringify({
+        quoteResponse: { result: results.filter(Boolean) },
+      });
+      setCache(cacheKey, body, 8000);
+      return new Response(body, jsonHeaders());
     }
 
-    const upstream = `${target}?${params.toString()}`;
-    const res = await fetch(upstream, {
-      headers: {
-        // Yahoo blocks default fetch UA; pretend to be a browser
-        "User-Agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        Accept: "application/json,text/plain,*/*",
-      },
-    });
+    if (kind === "chart") {
+      const symbol = url.searchParams.get("symbol");
+      if (!symbol) return json({ error: "symbol required" }, 400);
+      const range = url.searchParams.get("range") ?? "1d";
+      const interval = url.searchParams.get("interval") ?? "5m";
+      const cacheKey = `c:${symbol}:${range}:${interval}`;
+      const cached = getCache(cacheKey);
+      if (cached) return new Response(cached, jsonHeaders());
+      const upstream = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
+        symbol
+      )}?range=${range}&interval=${interval}&includePrePost=false`;
+      const r = await yahooFetch(upstream);
+      const body = await r.text();
+      if (r.ok) setCache(cacheKey, body, 10000);
+      return new Response(body, { ...jsonHeaders(), status: r.ok ? 200 : r.status });
+    }
 
-    const body = await res.text();
-    return new Response(body, {
-      status: res.ok ? 200 : res.status,
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "application/json",
-        "Cache-Control": "public, max-age=10",
-      },
-    });
+    if (kind === "search") {
+      const q = url.searchParams.get("q") ?? "stock market";
+      const newsCount = url.searchParams.get("newsCount") ?? "20";
+      const cacheKey = `s:${q}:${newsCount}`;
+      const cached = getCache(cacheKey);
+      if (cached) return new Response(cached, jsonHeaders());
+      const upstream = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(
+        q
+      )}&newsCount=${newsCount}&quotesCount=0`;
+      const r = await yahooFetch(upstream);
+      const body = await r.text();
+      if (r.ok) setCache(cacheKey, body, 30000);
+      return new Response(body, { ...jsonHeaders(), status: r.ok ? 200 : r.status });
+    }
+
+    return json({ error: "invalid kind" }, 400);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "unknown";
-    return new Response(JSON.stringify({ error: msg }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return json({ error: msg }, 500);
   }
 });
+
+function jsonHeaders() {
+  return { headers: { ...corsHeaders, "Content-Type": "application/json" } };
+}
+function json(obj: unknown, status = 200) {
+  return new Response(JSON.stringify(obj), { ...jsonHeaders(), status });
+}
