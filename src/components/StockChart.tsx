@@ -1,16 +1,18 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import {
-  AreaChart,
+  ComposedChart,
   Area,
+  Bar,
   XAxis,
   YAxis,
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
+  Cell,
 } from "recharts";
 import { useLiveChart } from "@/hooks/useLiveChart";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
-import { formatNumber, formatLargeNumber } from "@/lib/yahoo";
+import { formatNumber, formatLargeNumber, ChartPoint } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
 
 const RANGES: { label: string; range: string; interval: string }[] = [
@@ -24,12 +26,62 @@ const RANGES: { label: string; range: string; interval: string }[] = [
   { label: "Max", range: "max", interval: "1mo" },
 ];
 
+type ChartType = "mountain" | "bar" | "candle";
+
 interface Props {
   symbol: string;
 }
 
+// Candlestick / OHLC bar custom shape
+const Candle = (props: any) => {
+  const { x, y, width, height, payload, yAxis } = props;
+  const open = payload.open;
+  const close = payload.close;
+  const high = payload.high;
+  const low = payload.low;
+  if (open == null || close == null || high == null || low == null) return null;
+  const scale = yAxis?.scale;
+  if (!scale) return null;
+  const yHigh = scale(high);
+  const yLow = scale(low);
+  const yOpen = scale(open);
+  const yClose = scale(close);
+  const up = close >= open;
+  const color = up ? "hsl(var(--chart-up))" : "hsl(var(--chart-down))";
+  const bodyTop = Math.min(yOpen, yClose);
+  const bodyH = Math.max(1, Math.abs(yClose - yOpen));
+  const cx = x + width / 2;
+  const w = Math.max(2, width * 0.7);
+  return (
+    <g>
+      <line x1={cx} x2={cx} y1={yHigh} y2={yLow} stroke={color} strokeWidth={1} />
+      <rect x={cx - w / 2} y={bodyTop} width={w} height={bodyH} fill={color} />
+    </g>
+  );
+};
+
+const OHLCBar = (props: any) => {
+  const { x, width, payload, yAxis } = props;
+  const { open, close, high, low } = payload;
+  if (open == null || close == null || high == null || low == null) return null;
+  const scale = yAxis?.scale;
+  if (!scale) return null;
+  const up = close >= open;
+  const color = up ? "hsl(var(--chart-up))" : "hsl(var(--chart-down))";
+  const cx = x + width / 2;
+  const tickW = Math.max(3, width * 0.4);
+  return (
+    <g stroke={color} strokeWidth={1.25} fill="none">
+      <line x1={cx} x2={cx} y1={scale(high)} y2={scale(low)} />
+      <line x1={cx - tickW} x2={cx} y1={scale(open)} y2={scale(open)} />
+      <line x1={cx} x2={cx + tickW} y1={scale(close)} y2={scale(close)} />
+    </g>
+  );
+};
+
 export const StockChart = ({ symbol }: Props) => {
   const [rangeIdx, setRangeIdx] = useState(0);
+  const [chartType, setChartType] = useState<ChartType>("mountain");
   const r = RANGES[rangeIdx];
   const { data, loading } = useLiveChart(symbol, r.range, r.interval);
   const { quotes } = useLiveQuotes([symbol], 10000);
@@ -54,12 +106,92 @@ export const StockChart = ({ symbol }: Props) => {
 
   const minMax = useMemo(() => {
     if (!chartData.length) return [0, 0];
-    const vals = chartData.map((d) => d.price);
-    const min = Math.min(...vals, prevClose ?? Infinity);
-    const max = Math.max(...vals, prevClose ?? -Infinity);
+    const vals: number[] = [];
+    chartData.forEach((d) => {
+      if (chartType === "mountain") vals.push(d.price);
+      else {
+        if (d.high != null) vals.push(d.high);
+        if (d.low != null) vals.push(d.low);
+      }
+    });
+    if (prevClose != null) vals.push(prevClose);
+    const min = Math.min(...vals);
+    const max = Math.max(...vals);
     const pad = (max - min) * 0.1 || 1;
     return [min - pad, max + pad];
-  }, [chartData, prevClose]);
+  }, [chartData, prevClose, chartType]);
+
+  // ===== Pinch-to-compare (two-finger) =====
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const pointers = useRef<Map<number, { x: number }>>(new Map());
+  const [compare, setCompare] = useState<{ a: ChartPoint; b: ChartPoint } | null>(
+    null
+  );
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el || chartData.length < 2) return;
+
+    const rectInfo = () => el.getBoundingClientRect();
+
+    const pickPoint = (clientX: number): ChartPoint | null => {
+      const rect = rectInfo();
+      const ratio = (clientX - rect.left) / rect.width;
+      const idx = Math.max(
+        0,
+        Math.min(chartData.length - 1, Math.round(ratio * (chartData.length - 1)))
+      );
+      return chartData[idx];
+    };
+
+    const update = () => {
+      if (pointers.current.size >= 2) {
+        const xs = [...pointers.current.values()].map((p) => p.x);
+        const a = pickPoint(Math.min(...xs));
+        const b = pickPoint(Math.max(...xs));
+        if (a && b) setCompare({ a, b });
+      } else {
+        setCompare(null);
+      }
+    };
+
+    const onDown = (e: PointerEvent) => {
+      if (e.pointerType !== "touch") return;
+      pointers.current.set(e.pointerId, { x: e.clientX });
+      update();
+    };
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType !== "touch") return;
+      if (!pointers.current.has(e.pointerId)) return;
+      pointers.current.set(e.pointerId, { x: e.clientX });
+      if (pointers.current.size >= 2) e.preventDefault();
+      update();
+    };
+    const onUp = (e: PointerEvent) => {
+      pointers.current.delete(e.pointerId);
+      update();
+    };
+
+    el.addEventListener("pointerdown", onDown);
+    el.addEventListener("pointermove", onMove, { passive: false });
+    el.addEventListener("pointerup", onUp);
+    el.addEventListener("pointercancel", onUp);
+    el.addEventListener("pointerleave", onUp);
+    return () => {
+      el.removeEventListener("pointerdown", onDown);
+      el.removeEventListener("pointermove", onMove);
+      el.removeEventListener("pointerup", onUp);
+      el.removeEventListener("pointercancel", onUp);
+      el.removeEventListener("pointerleave", onUp);
+    };
+  }, [chartData]);
+
+  const compareDelta = compare
+    ? {
+        d: compare.b.price - compare.a.price,
+        pct: ((compare.b.price - compare.a.price) / compare.a.price) * 100,
+      }
+    : null;
 
   return (
     <div className="bg-card border rounded-lg p-4 md:p-6">
@@ -92,32 +224,56 @@ export const StockChart = ({ symbol }: Props) => {
             Live · auto-updating
           </div>
         </div>
-        <div className="flex flex-wrap gap-1">
-          {RANGES.map((rg, i) => (
-            <button
-              key={rg.label}
-              onClick={() => setRangeIdx(i)}
-              className={cn(
-                "px-3 py-1.5 rounded text-xs font-semibold transition-colors",
-                rangeIdx === i
-                  ? "bg-foreground text-background"
-                  : "text-muted-foreground hover:bg-muted"
-              )}
-            >
-              {rg.label}
-            </button>
-          ))}
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex gap-1">
+            {(["mountain", "bar", "candle"] as ChartType[]).map((t) => (
+              <button
+                key={t}
+                onClick={() => setChartType(t)}
+                className={cn(
+                  "px-3 py-1.5 rounded text-xs font-semibold capitalize transition-colors",
+                  chartType === t
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted"
+                )}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-1 justify-end">
+            {RANGES.map((rg, i) => (
+              <button
+                key={rg.label}
+                onClick={() => setRangeIdx(i)}
+                className={cn(
+                  "px-3 py-1.5 rounded text-xs font-semibold transition-colors",
+                  rangeIdx === i
+                    ? "bg-foreground text-background"
+                    : "text-muted-foreground hover:bg-muted"
+                )}
+              >
+                {rg.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      <div className="h-[380px] w-full">
+      <div
+        ref={wrapRef}
+        className="h-[380px] w-full relative touch-none select-none"
+      >
         {loading && !chartData.length ? (
           <div className="h-full flex items-center justify-center text-muted-foreground">
             Loading chart…
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+            <ComposedChart
+              data={chartData}
+              margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+            >
               <defs>
                 <linearGradient id="gradUp" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="hsl(var(--chart-up))" stopOpacity={0.4} />
@@ -135,6 +291,7 @@ export const StockChart = ({ symbol }: Props) => {
                 axisLine={false}
                 tickLine={false}
                 minTickGap={50}
+                type="category"
               />
               <YAxis
                 domain={minMax}
@@ -161,18 +318,58 @@ export const StockChart = ({ symbol }: Props) => {
                   fontSize: 12,
                 }}
                 labelFormatter={(v) => new Date(v as number).toLocaleString()}
-                formatter={(v: number) => [formatNumber(v), "Price"]}
+                formatter={(v: number, name: string) => [formatNumber(v), name]}
               />
-              <Area
-                type="monotone"
-                dataKey="price"
-                stroke={isUp ? "hsl(var(--chart-up))" : "hsl(var(--chart-down))"}
-                strokeWidth={2}
-                fill={isUp ? "url(#gradUp)" : "url(#gradDown)"}
-              />
-            </AreaChart>
+              {chartType === "mountain" && (
+                <Area
+                  type="linear"
+                  dataKey="price"
+                  stroke={isUp ? "hsl(var(--chart-up))" : "hsl(var(--chart-down))"}
+                  strokeWidth={1.75}
+                  fill={isUp ? "url(#gradUp)" : "url(#gradDown)"}
+                  isAnimationActive={false}
+                  dot={false}
+                />
+              )}
+              {chartType === "candle" && (
+                <Bar dataKey="high" shape={<Candle />} isAnimationActive={false}>
+                  {chartData.map((_, i) => (
+                    <Cell key={i} />
+                  ))}
+                </Bar>
+              )}
+              {chartType === "bar" && (
+                <Bar dataKey="high" shape={<OHLCBar />} isAnimationActive={false}>
+                  {chartData.map((_, i) => (
+                    <Cell key={i} />
+                  ))}
+                </Bar>
+              )}
+            </ComposedChart>
           </ResponsiveContainer>
         )}
+
+        {compare && compareDelta && (
+          <div className="absolute top-2 left-2 bg-background/95 border rounded-md px-3 py-2 shadow-lg text-xs">
+            <div className="font-semibold mb-1">Compare</div>
+            <div className="tabular-nums">
+              {formatNumber(compare.a.price)} → {formatNumber(compare.b.price)}
+            </div>
+            <div
+              className={cn(
+                "tabular-nums font-semibold",
+                compareDelta.d >= 0 ? "text-up" : "text-down"
+              )}
+            >
+              {compareDelta.d >= 0 ? "+" : ""}
+              {formatNumber(compareDelta.d)} ({compareDelta.pct >= 0 ? "+" : ""}
+              {formatNumber(compareDelta.pct)}%)
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="text-[10px] text-muted-foreground mt-2 md:hidden">
+        Tip: touch with two fingers to compare two points.
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t text-sm">
