@@ -14,16 +14,253 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      game_members: {
+        Row: {
+          cash: number
+          game_id: string
+          id: string
+          joined_at: string
+          user_id: string
+        }
+        Insert: {
+          cash?: number
+          game_id: string
+          id?: string
+          joined_at?: string
+          user_id: string
+        }
+        Update: {
+          cash?: number
+          game_id?: string
+          id?: string
+          joined_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_members_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      games: {
+        Row: {
+          allow_short: boolean
+          commission: number
+          created_at: string
+          created_by: string
+          ends_at: string | null
+          id: string
+          join_code: string
+          name: string
+          starting_cash: number
+        }
+        Insert: {
+          allow_short?: boolean
+          commission?: number
+          created_at?: string
+          created_by: string
+          ends_at?: string | null
+          id?: string
+          join_code?: string
+          name: string
+          starting_cash?: number
+        }
+        Update: {
+          allow_short?: boolean
+          commission?: number
+          created_at?: string
+          created_by?: string
+          ends_at?: string | null
+          id?: string
+          join_code?: string
+          name?: string
+          starting_cash?: number
+        }
+        Relationships: []
+      }
+      orders: {
+        Row: {
+          after_hours: boolean
+          created_at: string
+          filled_at: string | null
+          filled_price: number | null
+          id: string
+          limit_price: number | null
+          member_id: string
+          order_type: Database["public"]["Enums"]["order_type"]
+          shares: number
+          side: Database["public"]["Enums"]["order_side"]
+          status: Database["public"]["Enums"]["order_status"]
+          stop_price: number | null
+          symbol: string
+        }
+        Insert: {
+          after_hours?: boolean
+          created_at?: string
+          filled_at?: string | null
+          filled_price?: number | null
+          id?: string
+          limit_price?: number | null
+          member_id: string
+          order_type?: Database["public"]["Enums"]["order_type"]
+          shares: number
+          side: Database["public"]["Enums"]["order_side"]
+          status?: Database["public"]["Enums"]["order_status"]
+          stop_price?: number | null
+          symbol: string
+        }
+        Update: {
+          after_hours?: boolean
+          created_at?: string
+          filled_at?: string | null
+          filled_price?: number | null
+          id?: string
+          limit_price?: number | null
+          member_id?: string
+          order_type?: Database["public"]["Enums"]["order_type"]
+          shares?: number
+          side?: Database["public"]["Enums"]["order_side"]
+          status?: Database["public"]["Enums"]["order_status"]
+          stop_price?: number | null
+          symbol?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "game_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      positions: {
+        Row: {
+          avg_cost: number
+          id: string
+          member_id: string
+          shares: number
+          symbol: string
+          updated_at: string
+        }
+        Insert: {
+          avg_cost?: number
+          id?: string
+          member_id: string
+          shares?: number
+          symbol: string
+          updated_at?: string
+        }
+        Update: {
+          avg_cost?: number
+          id?: string
+          member_id?: string
+          shares?: number
+          symbol?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "positions_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "game_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          commission: number
+          created_at: string
+          id: string
+          member_id: string
+          order_id: string | null
+          price: number
+          shares: number
+          side: Database["public"]["Enums"]["order_side"]
+          symbol: string
+        }
+        Insert: {
+          commission?: number
+          created_at?: string
+          id?: string
+          member_id: string
+          order_id?: string | null
+          price: number
+          shares: number
+          side: Database["public"]["Enums"]["order_side"]
+          symbol: string
+        }
+        Update: {
+          commission?: number
+          created_at?: string
+          id?: string
+          member_id?: string
+          order_id?: string | null
+          price?: number
+          shares?: number
+          side?: Database["public"]["Enums"]["order_side"]
+          symbol?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "game_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_game_member: { Args: { _game_id: string }; Returns: boolean }
+      member_in_my_game: { Args: { _member_id: string }; Returns: boolean }
+      owns_member: { Args: { _member_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      order_side: "buy" | "sell"
+      order_status: "pending" | "filled" | "cancelled"
+      order_type: "market" | "limit" | "stop"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +387,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      order_side: ["buy", "sell"],
+      order_status: ["pending", "filled", "cancelled"],
+      order_type: ["market", "limit", "stop"],
+    },
   },
 } as const
