@@ -6,10 +6,12 @@ import { StockChart } from "@/components/StockChart";
 import { NewsList } from "@/components/NewsList";
 import { Watchlist } from "@/components/Watchlist";
 import { CATEGORIES, TRENDING } from "@/lib/categories";
+import { cn } from "@/lib/utils";
 
 const Index = () => {
   const [activeCat, setActiveCat] = useState("news");
   const [activeSymbol, setActiveSymbol] = useState("AAPL");
+  const [newsTab, setNewsTab] = useState<"my" | "general">("general");
 
   const cat = useMemo(
     () => CATEGORIES.find((c) => c.id === activeCat) ?? CATEGORIES[0],
@@ -22,6 +24,7 @@ const Index = () => {
   }, [cat]);
 
   const watchSymbols = cat.symbols && cat.symbols.length ? cat.symbols : TRENDING;
+  const myNewsQuery = watchSymbols.slice(0, 8).join(" OR ");
 
   return (
     <div className="min-h-screen bg-background">
@@ -34,10 +37,34 @@ const Index = () => {
           <div className="space-y-6 min-w-0">
             <StockChart symbol={activeSymbol} />
             <section>
-              <h2 className="text-2xl font-bold mb-4">
-                {cat.label} <span className="text-muted-foreground font-normal text-base">· latest stories</span>
-              </h2>
-              <NewsList query={cat.query} />
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                <h2 className="text-2xl font-bold">
+                  {newsTab === "my" ? "My News" : cat.label}{" "}
+                  <span className="text-muted-foreground font-normal text-base">
+                    · latest stories
+                  </span>
+                </h2>
+                <div className="flex gap-1 bg-muted rounded-md p-1">
+                  {(["my", "general"] as const).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setNewsTab(t)}
+                      className={cn(
+                        "px-3 py-1.5 rounded text-xs font-semibold transition-colors",
+                        newsTab === t
+                          ? "bg-background shadow-sm"
+                          : "text-muted-foreground"
+                      )}
+                    >
+                      {t === "my" ? "My News" : "General"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <NewsList
+                key={newsTab + ":" + (newsTab === "my" ? myNewsQuery : cat.query)}
+                query={newsTab === "my" ? myNewsQuery : cat.query}
+              />
             </section>
           </div>
           <aside className="space-y-6">
