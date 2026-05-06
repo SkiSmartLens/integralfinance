@@ -45,6 +45,11 @@ export async function fetchQuotes(symbols: string[]): Promise<Quote[]> {
 export interface ChartPoint {
   t: number;
   price: number;
+  open?: number;
+  high?: number;
+  low?: number;
+  close?: number;
+  volume?: number;
 }
 
 export interface ChartResult {
@@ -63,9 +68,22 @@ export async function fetchChart(
   const result = data?.chart?.result?.[0];
   if (!result) return { symbol, points: [] };
   const ts: number[] = result.timestamp ?? [];
-  const closes: (number | null)[] = result.indicators?.quote?.[0]?.close ?? [];
+  const q = result.indicators?.quote?.[0] ?? {};
+  const closes: (number | null)[] = q.close ?? [];
+  const opens: (number | null)[] = q.open ?? [];
+  const highs: (number | null)[] = q.high ?? [];
+  const lows: (number | null)[] = q.low ?? [];
+  const vols: (number | null)[] = q.volume ?? [];
   const points: ChartPoint[] = ts
-    .map((t, i) => ({ t: t * 1000, price: closes[i] as number }))
+    .map((t, i) => ({
+      t: t * 1000,
+      price: closes[i] as number,
+      open: opens[i] ?? undefined,
+      high: highs[i] ?? undefined,
+      low: lows[i] ?? undefined,
+      close: closes[i] ?? undefined,
+      volume: vols[i] ?? undefined,
+    }))
     .filter((p) => typeof p.price === "number" && !isNaN(p.price));
   return {
     symbol,
