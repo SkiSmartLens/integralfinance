@@ -54,21 +54,33 @@ const makeCandleLayer = (data: ChartPoint[]) => (props: any) => {
     <g>
       {data.map((d, i) => {
         if (d.open == null || d.close == null || d.high == null || d.low == null) return null;
+        // Ensure high >= low >= 0 and open/close are within [low, high]
+        const safeHigh = Math.max(d.high, d.low, d.open, d.close);
+        const safeLow = Math.min(d.high, d.low, d.open, d.close);
+        if (safeHigh <= 0 || safeLow <= 0) return null;
         const xPos = xScale(d.t as any);
         if (xPos == null || isNaN(xPos)) return null;
         const cx = xPos + bandW / 2;
-        const yH = yScale(d.high);
-        const yL = yScale(d.low);
+        const yH = yScale(safeHigh);
+        const yL = yScale(safeLow);
         const yO = yScale(d.open);
         const yC = yScale(d.close);
+        if ([yH, yL, yO, yC].some((v) => v == null || isNaN(v))) return null;
         const up = d.close >= d.open;
         const color = up ? "hsl(var(--chart-up))" : "hsl(var(--chart-down))";
-        const top = Math.min(yO, yC);
-        const h = Math.max(1, Math.abs(yC - yO));
+        const bodyTop = Math.min(yO, yC);
+        const bodyH = Math.max(1, Math.abs(yC - yO));
+        // Wicks only extend from the body edges to wick tips
+        const wickTop = Math.min(yH, bodyTop);
+        const wickBottom = Math.max(yL, bodyTop + bodyH);
         return (
           <g key={i}>
-            <line x1={cx} x2={cx} y1={yH} y2={yL} stroke={color} strokeWidth={1} />
-            <rect x={cx - w / 2} y={top} width={w} height={h} fill={color} stroke={color} strokeWidth={0.5} />
+            {/* Upper wick */}
+            <line x1={cx} x2={cx} y1={wickTop} y2={bodyTop} stroke={color} strokeWidth={1} />
+            {/* Lower wick */}
+            <line x1={cx} x2={cx} y1={bodyTop + bodyH} y2={wickBottom} stroke={color} strokeWidth={1} />
+            {/* Candle body */}
+            <rect x={cx - w / 2} y={bodyTop} width={w} height={bodyH} fill={color} stroke={color} strokeWidth={0.5} />
           </g>
         );
       })}
@@ -85,10 +97,21 @@ export const StockChart = ({ symbol }: Props) => {
   const { quotes } = useLiveQuotes([symbol], 10000);
   const quote = quotes[0];
 
-  const prevClose = data?.previousClose ?? quote?.regularMarketPreviousClose;
+  const is1D = chartType === "mountain" && rangeIdx === 0;
+
+  // For non-1D ranges, derive change from the chart's first vs last point
+  const firstPrice = data?.points[0]?.price;
   const lastPrice = data?.points.at(-1)?.price ?? quote?.regularMarketPrice;
-  const isUp = (lastPrice ?? 0) >= (prevClose ?? 0);
-  const change = lastPrice != null && prevClose != null ? lastPrice - prevClose : null;
+
+  const prevClose = is1D
+    ? (data?.previousClose ?? quote?.regularMarketPreviousClose)
+    : firstPrice;
+
+  const displayChange = lastPrice != null && prevClose != null ? lastPrice - prevClose : null;
+  const displayChangePct = displayChange != null && prevClose != null && prevClose !== 0
+    ? (displayChange / prevClose) * 100
+    : null;
+  const isUp = (displayChange ?? 0) >= 0;
 
   const chartData = useMemo(() => {
     const pts = data?.points ?? [];
@@ -120,7 +143,7 @@ export const StockChart = ({ symbol }: Props) => {
         if (d.low != null) vals.push(d.low);
       }
     });
-    if (prevClose != null) vals.push(prevClose);
+    if (is1D && prevClose != null) vals.push(prevClose);
     const min = Math.min(...vals);
     const max = Math.max(...vals);
     const pad = (max - min) * 0.1 || 1;
@@ -213,7 +236,7 @@ export const StockChart = ({ symbol }: Props) => {
             <span className="text-4xl font-bold tabular-nums">
               {formatNumber(lastPrice)}
             </span>
-            {change != null && (
+            {displayChange != null && (
               <span
                 className={cn(
                   "text-lg font-semibold tabular-nums",
@@ -221,9 +244,9 @@ export const StockChart = ({ symbol }: Props) => {
                 )}
               >
                 {isUp ? "+" : ""}
-                {formatNumber(change)}
-                {quote?.regularMarketChangePercent != null && (
-                  <> ({isUp ? "+" : ""}{formatNumber(quote.regularMarketChangePercent)}%)</>
+                {formatNumber(displayChange)}
+                {displayChangePct != null && (
+                  <> ({isUp ? "+" : ""}{formatNumber(displayChangePct)}%)</>
                 )}
               </span>
             )}
@@ -330,7 +353,7 @@ export const StockChart = ({ symbol }: Props) => {
                 width={60}
                 tickFormatter={(v) => formatNumber(v)}
               />
-              {prevClose && (
+              {is1D && prevClose && (
                 <ReferenceLine
                   y={prevClose}
                   stroke="hsl(var(--muted-foreground))"
