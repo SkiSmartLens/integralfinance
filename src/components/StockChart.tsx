@@ -32,30 +32,23 @@ interface Props {
 }
 
 // Custom OHLC / Candle renderer using Customized — has access to xAxisMap & yAxisMap
-const OhlcLayer = ({ kind }: { kind: "candle" | "bar" }) => (props: any) => {
-  const { xAxisMap, yAxisMap, formattedGraphicalItems } = props;
-  const xAxis: any = xAxisMap?.[Object.keys(xAxisMap)[0]];
-  const yAxis: any = yAxisMap?.[Object.keys(yAxisMap)[0]];
-  if (!xAxis || !yAxis) return null;
-  const data: ChartPoint[] =
-    formattedGraphicalItems?.[0]?.props?.data ?? [];
-  if (!data.length) return null;
+const makeOhlcLayer = (kind: "candle" | "bar", data: ChartPoint[]) => (props: any) => {
+  const { xAxisMap, yAxisMap } = props;
+  if (!xAxisMap || !yAxisMap) return null;
+  const xAxis: any = xAxisMap[Object.keys(xAxisMap)[0]];
+  const yAxis: any = yAxisMap[Object.keys(yAxisMap)[0]];
+  if (!xAxis || !yAxis || !data.length) return null;
   const xScale = xAxis.scale;
   const yScale = yAxis.scale;
-  const bandW =
-    typeof xScale.bandwidth === "function" ? xScale.bandwidth() : 8;
+  const bandW = typeof xScale.bandwidth === "function" ? xScale.bandwidth() : (xAxis.width || 0) / Math.max(1, data.length);
   const w = Math.max(2, bandW * 0.7);
   return (
     <g>
       {data.map((d, i) => {
-        if (
-          d.open == null ||
-          d.close == null ||
-          d.high == null ||
-          d.low == null
-        )
-          return null;
-        const cx = (xScale(d.t as any) ?? 0) + bandW / 2;
+        if (d.open == null || d.close == null || d.high == null || d.low == null) return null;
+        const xPos = xScale(d.t as any);
+        if (xPos == null || isNaN(xPos)) return null;
+        const cx = xPos + bandW / 2;
         const yH = yScale(d.high);
         const yL = yScale(d.low);
         const yO = yScale(d.open);
