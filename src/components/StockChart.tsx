@@ -25,14 +25,23 @@ const RANGES: { label: string; range: string; interval: string }[] = [
   { label: "Max", range: "max", interval: "1mo" },
 ];
 
-type ChartType = "mountain" | "bar" | "candle";
+// Intraday interval presets used for candle mode
+const INTRADAY: { label: string; range: string; interval: string }[] = [
+  { label: "5m", range: "5d", interval: "5m" },
+  { label: "15m", range: "1mo", interval: "15m" },
+  { label: "30m", range: "1mo", interval: "30m" },
+  { label: "1h", range: "3mo", interval: "60m" },
+  { label: "3h", range: "6mo", interval: "90m" },
+];
+
+type ChartType = "mountain" | "candle";
 
 interface Props {
   symbol: string;
 }
 
-// Custom OHLC / Candle renderer using Customized — has access to xAxisMap & yAxisMap
-const makeOhlcLayer = (kind: "candle" | "bar", data: ChartPoint[]) => (props: any) => {
+// Custom candle renderer using Customized — has access to xAxisMap & yAxisMap
+const makeCandleLayer = (data: ChartPoint[]) => (props: any) => {
   const { xAxisMap, yAxisMap } = props;
   if (!xAxisMap || !yAxisMap) return null;
   const xAxis: any = xAxisMap[Object.keys(xAxisMap)[0]];
@@ -41,7 +50,7 @@ const makeOhlcLayer = (kind: "candle" | "bar", data: ChartPoint[]) => (props: an
   const xScale = xAxis.scale;
   const yScale = yAxis.scale;
   const bandW = typeof xScale.bandwidth === "function" ? xScale.bandwidth() : (xAxis.width || 0) / Math.max(1, data.length);
-  const w = Math.max(2, bandW * 0.7);
+  const w = Math.max(2, Math.min(14, bandW * 0.75));
   return (
     <g>
       {data.map((d, i) => {
@@ -55,22 +64,12 @@ const makeOhlcLayer = (kind: "candle" | "bar", data: ChartPoint[]) => (props: an
         const yC = yScale(d.close);
         const up = d.close >= d.open;
         const color = up ? "hsl(var(--chart-up))" : "hsl(var(--chart-down))";
-        if (kind === "candle") {
-          const top = Math.min(yO, yC);
-          const h = Math.max(1, Math.abs(yC - yO));
-          return (
-            <g key={i}>
-              <line x1={cx} x2={cx} y1={yH} y2={yL} stroke={color} strokeWidth={1} />
-              <rect x={cx - w / 2} y={top} width={w} height={h} fill={color} />
-            </g>
-          );
-        }
-        const tickW = Math.max(3, bandW * 0.4);
+        const top = Math.min(yO, yC);
+        const h = Math.max(1, Math.abs(yC - yO));
         return (
-          <g key={i} stroke={color} strokeWidth={1.25} fill="none">
-            <line x1={cx} x2={cx} y1={yH} y2={yL} />
-            <line x1={cx - tickW} x2={cx} y1={yO} y2={yO} />
-            <line x1={cx} x2={cx + tickW} y1={yC} y2={yC} />
+          <g key={i}>
+            <line x1={cx} x2={cx} y1={yH} y2={yL} stroke={color} strokeWidth={1} />
+            <rect x={cx - w / 2} y={top} width={w} height={h} fill={color} stroke={color} strokeWidth={0.5} />
           </g>
         );
       })}
@@ -81,7 +80,8 @@ const makeOhlcLayer = (kind: "candle" | "bar", data: ChartPoint[]) => (props: an
 export const StockChart = ({ symbol }: Props) => {
   const [rangeIdx, setRangeIdx] = useState(0);
   const [chartType, setChartType] = useState<ChartType>("mountain");
-  const r = RANGES[rangeIdx];
+  const [intradayIdx, setIntradayIdx] = useState(0);
+  const r = chartType === "candle" ? INTRADAY[intradayIdx] : RANGES[rangeIdx];
   const { data, loading } = useLiveChart(symbol, r.range, r.interval);
   const { quotes } = useLiveQuotes([symbol], 10000);
   const quote = quotes[0];
@@ -89,6 +89,7 @@ export const StockChart = ({ symbol }: Props) => {
   const prevClose = data?.previousClose ?? quote?.regularMarketPreviousClose;
   const lastPrice = data?.points.at(-1)?.price ?? quote?.regularMarketPrice;
   const isUp = (lastPrice ?? 0) >= (prevClose ?? 0);
+  const change = lastPrice != null && prevClose != null ? lastPrice - prevClose : null;
 
   const chartData = useMemo(() => data?.points ?? [], [data]);
 
@@ -202,11 +203,11 @@ export const StockChart = ({ symbol }: Props) => {
               {symbol} · {quote?.exchange}
             </span>
           </div>
-          <div className="flex items-baseline gap-3">
+          <div className="flex items-baseline gap-3 flex-wrap">
             <span className="text-4xl font-bold tabular-nums">
               {formatNumber(lastPrice)}
             </span>
-            {quote?.regularMarketChangePercent != null && (
+            {change != null && (
               <span
                 className={cn(
                   "text-lg font-semibold tabular-nums",
@@ -214,7 +215,10 @@ export const StockChart = ({ symbol }: Props) => {
                 )}
               >
                 {isUp ? "+" : ""}
-                {formatNumber(quote.regularMarketChangePercent)}%
+                {formatNumber(change)}
+                {quote?.regularMarketChangePercent != null && (
+                  <> ({isUp ? "+" : ""}{formatNumber(quote.regularMarketChangePercent)}%)</>
+                )}
               </span>
             )}
           </div>
@@ -225,7 +229,7 @@ export const StockChart = ({ symbol }: Props) => {
         </div>
         <div className="flex flex-col items-end gap-2">
           <div className="flex gap-1">
-            {(["mountain", "bar", "candle"] as ChartType[]).map((t) => (
+            {(["mountain", "candle"] as ChartType[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setChartType(t)}
@@ -240,22 +244,41 @@ export const StockChart = ({ symbol }: Props) => {
               </button>
             ))}
           </div>
-          <div className="flex flex-wrap gap-1 justify-end">
-            {RANGES.map((rg, i) => (
-              <button
-                key={rg.label}
-                onClick={() => setRangeIdx(i)}
-                className={cn(
-                  "px-3 py-1.5 rounded text-xs font-semibold transition-colors",
-                  rangeIdx === i
-                    ? "bg-foreground text-background"
-                    : "text-muted-foreground hover:bg-muted"
-                )}
-              >
-                {rg.label}
-              </button>
-            ))}
-          </div>
+          {chartType === "candle" ? (
+            <div className="flex flex-wrap gap-1 justify-end">
+              {INTRADAY.map((rg, i) => (
+                <button
+                  key={rg.label}
+                  onClick={() => setIntradayIdx(i)}
+                  className={cn(
+                    "px-3 py-1.5 rounded text-xs font-semibold transition-colors",
+                    intradayIdx === i
+                      ? "bg-foreground text-background"
+                      : "text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  {rg.label}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-1 justify-end">
+              {RANGES.map((rg, i) => (
+                <button
+                  key={rg.label}
+                  onClick={() => setRangeIdx(i)}
+                  className={cn(
+                    "px-3 py-1.5 rounded text-xs font-semibold transition-colors",
+                    rangeIdx === i
+                      ? "bg-foreground text-background"
+                      : "text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  {rg.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -330,8 +353,8 @@ export const StockChart = ({ symbol }: Props) => {
                   dot={false}
                 />
               )}
-              {(chartType === "candle" || chartType === "bar") && (
-                <Customized component={makeOhlcLayer(chartType, chartData)} />
+              {chartType === "candle" && (
+                <Customized component={makeCandleLayer(chartData)} />
               )}
             </ComposedChart>
           </ResponsiveContainer>
