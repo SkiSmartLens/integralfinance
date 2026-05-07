@@ -25,7 +25,16 @@ const RANGES: { label: string; range: string; interval: string }[] = [
   { label: "Max", range: "max", interval: "1mo" },
 ];
 
-type ChartType = "mountain" | "bar" | "candle";
+// Intraday interval presets used for candle mode
+const INTRADAY: { label: string; range: string; interval: string }[] = [
+  { label: "5m", range: "5d", interval: "5m" },
+  { label: "15m", range: "1mo", interval: "15m" },
+  { label: "30m", range: "1mo", interval: "30m" },
+  { label: "1h", range: "3mo", interval: "60m" },
+  { label: "3h", range: "6mo", interval: "90m" },
+];
+
+type ChartType = "mountain" | "candle";
 
 interface Props {
   symbol: string;
