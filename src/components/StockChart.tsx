@@ -203,11 +203,11 @@ export const StockChart = ({ symbol }: Props) => {
               {symbol} · {quote?.exchange}
             </span>
           </div>
-          <div className="flex items-baseline gap-3">
+          <div className="flex items-baseline gap-3 flex-wrap">
             <span className="text-4xl font-bold tabular-nums">
               {formatNumber(lastPrice)}
             </span>
-            {quote?.regularMarketChangePercent != null && (
+            {change != null && (
               <span
                 className={cn(
                   "text-lg font-semibold tabular-nums",
@@ -215,7 +215,10 @@ export const StockChart = ({ symbol }: Props) => {
                 )}
               >
                 {isUp ? "+" : ""}
-                {formatNumber(quote.regularMarketChangePercent)}%
+                {formatNumber(change)}
+                {quote?.regularMarketChangePercent != null && (
+                  <> ({isUp ? "+" : ""}{formatNumber(quote.regularMarketChangePercent)}%)</>
+                )}
               </span>
             )}
           </div>
@@ -226,7 +229,7 @@ export const StockChart = ({ symbol }: Props) => {
         </div>
         <div className="flex flex-col items-end gap-2">
           <div className="flex gap-1">
-            {(["mountain", "bar", "candle"] as ChartType[]).map((t) => (
+            {(["mountain", "candle"] as ChartType[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setChartType(t)}
@@ -241,22 +244,41 @@ export const StockChart = ({ symbol }: Props) => {
               </button>
             ))}
           </div>
-          <div className="flex flex-wrap gap-1 justify-end">
-            {RANGES.map((rg, i) => (
-              <button
-                key={rg.label}
-                onClick={() => setRangeIdx(i)}
-                className={cn(
-                  "px-3 py-1.5 rounded text-xs font-semibold transition-colors",
-                  rangeIdx === i
-                    ? "bg-foreground text-background"
-                    : "text-muted-foreground hover:bg-muted"
-                )}
-              >
-                {rg.label}
-              </button>
-            ))}
-          </div>
+          {chartType === "candle" ? (
+            <div className="flex flex-wrap gap-1 justify-end">
+              {INTRADAY.map((rg, i) => (
+                <button
+                  key={rg.label}
+                  onClick={() => setIntradayIdx(i)}
+                  className={cn(
+                    "px-3 py-1.5 rounded text-xs font-semibold transition-colors",
+                    intradayIdx === i
+                      ? "bg-foreground text-background"
+                      : "text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  {rg.label}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-1 justify-end">
+              {RANGES.map((rg, i) => (
+                <button
+                  key={rg.label}
+                  onClick={() => setRangeIdx(i)}
+                  className={cn(
+                    "px-3 py-1.5 rounded text-xs font-semibold transition-colors",
+                    rangeIdx === i
+                      ? "bg-foreground text-background"
+                      : "text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  {rg.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -331,8 +353,8 @@ export const StockChart = ({ symbol }: Props) => {
                   dot={false}
                 />
               )}
-              {(chartType === "candle" || chartType === "bar") && (
-                <Customized component={makeOhlcLayer(chartType, chartData)} />
+              {chartType === "candle" && (
+                <Customized component={makeCandleLayer(chartData)} />
               )}
             </ComposedChart>
           </ResponsiveContainer>
