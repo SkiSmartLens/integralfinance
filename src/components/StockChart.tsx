@@ -40,8 +40,8 @@ interface Props {
   symbol: string;
 }
 
-// Custom OHLC / Candle renderer using Customized — has access to xAxisMap & yAxisMap
-const makeOhlcLayer = (kind: "candle" | "bar", data: ChartPoint[]) => (props: any) => {
+// Custom candle renderer using Customized — has access to xAxisMap & yAxisMap
+const makeCandleLayer = (data: ChartPoint[]) => (props: any) => {
   const { xAxisMap, yAxisMap } = props;
   if (!xAxisMap || !yAxisMap) return null;
   const xAxis: any = xAxisMap[Object.keys(xAxisMap)[0]];
@@ -50,7 +50,7 @@ const makeOhlcLayer = (kind: "candle" | "bar", data: ChartPoint[]) => (props: an
   const xScale = xAxis.scale;
   const yScale = yAxis.scale;
   const bandW = typeof xScale.bandwidth === "function" ? xScale.bandwidth() : (xAxis.width || 0) / Math.max(1, data.length);
-  const w = Math.max(2, bandW * 0.7);
+  const w = Math.max(2, Math.min(14, bandW * 0.75));
   return (
     <g>
       {data.map((d, i) => {
@@ -64,22 +64,12 @@ const makeOhlcLayer = (kind: "candle" | "bar", data: ChartPoint[]) => (props: an
         const yC = yScale(d.close);
         const up = d.close >= d.open;
         const color = up ? "hsl(var(--chart-up))" : "hsl(var(--chart-down))";
-        if (kind === "candle") {
-          const top = Math.min(yO, yC);
-          const h = Math.max(1, Math.abs(yC - yO));
-          return (
-            <g key={i}>
-              <line x1={cx} x2={cx} y1={yH} y2={yL} stroke={color} strokeWidth={1} />
-              <rect x={cx - w / 2} y={top} width={w} height={h} fill={color} />
-            </g>
-          );
-        }
-        const tickW = Math.max(3, bandW * 0.4);
+        const top = Math.min(yO, yC);
+        const h = Math.max(1, Math.abs(yC - yO));
         return (
-          <g key={i} stroke={color} strokeWidth={1.25} fill="none">
-            <line x1={cx} x2={cx} y1={yH} y2={yL} />
-            <line x1={cx - tickW} x2={cx} y1={yO} y2={yO} />
-            <line x1={cx} x2={cx + tickW} y1={yC} y2={yC} />
+          <g key={i}>
+            <line x1={cx} x2={cx} y1={yH} y2={yL} stroke={color} strokeWidth={1} />
+            <rect x={cx - w / 2} y={top} width={w} height={h} fill={color} stroke={color} strokeWidth={0.5} />
           </g>
         );
       })}
