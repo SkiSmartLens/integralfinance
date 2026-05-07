@@ -2,13 +2,12 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import {
   ComposedChart,
   Area,
-  Bar,
   XAxis,
   YAxis,
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
-  Cell,
+  Customized,
 } from "recharts";
 import { useLiveChart } from "@/hooks/useLiveChart";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
