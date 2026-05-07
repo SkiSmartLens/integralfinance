@@ -3,6 +3,7 @@ import { Header } from "@/components/Header";
 import { Ticker } from "@/components/Ticker";
 import { CategoryNav } from "@/components/CategoryNav";
 import { StockChart } from "@/components/StockChart";
+import { StockSummary } from "@/components/StockSummary";
 import { NewsList } from "@/components/NewsList";
 import { Watchlist } from "@/components/Watchlist";
 import { CATEGORIES, TRENDING } from "@/lib/categories";
