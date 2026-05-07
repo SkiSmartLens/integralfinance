@@ -91,7 +91,14 @@ export const StockChart = ({ symbol }: Props) => {
   const isUp = (lastPrice ?? 0) >= (prevClose ?? 0);
   const change = lastPrice != null && prevClose != null ? lastPrice - prevClose : null;
 
-  const chartData = useMemo(() => data?.points ?? [], [data]);
+  const chartData = useMemo(() => {
+    const pts = data?.points ?? [];
+    if (chartType === "candle") {
+      // Drop bars without OHLC so we don't render empty/black gaps
+      return pts.filter((p) => p.open != null && p.close != null && p.high != null && p.low != null);
+    }
+    return pts;
+  }, [data, chartType]);
 
   const formatTime = (t: number) => {
     const d = new Date(t);
