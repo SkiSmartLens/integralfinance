@@ -2,13 +2,12 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import {
   ComposedChart,
   Area,
-  Bar,
   XAxis,
   YAxis,
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
-  Cell,
+  Customized,
 } from "recharts";
 import { useLiveChart } from "@/hooks/useLiveChart";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
@@ -32,49 +31,49 @@ interface Props {
   symbol: string;
 }
 
-// Candlestick / OHLC bar custom shape
-const Candle = (props: any) => {
-  const { x, y, width, height, payload, yAxis } = props;
-  const open = payload.open;
-  const close = payload.close;
-  const high = payload.high;
-  const low = payload.low;
-  if (open == null || close == null || high == null || low == null) return null;
-  const scale = yAxis?.scale;
-  if (!scale) return null;
-  const yHigh = scale(high);
-  const yLow = scale(low);
-  const yOpen = scale(open);
-  const yClose = scale(close);
-  const up = close >= open;
-  const color = up ? "hsl(var(--chart-up))" : "hsl(var(--chart-down))";
-  const bodyTop = Math.min(yOpen, yClose);
-  const bodyH = Math.max(1, Math.abs(yClose - yOpen));
-  const cx = x + width / 2;
-  const w = Math.max(2, width * 0.7);
+// Custom OHLC / Candle renderer using Customized — has access to xAxisMap & yAxisMap
+const makeOhlcLayer = (kind: "candle" | "bar", data: ChartPoint[]) => (props: any) => {
+  const { xAxisMap, yAxisMap } = props;
+  if (!xAxisMap || !yAxisMap) return null;
+  const xAxis: any = xAxisMap[Object.keys(xAxisMap)[0]];
+  const yAxis: any = yAxisMap[Object.keys(yAxisMap)[0]];
+  if (!xAxis || !yAxis || !data.length) return null;
+  const xScale = xAxis.scale;
+  const yScale = yAxis.scale;
+  const bandW = typeof xScale.bandwidth === "function" ? xScale.bandwidth() : (xAxis.width || 0) / Math.max(1, data.length);
+  const w = Math.max(2, bandW * 0.7);
   return (
     <g>
-      <line x1={cx} x2={cx} y1={yHigh} y2={yLow} stroke={color} strokeWidth={1} />
-      <rect x={cx - w / 2} y={bodyTop} width={w} height={bodyH} fill={color} />
-    </g>
-  );
-};
-
-const OHLCBar = (props: any) => {
-  const { x, width, payload, yAxis } = props;
-  const { open, close, high, low } = payload;
-  if (open == null || close == null || high == null || low == null) return null;
-  const scale = yAxis?.scale;
-  if (!scale) return null;
-  const up = close >= open;
-  const color = up ? "hsl(var(--chart-up))" : "hsl(var(--chart-down))";
-  const cx = x + width / 2;
-  const tickW = Math.max(3, width * 0.4);
-  return (
-    <g stroke={color} strokeWidth={1.25} fill="none">
-      <line x1={cx} x2={cx} y1={scale(high)} y2={scale(low)} />
-      <line x1={cx - tickW} x2={cx} y1={scale(open)} y2={scale(open)} />
-      <line x1={cx} x2={cx + tickW} y1={scale(close)} y2={scale(close)} />
+      {data.map((d, i) => {
+        if (d.open == null || d.close == null || d.high == null || d.low == null) return null;
+        const xPos = xScale(d.t as any);
+        if (xPos == null || isNaN(xPos)) return null;
+        const cx = xPos + bandW / 2;
+        const yH = yScale(d.high);
+        const yL = yScale(d.low);
+        const yO = yScale(d.open);
+        const yC = yScale(d.close);
+        const up = d.close >= d.open;
+        const color = up ? "hsl(var(--chart-up))" : "hsl(var(--chart-down))";
+        if (kind === "candle") {
+          const top = Math.min(yO, yC);
+          const h = Math.max(1, Math.abs(yC - yO));
+          return (
+            <g key={i}>
+              <line x1={cx} x2={cx} y1={yH} y2={yL} stroke={color} strokeWidth={1} />
+              <rect x={cx - w / 2} y={top} width={w} height={h} fill={color} />
+            </g>
+          );
+        }
+        const tickW = Math.max(3, bandW * 0.4);
+        return (
+          <g key={i} stroke={color} strokeWidth={1.25} fill="none">
+            <line x1={cx} x2={cx} y1={yH} y2={yL} />
+            <line x1={cx - tickW} x2={cx} y1={yO} y2={yO} />
+            <line x1={cx} x2={cx + tickW} y1={yC} y2={yC} />
+          </g>
+        );
+      })}
     </g>
   );
 };
@@ -331,19 +330,8 @@ export const StockChart = ({ symbol }: Props) => {
                   dot={false}
                 />
               )}
-              {chartType === "candle" && (
-                <Bar dataKey="high" shape={<Candle />} isAnimationActive={false}>
-                  {chartData.map((_, i) => (
-                    <Cell key={i} />
-                  ))}
-                </Bar>
-              )}
-              {chartType === "bar" && (
-                <Bar dataKey="high" shape={<OHLCBar />} isAnimationActive={false}>
-                  {chartData.map((_, i) => (
-                    <Cell key={i} />
-                  ))}
-                </Bar>
+              {(chartType === "candle" || chartType === "bar") && (
+                <Customized component={makeOhlcLayer(chartType, chartData)} />
               )}
             </ComposedChart>
           </ResponsiveContainer>
