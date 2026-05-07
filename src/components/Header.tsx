@@ -13,7 +13,7 @@ export const Header = ({ onSearch }: Props) => {
       <div className="container mx-auto px-4 py-3 flex items-center gap-4">
         <Link to="/" className="flex items-center gap-2 font-bold text-xl">
           <TrendingUp className="text-primary" />
-          <span>FinPulse</span>
+          <span>IntegralFinance</span>
         </Link>
         <form
           onSubmit={(e) => {
