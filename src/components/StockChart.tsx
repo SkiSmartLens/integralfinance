@@ -80,7 +80,8 @@ const makeCandleLayer = (data: ChartPoint[]) => (props: any) => {
 export const StockChart = ({ symbol }: Props) => {
   const [rangeIdx, setRangeIdx] = useState(0);
   const [chartType, setChartType] = useState<ChartType>("mountain");
-  const r = RANGES[rangeIdx];
+  const [intradayIdx, setIntradayIdx] = useState(0);
+  const r = chartType === "candle" ? INTRADAY[intradayIdx] : RANGES[rangeIdx];
   const { data, loading } = useLiveChart(symbol, r.range, r.interval);
   const { quotes } = useLiveQuotes([symbol], 10000);
   const quote = quotes[0];
@@ -88,6 +89,7 @@ export const StockChart = ({ symbol }: Props) => {
   const prevClose = data?.previousClose ?? quote?.regularMarketPreviousClose;
   const lastPrice = data?.points.at(-1)?.price ?? quote?.regularMarketPrice;
   const isUp = (lastPrice ?? 0) >= (prevClose ?? 0);
+  const change = lastPrice != null && prevClose != null ? lastPrice - prevClose : null;
 
   const chartData = useMemo(() => data?.points ?? [], [data]);
 
