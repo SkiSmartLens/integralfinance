@@ -37,6 +37,7 @@ const Index = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
           <div className="space-y-6 min-w-0">
             <StockChart symbol={activeSymbol} />
+            <StockSummary symbol={activeSymbol} />
             <section>
               <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                 <h2 className="text-2xl font-bold">
