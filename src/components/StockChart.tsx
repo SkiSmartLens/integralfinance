@@ -330,19 +330,8 @@ export const StockChart = ({ symbol }: Props) => {
                   dot={false}
                 />
               )}
-              {chartType === "candle" && (
-                <Bar dataKey="high" shape={<Candle />} isAnimationActive={false}>
-                  {chartData.map((_, i) => (
-                    <Cell key={i} />
-                  ))}
-                </Bar>
-              )}
-              {chartType === "bar" && (
-                <Bar dataKey="high" shape={<OHLCBar />} isAnimationActive={false}>
-                  {chartData.map((_, i) => (
-                    <Cell key={i} />
-                  ))}
-                </Bar>
+              {(chartType === "candle" || chartType === "bar") && (
+                <Customized component={makeOhlcLayer(chartType, chartData)} />
               )}
             </ComposedChart>
           </ResponsiveContainer>
