@@ -1,13 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { Header } from "@/components/Header";
 import { Ticker } from "@/components/Ticker";
 import { CategoryNav } from "@/components/CategoryNav";
 import { StockChart } from "@/components/StockChart";
-import { StockSummary } from "@/components/StockSummary";
-import { NewsList } from "@/components/NewsList";
 import { Watchlist } from "@/components/Watchlist";
 import { CATEGORIES, TRENDING } from "@/lib/categories";
 import { cn } from "@/lib/utils";
+
+const StockSummary = lazy(() =>
+  import("@/components/StockSummary").then((m) => ({ default: m.StockSummary }))
+);
+const NewsList = lazy(() =>
+  import("@/components/NewsList").then((m) => ({ default: m.NewsList }))
+);
 
 const Index = () => {
   const [activeCat, setActiveCat] = useState("news");
