@@ -70,10 +70,12 @@ const Index = () => {
                   ))}
                 </div>
               </div>
-              <NewsList
-                key={newsTab + ":" + (newsTab === "my" ? myNewsQuery : cat.query)}
-                query={newsTab === "my" ? myNewsQuery : cat.query}
-              />
+              <Suspense fallback={<div className="text-muted-foreground py-8 text-center">Loading stories…</div>}>
+                <NewsList
+                  key={newsTab + ":" + (newsTab === "my" ? myNewsQuery : cat.query)}
+                  query={newsTab === "my" ? myNewsQuery : cat.query}
+                />
+              </Suspense>
             </section>
           </div>
           <aside className="space-y-6">
