@@ -77,20 +77,23 @@ export async function fetchChart(
   const highs: (number | null)[] = q.high ?? [];
   const lows: (number | null)[] = q.low ?? [];
   const vols: (number | null)[] = q.volume ?? [];
-  const points: ChartPoint[] = ts
-    .map((t, i) => {
+  const points: ChartPoint[] = ts.flatMap((t, i) => {
       const close = finiteNumber(closes[i]);
+      if (close == null) return [];
+      const open = finiteNumber(opens[i]);
+      const high = finiteNumber(highs[i]);
+      const low = finiteNumber(lows[i]);
+      const volume = finiteNumber(vols[i]);
       return {
         t: t * 1000,
         price: close,
-        open: finiteNumber(opens[i]),
-        high: finiteNumber(highs[i]),
-        low: finiteNumber(lows[i]),
+        ...(open != null ? { open } : {}),
+        ...(high != null ? { high } : {}),
+        ...(low != null ? { low } : {}),
         close,
-        volume: finiteNumber(vols[i]),
+        ...(volume != null ? { volume } : {}),
       };
-    })
-    .filter((p): p is ChartPoint => typeof p.price === "number");
+    });
   return {
     symbol,
     points,
