@@ -62,7 +62,7 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
   }, [symbol, visible]);
 
   return (
-    <section className="bg-card border rounded-lg p-4 md:p-6">
+    <section ref={ref} className="bg-card border rounded-lg p-4 md:p-6">
       <div className="flex items-center gap-2 mb-4">
         <Sparkles className="w-5 h-5 text-primary" />
         <h3 className="text-lg font-bold">AI Insights · {symbol}</h3>
