@@ -27,10 +27,10 @@ const RANGES: { label: string; range: string; interval: string }[] = [
 
 // Intraday interval presets used for candle mode
 const INTRADAY: { label: string; range: string; interval: string }[] = [
-  { label: "5m", range: "5d", interval: "5m" },
-  { label: "15m", range: "1mo", interval: "15m" },
-  { label: "30m", range: "1mo", interval: "30m" },
-  { label: "1h", range: "3mo", interval: "60m" },
+  { label: "5m", range: "1d", interval: "5m" },
+  { label: "15m", range: "1d", interval: "15m" },
+  { label: "30m", range: "1d", interval: "30m" },
+  { label: "1h", range: "5d", interval: "60m" },
 ];
 
 type ChartType = "mountain" | "candle";
@@ -123,8 +123,11 @@ export const StockChart = ({ symbol }: Props) => {
 
   const formatTime = (t: number) => {
     const d = new Date(t);
-    if (r.range === "1d" || r.range === "5d") {
+    if (r.range === "1d") {
       return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    }
+    if (r.range === "5d") {
+      return d.toLocaleDateString([], { weekday: "short", hour: "numeric" });
     }
     if (r.range === "1mo" || r.range === "6mo" || r.range === "ytd") {
       return d.toLocaleDateString([], { month: "short", day: "numeric" });
