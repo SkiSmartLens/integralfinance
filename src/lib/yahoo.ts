@@ -59,6 +59,9 @@ export interface ChartResult {
   meta?: any;
 }
 
+const finiteNumber = (value: unknown): number | undefined =>
+  typeof value === "number" && Number.isFinite(value) ? value : undefined;
+
 export async function fetchChart(
   symbol: string,
   range: string,
@@ -74,17 +77,23 @@ export async function fetchChart(
   const highs: (number | null)[] = q.high ?? [];
   const lows: (number | null)[] = q.low ?? [];
   const vols: (number | null)[] = q.volume ?? [];
-  const points: ChartPoint[] = ts
-    .map((t, i) => ({
-      t: t * 1000,
-      price: closes[i] as number,
-      open: opens[i] ?? undefined,
-      high: highs[i] ?? undefined,
-      low: lows[i] ?? undefined,
-      close: closes[i] ?? undefined,
-      volume: vols[i] ?? undefined,
-    }))
-    .filter((p) => typeof p.price === "number" && !isNaN(p.price));
+  const points: ChartPoint[] = ts.flatMap((t, i) => {
+      const close = finiteNumber(closes[i]);
+      if (close == null) return [];
+      const open = finiteNumber(opens[i]);
+      const high = finiteNumber(highs[i]);
+      const low = finiteNumber(lows[i]);
+      const volume = finiteNumber(vols[i]);
+      return {
+        t: t * 1000,
+        price: close,
+        ...(open != null ? { open } : {}),
+        ...(high != null ? { high } : {}),
+        ...(low != null ? { low } : {}),
+        close,
+        ...(volume != null ? { volume } : {}),
+      };
+    });
   return {
     symbol,
     points,

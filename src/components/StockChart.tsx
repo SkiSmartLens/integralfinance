@@ -27,10 +27,10 @@ const RANGES: { label: string; range: string; interval: string }[] = [
 
 // Intraday interval presets used for candle mode
 const INTRADAY: { label: string; range: string; interval: string }[] = [
-  { label: "5m", range: "5d", interval: "5m" },
-  { label: "15m", range: "1mo", interval: "15m" },
-  { label: "30m", range: "1mo", interval: "30m" },
-  { label: "1h", range: "3mo", interval: "60m" },
+  { label: "5m", range: "1d", interval: "5m" },
+  { label: "15m", range: "1d", interval: "15m" },
+  { label: "30m", range: "1d", interval: "30m" },
+  { label: "1h", range: "5d", interval: "60m" },
 ];
 
 type ChartType = "mountain" | "candle";
@@ -49,7 +49,7 @@ const makeCandleLayer = (data: ChartPoint[]) => (props: any) => {
   const xScale = xAxis.scale;
   const yScale = yAxis.scale;
   const bandW = typeof xScale.bandwidth === "function" ? xScale.bandwidth() : (xAxis.width || 0) / Math.max(1, data.length);
-  const w = Math.max(2, Math.min(14, bandW * 0.75));
+  const w = Math.max(2, Math.min(12, bandW * 0.58));
   return (
     <g>
       {data.map((d, i) => {
@@ -70,16 +70,9 @@ const makeCandleLayer = (data: ChartPoint[]) => (props: any) => {
         const color = up ? "hsl(var(--chart-up))" : "hsl(var(--chart-down))";
         const bodyTop = Math.min(yO, yC);
         const bodyH = Math.max(1, Math.abs(yC - yO));
-        // Wicks only extend from the body edges to wick tips
-        const wickTop = Math.min(yH, bodyTop);
-        const wickBottom = Math.max(yL, bodyTop + bodyH);
         return (
           <g key={i}>
-            {/* Upper wick */}
-            <line x1={cx} x2={cx} y1={wickTop} y2={bodyTop} stroke={color} strokeWidth={1} />
-            {/* Lower wick */}
-            <line x1={cx} x2={cx} y1={bodyTop + bodyH} y2={wickBottom} stroke={color} strokeWidth={1} />
-            {/* Candle body */}
+            <line x1={cx} x2={cx} y1={yH} y2={yL} stroke={color} strokeWidth={1.25} strokeLinecap="round" />
             <rect x={cx - w / 2} y={bodyTop} width={w} height={bodyH} fill={color} stroke={color} strokeWidth={0.5} />
           </g>
         );
@@ -116,16 +109,25 @@ export const StockChart = ({ symbol }: Props) => {
   const chartData = useMemo(() => {
     const pts = data?.points ?? [];
     if (chartType === "candle") {
-      // Drop bars without OHLC so we don't render empty/black gaps
-      return pts.filter((p) => p.open != null && p.close != null && p.high != null && p.low != null);
+      return pts.filter(
+        (p) =>
+          [p.open, p.close, p.high, p.low].every(
+            (v) => typeof v === "number" && Number.isFinite(v)
+          ) &&
+          p.high! >= Math.max(p.open!, p.close!, p.low!) &&
+          p.low! <= Math.min(p.open!, p.close!, p.high!)
+      );
     }
     return pts;
   }, [data, chartType]);
 
   const formatTime = (t: number) => {
     const d = new Date(t);
-    if (r.range === "1d" || r.range === "5d") {
+    if (r.range === "1d") {
       return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    }
+    if (r.range === "5d") {
+      return d.toLocaleDateString([], { weekday: "short", hour: "numeric" });
     }
     if (r.range === "1mo" || r.range === "6mo" || r.range === "ytd") {
       return d.toLocaleDateString([], { month: "short", day: "numeric" });
