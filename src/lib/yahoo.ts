@@ -59,6 +59,9 @@ export interface ChartResult {
   meta?: any;
 }
 
+const finiteNumber = (value: unknown): number | undefined =>
+  typeof value === "number" && Number.isFinite(value) ? value : undefined;
+
 export async function fetchChart(
   symbol: string,
   range: string,
@@ -75,16 +78,19 @@ export async function fetchChart(
   const lows: (number | null)[] = q.low ?? [];
   const vols: (number | null)[] = q.volume ?? [];
   const points: ChartPoint[] = ts
-    .map((t, i) => ({
-      t: t * 1000,
-      price: closes[i] as number,
-      open: opens[i] ?? undefined,
-      high: highs[i] ?? undefined,
-      low: lows[i] ?? undefined,
-      close: closes[i] ?? undefined,
-      volume: vols[i] ?? undefined,
-    }))
-    .filter((p) => typeof p.price === "number" && !isNaN(p.price));
+    .map((t, i) => {
+      const close = finiteNumber(closes[i]);
+      return {
+        t: t * 1000,
+        price: close,
+        open: finiteNumber(opens[i]),
+        high: finiteNumber(highs[i]),
+        low: finiteNumber(lows[i]),
+        close,
+        volume: finiteNumber(vols[i]),
+      };
+    })
+    .filter((p): p is ChartPoint => typeof p.price === "number");
   return {
     symbol,
     points,
