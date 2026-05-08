@@ -1,13 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { Header } from "@/components/Header";
 import { Ticker } from "@/components/Ticker";
 import { CategoryNav } from "@/components/CategoryNav";
 import { StockChart } from "@/components/StockChart";
-import { StockSummary } from "@/components/StockSummary";
-import { NewsList } from "@/components/NewsList";
 import { Watchlist } from "@/components/Watchlist";
 import { CATEGORIES, TRENDING } from "@/lib/categories";
 import { cn } from "@/lib/utils";
+
+const StockSummary = lazy(() =>
+  import("@/components/StockSummary").then((m) => ({ default: m.StockSummary }))
+);
+const NewsList = lazy(() =>
+  import("@/components/NewsList").then((m) => ({ default: m.NewsList }))
+);
 
 const Index = () => {
   const [activeCat, setActiveCat] = useState("news");
@@ -37,7 +42,9 @@ const Index = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
           <div className="space-y-6 min-w-0">
             <StockChart symbol={activeSymbol} />
-            <StockSummary symbol={activeSymbol} />
+            <Suspense fallback={<div className="h-32" />}>
+              <StockSummary symbol={activeSymbol} />
+            </Suspense>
             <section>
               <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                 <h2 className="text-2xl font-bold">
@@ -63,10 +70,12 @@ const Index = () => {
                   ))}
                 </div>
               </div>
-              <NewsList
-                key={newsTab + ":" + (newsTab === "my" ? myNewsQuery : cat.query)}
-                query={newsTab === "my" ? myNewsQuery : cat.query}
-              />
+              <Suspense fallback={<div className="text-muted-foreground py-8 text-center">Loading stories…</div>}>
+                <NewsList
+                  key={newsTab + ":" + (newsTab === "my" ? myNewsQuery : cat.query)}
+                  query={newsTab === "my" ? myNewsQuery : cat.query}
+                />
+              </Suspense>
             </section>
           </div>
           <aside className="space-y-6">
