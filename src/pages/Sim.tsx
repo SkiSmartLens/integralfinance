@@ -97,15 +97,32 @@ const Sim = () => {
   const startCash = games.find((g) => g.id === activeGameId)?.starting_cash ?? 100000;
   const totalReturnPct = ((equity - Number(startCash)) / Number(startCash)) * 100;
 
-  const createGame = async (name: string, cash: number) => {
-    if (!userId) return;
-    const { data, error } = await supabase.from("games")
-      .insert({ name, starting_cash: cash, created_by: userId }).select().single();
-    if (error) return toast({ title: "Failed", description: error.message, variant: "destructive" });
-    await supabase.from("game_members").insert({ game_id: data.id, user_id: userId, cash });
-    setShowCreate(false);
-    setActiveGameId(data.id);
-    reloadGames();
+  const createGame = async (name: string, cash: number, commission: number, allowShort: boolean) => {
+    if (!userId) return toast({ title: "Not signed in", variant: "destructive" });
+    if (!name.trim()) return toast({ title: "Name required", variant: "destructive" });
+    if (!Number.isFinite(cash) || cash <= 0) return toast({ title: "Starting cash must be positive", variant: "destructive" });
+    try {
+      const { data, error } = await supabase.from("games")
+        .insert({ name: name.trim(), starting_cash: cash, commission, allow_short: allowShort, created_by: userId })
+        .select().single();
+      if (error || !data) {
+        console.error("create game error", error);
+        return toast({ title: "Failed to create game", description: error?.message ?? "Unknown error", variant: "destructive" });
+      }
+      const { error: jErr } = await supabase.from("game_members")
+        .insert({ game_id: data.id, user_id: userId, cash });
+      if (jErr) {
+        console.error("join own game error", jErr);
+        return toast({ title: "Game created but join failed", description: jErr.message, variant: "destructive" });
+      }
+      toast({ title: "Game created", description: `Code: ${data.join_code}` });
+      setShowCreate(false);
+      setActiveGameId(data.id);
+      reloadGames();
+    } catch (e: any) {
+      console.error(e);
+      toast({ title: "Failed to create game", description: e?.message ?? "Unexpected error", variant: "destructive" });
+    }
   };
 
   const joinGame = async (code: string) => {
