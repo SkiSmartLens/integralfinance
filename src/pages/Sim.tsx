@@ -11,6 +11,7 @@ interface Game { id: string; name: string; starting_cash: number; commission: nu
 interface Member { id: string; game_id: string; user_id: string; cash: number; }
 interface Position { id: string; symbol: string; shares: number; avg_cost: number; }
 interface Tx { id: string; symbol: string; side: string; shares: number; price: number; created_at: string; }
+interface Order { id: string; symbol: string; side: string; order_type: string; shares: number; limit_price: number | null; stop_price: number | null; status: string; created_at: string; }
 
 const Sim = () => {
   const nav = useNavigate();
