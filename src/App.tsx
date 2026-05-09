@@ -9,6 +9,7 @@ import Index from "./pages/Index.tsx";
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 const Auth = lazy(() => import("./pages/Auth.tsx"));
 const Sim = lazy(() => import("./pages/Sim.tsx"));
+const Screener = lazy(() => import("./pages/Screener.tsx"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
