@@ -177,6 +177,13 @@ const Sim = () => {
     reloadGames();
   };
 
+  const cancelOrder = async (id: string) => {
+    const { error } = await supabase.from("orders").update({ status: "cancelled" }).eq("id", id);
+    if (error) return toast({ title: "Cancel failed", description: error.message, variant: "destructive" });
+    toast({ title: "Order cancelled" });
+    reloadPortfolio();
+  };
+
   const signOut = async () => { await supabase.auth.signOut(); nav("/auth"); };
 
   return (
