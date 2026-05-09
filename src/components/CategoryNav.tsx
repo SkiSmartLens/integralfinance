@@ -28,8 +28,15 @@ export const CategoryNav = ({ active, onChange }: Props) => {
             </button>
           ))}
           <Link
+            to="/screener"
+            className="ml-auto flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap bg-muted hover:bg-muted/70"
+          >
+            <Filter className="w-4 h-4" />
+            Screener
+          </Link>
+          <Link
             to="/sim"
-            className="ml-auto flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap bg-primary text-primary-foreground hover:opacity-90"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap bg-primary text-primary-foreground hover:opacity-90"
           >
             <LineChart className="w-4 h-4" />
             Simulator
