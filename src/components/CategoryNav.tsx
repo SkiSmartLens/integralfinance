@@ -1,7 +1,7 @@
 import { CATEGORIES } from "@/lib/categories";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
-import { LineChart } from "lucide-react";
+import { LineChart, Filter } from "lucide-react";
 
 interface Props {
   active: string;
