@@ -118,6 +118,27 @@ export async function fetchNews(query = "stock market"): Promise<NewsItem[]> {
   return data?.news ?? [];
 }
 
+export interface ScreenerQuote {
+  symbol: string;
+  shortName?: string;
+  longName?: string;
+  regularMarketPrice?: number;
+  regularMarketChange?: number;
+  regularMarketChangePercent?: number;
+  regularMarketVolume?: number;
+  marketCap?: number;
+  averageDailyVolume3Month?: number;
+  trailingPE?: number;
+  fiftyTwoWeekLow?: number;
+  fiftyTwoWeekHigh?: number;
+  exchange?: string;
+}
+
+export async function fetchScreener(scrId: string, count = 25): Promise<ScreenerQuote[]> {
+  const data = await callProxy({ kind: "screener", scrId, count: String(count) });
+  return data?.finance?.result?.[0]?.quotes ?? [];
+}
+
 export function formatNumber(n?: number, opts?: Intl.NumberFormatOptions) {
   if (n == null || isNaN(n)) return "—";
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2, ...opts }).format(n);
