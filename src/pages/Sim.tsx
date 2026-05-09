@@ -221,11 +221,13 @@ const Sim = () => {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <Stat label="Cash" value={`$${formatNumber(Number(activeMember.cash))}`} />
               <Stat label="Holdings" value={`$${formatNumber(portfolioValue)}`} />
               <Stat label="Equity" value={`$${formatNumber(equity)}`} />
-              <Stat label="Return" value={`${totalReturnPct >= 0 ? "+" : ""}${formatNumber(totalReturnPct)}%`}
+              <Stat label="Day P&L" value={`${dayPL >= 0 ? "+" : ""}$${formatNumber(dayPL)}`}
+                cls={dayPL >= 0 ? "text-up" : "text-down"} />
+              <Stat label="Total Return" value={`${totalReturnPct >= 0 ? "+" : ""}${formatNumber(totalReturnPct)}%`}
                 cls={totalReturnPct >= 0 ? "text-up" : "text-down"} />
             </div>
 
