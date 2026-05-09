@@ -21,7 +21,9 @@ const Sim = () => {
   const [activeGameId, setActiveGameId] = useState<string | null>(null);
   const [positions, setPositions] = useState<Position[]>([]);
   const [txs, setTxs] = useState<Tx[]>([]);
+  const [pending, setPending] = useState<Order[]>([]);
   const [prices, setPrices] = useState<Record<string, number>>({});
+  const [prevCloses, setPrevCloses] = useState<Record<string, number>>({});
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
 
