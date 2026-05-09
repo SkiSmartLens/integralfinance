@@ -392,16 +392,26 @@ const Modal = ({ children, onClose }: any) => (
   </div>
 );
 
-const CreateGameModal = ({ onClose, onCreate }: { onClose: () => void; onCreate: (n: string, c: number) => void }) => {
+const CreateGameModal = ({ onClose, onCreate }: { onClose: () => void; onCreate: (n: string, c: number, commission: number, allowShort: boolean) => void }) => {
   const [name, setName] = useState("My Game");
   const [cash, setCash] = useState(100000);
+  const [commission, setCommission] = useState(0);
+  const [allowShort, setAllowShort] = useState(false);
   return (
     <Modal onClose={onClose}>
       <h3 className="font-bold text-lg mb-3">New game</h3>
       <div className="space-y-3">
+        <label className="block text-xs text-muted-foreground">Game name</label>
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" className="w-full px-3 py-2 bg-muted rounded outline-none" />
-        <input type="number" value={cash} onChange={(e) => setCash(Number(e.target.value))} placeholder="Starting cash" className="w-full px-3 py-2 bg-muted rounded outline-none" />
-        <button onClick={() => onCreate(name, cash)} className="w-full py-2 rounded bg-primary text-primary-foreground font-semibold">Create</button>
+        <label className="block text-xs text-muted-foreground">Starting cash ($)</label>
+        <input type="number" min={1000} step={1000} value={cash} onChange={(e) => setCash(Number(e.target.value))} className="w-full px-3 py-2 bg-muted rounded outline-none" />
+        <label className="block text-xs text-muted-foreground">Commission per trade ($)</label>
+        <input type="number" min={0} step={0.5} value={commission} onChange={(e) => setCommission(Number(e.target.value))} className="w-full px-3 py-2 bg-muted rounded outline-none" />
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={allowShort} onChange={(e) => setAllowShort(e.target.checked)} />
+          Allow short selling
+        </label>
+        <button onClick={() => onCreate(name, cash, commission, allowShort)} className="w-full py-2 rounded bg-primary text-primary-foreground font-semibold">Create</button>
       </div>
     </Modal>
   );
