@@ -89,8 +89,13 @@ const Sim = () => {
       const qs = await fetchQuotes(syms);
       if (!alive) return;
       const m: Record<string, number> = {};
-      qs.forEach((q) => { if (q.regularMarketPrice) m[q.symbol] = q.regularMarketPrice; });
+      const pc: Record<string, number> = {};
+      qs.forEach((q) => {
+        if (q.regularMarketPrice) m[q.symbol] = q.regularMarketPrice;
+        if (q.regularMarketPreviousClose) pc[q.symbol] = q.regularMarketPreviousClose;
+      });
       setPrices(m);
+      setPrevCloses(pc);
     };
     load();
     const t = setInterval(load, 15000);
@@ -98,6 +103,11 @@ const Sim = () => {
   }, [positions.map((p) => p.symbol).join(",")]);
 
   const portfolioValue = positions.reduce((sum, p) => sum + (prices[p.symbol] ?? p.avg_cost) * Number(p.shares), 0);
+  const dayPL = positions.reduce((sum, p) => {
+    const last = prices[p.symbol] ?? Number(p.avg_cost);
+    const prev = prevCloses[p.symbol] ?? last;
+    return sum + (last - prev) * Number(p.shares);
+  }, 0);
   const equity = (Number(activeMember?.cash ?? 0)) + portfolioValue;
   const startCash = games.find((g) => g.id === activeGameId)?.starting_cash ?? 100000;
   const totalReturnPct = ((equity - Number(startCash)) / Number(startCash)) * 100;
