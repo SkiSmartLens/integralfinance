@@ -319,6 +319,42 @@ const Sim = () => {
             <Leaderboard gameId={activeGameId!} />
 
             <section className="bg-card border rounded-lg p-4">
+              <h3 className="font-bold mb-3">Pending orders</h3>
+              {pending.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">No queued or working orders.</p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="text-xs text-muted-foreground border-b">
+                    <tr>
+                      <th className="text-left py-2">Placed</th>
+                      <th className="text-left">Symbol</th>
+                      <th>Side</th>
+                      <th>Type</th>
+                      <th className="text-right">Shares</th>
+                      <th className="text-right">Trigger</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pending.map((o) => (
+                      <tr key={o.id} className="border-b last:border-0">
+                        <td className="py-2 text-muted-foreground">{new Date(o.created_at).toLocaleString()}</td>
+                        <td className="font-semibold">{o.symbol}</td>
+                        <td className={cn("uppercase text-xs font-semibold", o.side === "buy" ? "text-up" : "text-down")}>{o.side}</td>
+                        <td className="uppercase text-xs">{o.order_type}</td>
+                        <td className="text-right tabular-nums">{o.shares}</td>
+                        <td className="text-right tabular-nums">{o.limit_price ?? o.stop_price ?? "—"}</td>
+                        <td className="text-right">
+                          <button onClick={() => cancelOrder(o.id)} className="text-xs px-2 py-1 rounded bg-muted hover:bg-down hover:text-white">Cancel</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </section>
+
+            <section className="bg-card border rounded-lg p-4">
               <h3 className="font-bold mb-3">Recent transactions</h3>
               {txs.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-4 text-center">No trades yet.</p>
