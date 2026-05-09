@@ -68,12 +68,14 @@ const Sim = () => {
 
   const reloadPortfolio = async () => {
     if (!activeMember) return;
-    const [{ data: pos }, { data: tx }] = await Promise.all([
+    const [{ data: pos }, { data: tx }, { data: ords }] = await Promise.all([
       supabase.from("positions").select("*").eq("member_id", activeMember.id),
       supabase.from("transactions").select("*").eq("member_id", activeMember.id).order("created_at", { ascending: false }).limit(20),
+      supabase.from("orders").select("*").eq("member_id", activeMember.id).eq("status", "pending").order("created_at", { ascending: false }),
     ]);
     setPositions((pos ?? []) as Position[]);
     setTxs((tx ?? []) as Tx[]);
+    setPending((ords ?? []) as Order[]);
   };
 
   useEffect(() => { reloadPortfolio(); /* eslint-disable-next-line */ }, [activeMember?.id]);
