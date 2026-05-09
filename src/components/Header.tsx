@@ -1,13 +1,14 @@
 import { Search, TrendingUp } from "lucide-react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 interface Props {
-  onSearch: (sym: string) => void;
+  onSearch?: (sym: string) => void;
 }
 
 export const Header = ({ onSearch }: Props) => {
   const [q, setQ] = useState("");
+  const nav = useNavigate();
   return (
     <header className="bg-card border-b">
       <div className="container mx-auto px-4 py-3 flex items-center gap-4">
@@ -18,7 +19,10 @@ export const Header = ({ onSearch }: Props) => {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (q.trim()) onSearch(q.trim().toUpperCase());
+            const sym = q.trim().toUpperCase();
+            if (!sym) return;
+            if (onSearch) onSearch(sym);
+            else nav(`/?symbol=${sym}`);
           }}
           className="flex-1 max-w-xl relative"
         >

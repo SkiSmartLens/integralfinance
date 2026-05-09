@@ -113,6 +113,19 @@ Deno.serve(async (req) => {
       return new Response(body, { ...jsonHeaders(), status: r.ok ? 200 : r.status });
     }
 
+    if (kind === "screener") {
+      const scrId = url.searchParams.get("scrId") ?? "day_gainers";
+      const count = url.searchParams.get("count") ?? "25";
+      const cacheKey = `scr:${scrId}:${count}`;
+      const cached = getCache(cacheKey);
+      if (cached) return new Response(cached, jsonHeaders());
+      const upstream = `https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved?scrIds=${encodeURIComponent(scrId)}&count=${encodeURIComponent(count)}`;
+      const r = await yahooFetch(upstream);
+      const body = await r.text();
+      if (r.ok) setCache(cacheKey, body, 60000);
+      return new Response(body, { ...jsonHeaders(), status: r.ok ? 200 : r.status });
+    }
+
     if (kind === "search") {
       const q = url.searchParams.get("q") ?? "stock market";
       const newsCount = url.searchParams.get("newsCount") ?? "20";

@@ -11,6 +11,7 @@ interface Game { id: string; name: string; starting_cash: number; commission: nu
 interface Member { id: string; game_id: string; user_id: string; cash: number; }
 interface Position { id: string; symbol: string; shares: number; avg_cost: number; }
 interface Tx { id: string; symbol: string; side: string; shares: number; price: number; created_at: string; }
+interface Order { id: string; symbol: string; side: string; order_type: string; shares: number; limit_price: number | null; stop_price: number | null; status: string; created_at: string; }
 
 const Sim = () => {
   const nav = useNavigate();
@@ -20,7 +21,9 @@ const Sim = () => {
   const [activeGameId, setActiveGameId] = useState<string | null>(null);
   const [positions, setPositions] = useState<Position[]>([]);
   const [txs, setTxs] = useState<Tx[]>([]);
+  const [pending, setPending] = useState<Order[]>([]);
   const [prices, setPrices] = useState<Record<string, number>>({});
+  const [prevCloses, setPrevCloses] = useState<Record<string, number>>({});
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
 
@@ -65,12 +68,14 @@ const Sim = () => {
 
   const reloadPortfolio = async () => {
     if (!activeMember) return;
-    const [{ data: pos }, { data: tx }] = await Promise.all([
+    const [{ data: pos }, { data: tx }, { data: ords }] = await Promise.all([
       supabase.from("positions").select("*").eq("member_id", activeMember.id),
       supabase.from("transactions").select("*").eq("member_id", activeMember.id).order("created_at", { ascending: false }).limit(20),
+      supabase.from("orders").select("*").eq("member_id", activeMember.id).eq("status", "pending").order("created_at", { ascending: false }),
     ]);
     setPositions((pos ?? []) as Position[]);
     setTxs((tx ?? []) as Tx[]);
+    setPending((ords ?? []) as Order[]);
   };
 
   useEffect(() => { reloadPortfolio(); /* eslint-disable-next-line */ }, [activeMember?.id]);
@@ -84,8 +89,13 @@ const Sim = () => {
       const qs = await fetchQuotes(syms);
       if (!alive) return;
       const m: Record<string, number> = {};
-      qs.forEach((q) => { if (q.regularMarketPrice) m[q.symbol] = q.regularMarketPrice; });
+      const pc: Record<string, number> = {};
+      qs.forEach((q) => {
+        if (q.regularMarketPrice) m[q.symbol] = q.regularMarketPrice;
+        if (q.regularMarketPreviousClose) pc[q.symbol] = q.regularMarketPreviousClose;
+      });
       setPrices(m);
+      setPrevCloses(pc);
     };
     load();
     const t = setInterval(load, 15000);
@@ -93,19 +103,41 @@ const Sim = () => {
   }, [positions.map((p) => p.symbol).join(",")]);
 
   const portfolioValue = positions.reduce((sum, p) => sum + (prices[p.symbol] ?? p.avg_cost) * Number(p.shares), 0);
+  const dayPL = positions.reduce((sum, p) => {
+    const last = prices[p.symbol] ?? Number(p.avg_cost);
+    const prev = prevCloses[p.symbol] ?? last;
+    return sum + (last - prev) * Number(p.shares);
+  }, 0);
   const equity = (Number(activeMember?.cash ?? 0)) + portfolioValue;
   const startCash = games.find((g) => g.id === activeGameId)?.starting_cash ?? 100000;
   const totalReturnPct = ((equity - Number(startCash)) / Number(startCash)) * 100;
 
-  const createGame = async (name: string, cash: number) => {
-    if (!userId) return;
-    const { data, error } = await supabase.from("games")
-      .insert({ name, starting_cash: cash, created_by: userId }).select().single();
-    if (error) return toast({ title: "Failed", description: error.message, variant: "destructive" });
-    await supabase.from("game_members").insert({ game_id: data.id, user_id: userId, cash });
-    setShowCreate(false);
-    setActiveGameId(data.id);
-    reloadGames();
+  const createGame = async (name: string, cash: number, commission: number, allowShort: boolean) => {
+    if (!userId) return toast({ title: "Not signed in", variant: "destructive" });
+    if (!name.trim()) return toast({ title: "Name required", variant: "destructive" });
+    if (!Number.isFinite(cash) || cash <= 0) return toast({ title: "Starting cash must be positive", variant: "destructive" });
+    try {
+      const { data, error } = await supabase.from("games")
+        .insert({ name: name.trim(), starting_cash: cash, commission, allow_short: allowShort, created_by: userId })
+        .select().single();
+      if (error || !data) {
+        console.error("create game error", error);
+        return toast({ title: "Failed to create game", description: error?.message ?? "Unknown error", variant: "destructive" });
+      }
+      const { error: jErr } = await supabase.from("game_members")
+        .insert({ game_id: data.id, user_id: userId, cash });
+      if (jErr) {
+        console.error("join own game error", jErr);
+        return toast({ title: "Game created but join failed", description: jErr.message, variant: "destructive" });
+      }
+      toast({ title: "Game created", description: `Code: ${data.join_code}` });
+      setShowCreate(false);
+      setActiveGameId(data.id);
+      reloadGames();
+    } catch (e: any) {
+      console.error(e);
+      toast({ title: "Failed to create game", description: e?.message ?? "Unexpected error", variant: "destructive" });
+    }
   };
 
   const joinGame = async (code: string) => {
@@ -143,6 +175,13 @@ const Sim = () => {
     });
     reloadPortfolio();
     reloadGames();
+  };
+
+  const cancelOrder = async (id: string) => {
+    const { error } = await supabase.from("orders").update({ status: "cancelled" }).eq("id", id);
+    if (error) return toast({ title: "Cancel failed", description: error.message, variant: "destructive" });
+    toast({ title: "Order cancelled" });
+    reloadPortfolio();
   };
 
   const signOut = async () => { await supabase.auth.signOut(); nav("/auth"); };
@@ -189,11 +228,13 @@ const Sim = () => {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <Stat label="Cash" value={`$${formatNumber(Number(activeMember.cash))}`} />
               <Stat label="Holdings" value={`$${formatNumber(portfolioValue)}`} />
               <Stat label="Equity" value={`$${formatNumber(equity)}`} />
-              <Stat label="Return" value={`${totalReturnPct >= 0 ? "+" : ""}${formatNumber(totalReturnPct)}%`}
+              <Stat label="Day P&L" value={`${dayPL >= 0 ? "+" : ""}$${formatNumber(dayPL)}`}
+                cls={dayPL >= 0 ? "text-up" : "text-down"} />
+              <Stat label="Total Return" value={`${totalReturnPct >= 0 ? "+" : ""}${formatNumber(totalReturnPct)}%`}
                 cls={totalReturnPct >= 0 ? "text-up" : "text-down"} />
             </div>
 
@@ -276,6 +317,42 @@ const Sim = () => {
             </div>
 
             <Leaderboard gameId={activeGameId!} />
+
+            <section className="bg-card border rounded-lg p-4">
+              <h3 className="font-bold mb-3">Pending orders</h3>
+              {pending.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">No queued or working orders.</p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="text-xs text-muted-foreground border-b">
+                    <tr>
+                      <th className="text-left py-2">Placed</th>
+                      <th className="text-left">Symbol</th>
+                      <th>Side</th>
+                      <th>Type</th>
+                      <th className="text-right">Shares</th>
+                      <th className="text-right">Trigger</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pending.map((o) => (
+                      <tr key={o.id} className="border-b last:border-0">
+                        <td className="py-2 text-muted-foreground">{new Date(o.created_at).toLocaleString()}</td>
+                        <td className="font-semibold">{o.symbol}</td>
+                        <td className={cn("uppercase text-xs font-semibold", o.side === "buy" ? "text-up" : "text-down")}>{o.side}</td>
+                        <td className="uppercase text-xs">{o.order_type}</td>
+                        <td className="text-right tabular-nums">{o.shares}</td>
+                        <td className="text-right tabular-nums">{o.limit_price ?? o.stop_price ?? "—"}</td>
+                        <td className="text-right">
+                          <button onClick={() => cancelOrder(o.id)} className="text-xs px-2 py-1 rounded bg-muted hover:bg-down hover:text-white">Cancel</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </section>
 
             <section className="bg-card border rounded-lg p-4">
               <h3 className="font-bold mb-3">Recent transactions</h3>
@@ -375,16 +452,26 @@ const Modal = ({ children, onClose }: any) => (
   </div>
 );
 
-const CreateGameModal = ({ onClose, onCreate }: { onClose: () => void; onCreate: (n: string, c: number) => void }) => {
+const CreateGameModal = ({ onClose, onCreate }: { onClose: () => void; onCreate: (n: string, c: number, commission: number, allowShort: boolean) => void }) => {
   const [name, setName] = useState("My Game");
   const [cash, setCash] = useState(100000);
+  const [commission, setCommission] = useState(0);
+  const [allowShort, setAllowShort] = useState(false);
   return (
     <Modal onClose={onClose}>
       <h3 className="font-bold text-lg mb-3">New game</h3>
       <div className="space-y-3">
+        <label className="block text-xs text-muted-foreground">Game name</label>
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" className="w-full px-3 py-2 bg-muted rounded outline-none" />
-        <input type="number" value={cash} onChange={(e) => setCash(Number(e.target.value))} placeholder="Starting cash" className="w-full px-3 py-2 bg-muted rounded outline-none" />
-        <button onClick={() => onCreate(name, cash)} className="w-full py-2 rounded bg-primary text-primary-foreground font-semibold">Create</button>
+        <label className="block text-xs text-muted-foreground">Starting cash ($)</label>
+        <input type="number" min={1000} step={1000} value={cash} onChange={(e) => setCash(Number(e.target.value))} className="w-full px-3 py-2 bg-muted rounded outline-none" />
+        <label className="block text-xs text-muted-foreground">Commission per trade ($)</label>
+        <input type="number" min={0} step={0.5} value={commission} onChange={(e) => setCommission(Number(e.target.value))} className="w-full px-3 py-2 bg-muted rounded outline-none" />
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={allowShort} onChange={(e) => setAllowShort(e.target.checked)} />
+          Allow short selling
+        </label>
+        <button onClick={() => onCreate(name, cash, commission, allowShort)} className="w-full py-2 rounded bg-primary text-primary-foreground font-semibold">Create</button>
       </div>
     </Modal>
   );
