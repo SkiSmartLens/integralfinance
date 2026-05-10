@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchQuotes } from "@/lib/yahoo";
 import { Sparkles, TrendingUp, TrendingDown, Calendar, Eye } from "lucide-react";
 
 interface Summary {
@@ -11,13 +12,32 @@ interface Summary {
 
 // Cache AI summaries by symbol so re-selecting is instant.
 const summaryCache = new Map<string, Summary>();
+const nameCache = new Map<string, string>();
 
 export const StockSummary = ({ symbol }: { symbol: string }) => {
   const [data, setData] = useState<Summary | null>(summaryCache.get(symbol) ?? null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [visible, setVisible] = useState(false);
+  const [companyName, setCompanyName] = useState<string>(nameCache.get(symbol) ?? "");
   const ref = useRef<HTMLElement | null>(null);
+
+  // Look up the company name for a friendlier heading.
+  useEffect(() => {
+    const cached = nameCache.get(symbol);
+    if (cached) { setCompanyName(cached); return; }
+    setCompanyName("");
+    let alive = true;
+    fetchQuotes([symbol]).then((qs) => {
+      if (!alive) return;
+      const name = qs[0]?.longName || qs[0]?.shortName || "";
+      if (name) {
+        nameCache.set(symbol, name);
+        setCompanyName(name);
+      }
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [symbol]);
 
   // Defer the AI fetch until the section is near the viewport.
   useEffect(() => {
@@ -65,7 +85,7 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
     <section ref={ref} className="bg-card border rounded-lg p-4 md:p-6">
       <div className="flex items-center gap-2 mb-4">
         <Sparkles className="w-5 h-5 text-primary" />
-        <h3 className="text-lg font-bold">AI Insights · {symbol}</h3>
+        <h3 className="text-lg font-bold">AI Insights · {companyName || symbol}</h3>
       </div>
       {loading && <div className="text-sm text-muted-foreground py-4">Analyzing latest signals…</div>}
       {err && <div className="text-sm text-down py-2">{err}</div>}
