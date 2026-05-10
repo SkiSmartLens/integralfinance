@@ -1,9 +1,7 @@
 import { Search, TrendingUp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { fetchSearchQuotes, SearchQuote, formatNumber } from "@/lib/yahoo";
-import { useLiveQuotes } from "@/hooks/useLiveQuotes";
-import { TRENDING } from "@/lib/categories";
+import { fetchSearchQuotes, SearchQuote } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -17,9 +15,6 @@ export const Header = ({ onSearch }: Props) => {
   const [highlight, setHighlight] = useState(0);
   const nav = useNavigate();
   const boxRef = useRef<HTMLDivElement>(null);
-
-  // Mini watchlist in the top bar
-  const { quotes } = useLiveQuotes(TRENDING, 15000);
 
   // Debounced autocomplete
   useEffect(() => {
