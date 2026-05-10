@@ -2,11 +2,11 @@
 import { supabase } from "@/integrations/supabase/client";
 
 const SUPABASE_URL =
-  (import.meta.env.VITE_SUPABASE_URL as string) ??
-  "https://mnoyjhcoogdrcsuvpxkt.supabase.co";
-const ANON = ((import.meta.env.VITE_SUPABASE_ANON_KEY as string) ??
-  (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string) ??
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ub3lqaGNvb2RyY3N1dnB4a3QiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc3NDM4NjE3NSwiZXhwIjoyMDg5OTYyMTc1fQ.ZX6EM53EadD-HwrhZWOjN9waWM_RRdW2EUSwWmCVxcs") as string;
+  (import.meta.env.VITE_SUPABASE_URL as string | undefined) ??
+  "https://oadtpipsbeqiadoluxnq.supabase.co";
+const ANON = ((import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ??
+  (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined) ??
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9hZHRwaXBzYmVxaWFkb2x1eG5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMDUyNDYsImV4cCI6MjA5MzU4MTI0Nn0.k7_W04vpl9Sctg1XhNlSz9abWI--VPk82jD5r-0hFvk") as string;
 const FN_URL = `${SUPABASE_URL}/functions/v1/yahoo-proxy`;
 
 async function callProxy(params: Record<string, string>): Promise<any> {
