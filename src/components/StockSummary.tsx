@@ -19,7 +19,25 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [visible, setVisible] = useState(false);
+  const [companyName, setCompanyName] = useState<string>(nameCache.get(symbol) ?? "");
   const ref = useRef<HTMLElement | null>(null);
+
+  // Look up the company name for a friendlier heading.
+  useEffect(() => {
+    const cached = nameCache.get(symbol);
+    if (cached) { setCompanyName(cached); return; }
+    setCompanyName("");
+    let alive = true;
+    fetchQuotes([symbol]).then((qs) => {
+      if (!alive) return;
+      const name = qs[0]?.longName || qs[0]?.shortName || "";
+      if (name) {
+        nameCache.set(symbol, name);
+        setCompanyName(name);
+      }
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [symbol]);
 
   // Defer the AI fetch until the section is near the viewport.
   useEffect(() => {
