@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchQuotes } from "@/lib/yahoo";
 import { Sparkles, TrendingUp, TrendingDown, Calendar, Eye } from "lucide-react";
 
 interface Summary {
@@ -11,6 +12,7 @@ interface Summary {
 
 // Cache AI summaries by symbol so re-selecting is instant.
 const summaryCache = new Map<string, Summary>();
+const nameCache = new Map<string, string>();
 
 export const StockSummary = ({ symbol }: { symbol: string }) => {
   const [data, setData] = useState<Summary | null>(summaryCache.get(symbol) ?? null);
