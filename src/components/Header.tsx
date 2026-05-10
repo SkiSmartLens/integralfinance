@@ -1,6 +1,10 @@
 import { Search, TrendingUp } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { fetchSearchQuotes, SearchQuote, formatNumber } from "@/lib/yahoo";
+import { useLiveQuotes } from "@/hooks/useLiveQuotes";
+import { TRENDING } from "@/lib/categories";
+import { cn } from "@/lib/utils";
 
 interface Props {
   onSearch?: (sym: string) => void;
@@ -8,32 +12,131 @@ interface Props {
 
 export const Header = ({ onSearch }: Props) => {
   const [q, setQ] = useState("");
+  const [results, setResults] = useState<SearchQuote[]>([]);
+  const [open, setOpen] = useState(false);
+  const [highlight, setHighlight] = useState(0);
   const nav = useNavigate();
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  // Mini watchlist in the top bar
+  const { quotes } = useLiveQuotes(TRENDING, 15000);
+
+  // Debounced autocomplete
+  useEffect(() => {
+    const term = q.trim();
+    if (!term) { setResults([]); return; }
+    const handle = setTimeout(async () => {
+      try {
+        const r = await fetchSearchQuotes(term, 8);
+        setResults(r.filter((x) => x.symbol));
+        setHighlight(0);
+      } catch { /* ignore */ }
+    }, 180);
+    return () => clearTimeout(handle);
+  }, [q]);
+
+  // Click outside closes
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      if (!boxRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  const pick = (sym: string) => {
+    const s = sym.toUpperCase();
+    setQ("");
+    setOpen(false);
+    setResults([]);
+    if (onSearch) onSearch(s);
+    else nav(`/?symbol=${s}`);
+  };
+
   return (
     <header className="bg-card border-b">
       <div className="container mx-auto px-4 py-3 flex items-center gap-4">
-        <Link to="/" className="flex items-center gap-2 font-bold text-xl">
+        <Link to="/" className="flex items-center gap-2 font-bold text-xl shrink-0">
           <TrendingUp className="text-primary" />
-          <span>IntegralFinance</span>
+          <span className="hidden sm:inline">IntegralFinance</span>
         </Link>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            const sym = q.trim().toUpperCase();
-            if (!sym) return;
-            if (onSearch) onSearch(sym);
-            else nav(`/?symbol=${sym}`);
-          }}
-          className="flex-1 max-w-xl relative"
-        >
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search for symbols (AAPL, BTC-USD, ^GSPC)..."
-            className="w-full pl-9 pr-4 py-2 bg-muted border border-transparent focus:border-primary focus:bg-background rounded-md text-sm outline-none transition-all"
-          />
-        </form>
+        <div ref={boxRef} className="flex-1 max-w-xl relative">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (open && results[highlight]) return pick(results[highlight].symbol);
+              const sym = q.trim().toUpperCase();
+              if (sym) pick(sym);
+            }}
+            className="relative"
+          >
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              value={q}
+              onChange={(e) => { setQ(e.target.value); setOpen(true); }}
+              onFocus={() => setOpen(true)}
+              onKeyDown={(e) => {
+                if (!open || !results.length) return;
+                if (e.key === "ArrowDown") { e.preventDefault(); setHighlight((h) => Math.min(h + 1, results.length - 1)); }
+                else if (e.key === "ArrowUp") { e.preventDefault(); setHighlight((h) => Math.max(h - 1, 0)); }
+                else if (e.key === "Escape") setOpen(false);
+              }}
+              placeholder="Search symbols or companies (Apple, AAPL, BTC)…"
+              className="w-full pl-9 pr-4 py-2 bg-muted border border-transparent focus:border-primary focus:bg-background rounded-md text-sm outline-none transition-all"
+            />
+          </form>
+          {open && results.length > 0 && (
+            <div className="absolute left-0 right-0 top-full mt-1 bg-popover border rounded-md shadow-lg z-50 max-h-80 overflow-y-auto">
+              {results.map((r, i) => (
+                <button
+                  key={`${r.symbol}-${i}`}
+                  onMouseDown={(e) => { e.preventDefault(); pick(r.symbol); }}
+                  onMouseEnter={() => setHighlight(i)}
+                  className={cn(
+                    "w-full text-left px-3 py-2 flex items-center justify-between gap-3 text-sm",
+                    i === highlight ? "bg-accent" : "hover:bg-accent/60"
+                  )}
+                >
+                  <div className="min-w-0">
+                    <div className="font-semibold">{r.symbol}</div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {r.longname || r.shortname || r.typeDisp || ""}
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground shrink-0">
+                    {r.exchDisp || r.quoteType || ""}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+      {/* Top-bar watchlist */}
+      <div className="border-t bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="flex gap-2 overflow-x-auto py-2 scrollbar-none">
+            {TRENDING.map((sym) => {
+              const quote = quotes.find((x) => x.symbol === sym);
+              const up = (quote?.regularMarketChangePercent ?? 0) >= 0;
+              return (
+                <button
+                  key={sym}
+                  onClick={() => pick(sym)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-card border text-xs hover:border-primary transition-colors shrink-0"
+                >
+                  <span className="font-semibold">{sym}</span>
+                  <span className="tabular-nums text-muted-foreground">
+                    {formatNumber(quote?.regularMarketPrice)}
+                  </span>
+                  <span className={cn("tabular-nums font-medium", up ? "text-up" : "text-down")}>
+                    {up ? "+" : ""}{formatNumber(quote?.regularMarketChangePercent)}%
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </header>
   );
