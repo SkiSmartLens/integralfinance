@@ -85,7 +85,7 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
     <section ref={ref} className="bg-card border rounded-lg p-4 md:p-6">
       <div className="flex items-center gap-2 mb-4">
         <Sparkles className="w-5 h-5 text-primary" />
-        <h3 className="text-lg font-bold">AI Insights · {symbol}</h3>
+        <h3 className="text-lg font-bold">AI Insights · {companyName || symbol}</h3>
       </div>
       {loading && <div className="text-sm text-muted-foreground py-4">Analyzing latest signals…</div>}
       {err && <div className="text-sm text-down py-2">{err}</div>}
