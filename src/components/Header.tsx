@@ -112,32 +112,6 @@ export const Header = ({ onSearch }: Props) => {
           )}
         </div>
       </div>
-      {/* Top-bar watchlist */}
-      <div className="border-t bg-muted/30">
-        <div className="container mx-auto px-4">
-          <div className="flex gap-2 overflow-x-auto py-2 scrollbar-none">
-            {TRENDING.map((sym) => {
-              const quote = quotes.find((x) => x.symbol === sym);
-              const up = (quote?.regularMarketChangePercent ?? 0) >= 0;
-              return (
-                <button
-                  key={sym}
-                  onClick={() => pick(sym)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-card border text-xs hover:border-primary transition-colors shrink-0"
-                >
-                  <span className="font-semibold">{sym}</span>
-                  <span className="tabular-nums text-muted-foreground">
-                    {formatNumber(quote?.regularMarketPrice)}
-                  </span>
-                  <span className={cn("tabular-nums font-medium", up ? "text-up" : "text-down")}>
-                    {up ? "+" : ""}{formatNumber(quote?.regularMarketChangePercent)}%
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
     </header>
   );
 };
