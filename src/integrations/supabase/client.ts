@@ -2,12 +2,15 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
+// Hardcoded fallbacks for production builds (Vercel / lovable.app) where
+// the VITE_* env vars may not be injected. These are PUBLIC keys.
 const SUPABASE_URL =
-  import.meta.env.VITE_SUPABASE_URL ?? "https://mnoyjhcoogdrcsuvpxkt.supabase.co";
+  (import.meta.env.VITE_SUPABASE_URL as string | undefined) ??
+  "https://oadtpipsbeqiadoluxnq.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY =
-  import.meta.env.VITE_SUPABASE_ANON_KEY ??
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ub3lqaGNvb2RyY3N1dnB4a3QiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc3NDM4NjE3NSwiZXhwIjoyMDg5OTYyMTc1fQ.ZX6EM53EadD-HwrhZWOjN9waWM_RRdW2EUSwWmCVxcs";
+  (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ??
+  (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined) ??
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9hZHRwaXBzYmVxaWFkb2x1eG5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMDUyNDYsImV4cCI6MjA5MzU4MTI0Nn0.k7_W04vpl9Sctg1XhNlSz9abWI--VPk82jD5r-0hFvk";
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
