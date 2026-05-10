@@ -125,15 +125,19 @@ const Sim = () => {
         return toast({ title: "Failed to create game", description: error?.message ?? "Unknown error", variant: "destructive" });
       }
       const { error: jErr } = await supabase.from("game_members")
-        .insert({ game_id: data.id, user_id: userId, cash });
-      if (jErr) {
+        .upsert({ game_id: data.id, user_id: userId, cash }, { onConflict: "game_id,user_id", ignoreDuplicates: true });
+      if (jErr && !/duplicate/i.test(jErr.message)) {
         console.error("join own game error", jErr);
         return toast({ title: "Game created but join failed", description: jErr.message, variant: "destructive" });
       }
-      toast({ title: "Game created", description: `Code: ${data.join_code}` });
+      try {
+        localStorage.setItem("lastJoinCode", data.join_code);
+        await navigator.clipboard?.writeText(data.join_code);
+      } catch {}
+      toast({ title: "Game created", description: `Code ${data.join_code} copied to clipboard` });
       setShowCreate(false);
       setActiveGameId(data.id);
-      reloadGames();
+      await reloadGames();
     } catch (e: any) {
       console.error(e);
       toast({ title: "Failed to create game", description: e?.message ?? "Unexpected error", variant: "destructive" });
@@ -145,11 +149,12 @@ const Sim = () => {
     const { data: g, error } = await supabase.from("games").select("*").eq("join_code", code.toUpperCase()).single();
     if (error || !g) return toast({ title: "Game not found", variant: "destructive" });
     const { error: jErr } = await supabase.from("game_members")
-      .insert({ game_id: g.id, user_id: userId, cash: g.starting_cash });
-    if (jErr) return toast({ title: "Couldn't join", description: jErr.message, variant: "destructive" });
+      .upsert({ game_id: g.id, user_id: userId, cash: g.starting_cash }, { onConflict: "game_id,user_id", ignoreDuplicates: true });
+    if (jErr && !/duplicate/i.test(jErr.message)) return toast({ title: "Couldn't join", description: jErr.message, variant: "destructive" });
+    try { localStorage.setItem("lastJoinCode", g.join_code); } catch {}
     setShowJoin(false);
     setActiveGameId(g.id);
-    reloadGames();
+    await reloadGames();
   };
 
   const placeOrder = async (e: React.FormEvent) => {
