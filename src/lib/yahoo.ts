@@ -123,6 +123,27 @@ export async function fetchNews(query = "stock market"): Promise<NewsItem[]> {
   return data?.news ?? [];
 }
 
+export interface SearchQuote {
+  symbol: string;
+  shortname?: string;
+  longname?: string;
+  exchDisp?: string;
+  typeDisp?: string;
+  quoteType?: string;
+}
+
+export async function fetchSearchQuotes(query: string, count = 8): Promise<SearchQuote[]> {
+  const q = query.trim();
+  if (!q) return [];
+  const data = await callProxy({
+    kind: "search",
+    q,
+    newsCount: "0",
+    quotesCount: String(count),
+  });
+  return (data?.quotes ?? []) as SearchQuote[];
+}
+
 export interface ScreenerQuote {
   symbol: string;
   shortName?: string;

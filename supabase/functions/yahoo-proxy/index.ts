@@ -129,12 +129,13 @@ Deno.serve(async (req) => {
     if (kind === "search") {
       const q = url.searchParams.get("q") ?? "stock market";
       const newsCount = url.searchParams.get("newsCount") ?? "20";
-      const cacheKey = `s:${q}:${newsCount}`;
+      const quotesCount = url.searchParams.get("quotesCount") ?? "0";
+      const cacheKey = `s:${q}:${newsCount}:${quotesCount}`;
       const cached = getCache(cacheKey);
       if (cached) return new Response(cached, jsonHeaders());
       const upstream = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(
         q
-      )}&newsCount=${newsCount}&quotesCount=0`;
+      )}&newsCount=${newsCount}&quotesCount=${quotesCount}`;
       const r = await yahooFetch(upstream);
       const body = await r.text();
       if (r.ok) setCache(cacheKey, body, 30000);
