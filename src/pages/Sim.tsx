@@ -112,13 +112,13 @@ const Sim = () => {
   const startCash = games.find((g) => g.id === activeGameId)?.starting_cash ?? 100000;
   const totalReturnPct = ((equity - Number(startCash)) / Number(startCash)) * 100;
 
-  const createGame = async (name: string, cash: number, commission: number, allowShort: boolean) => {
+  const createGame = async (name: string, cash: number, commission: number, allowShort: boolean, isPublic: boolean) => {
     if (!userId) return toast({ title: "Not signed in", variant: "destructive" });
     if (!name.trim()) return toast({ title: "Name required", variant: "destructive" });
     if (!Number.isFinite(cash) || cash <= 0) return toast({ title: "Starting cash must be positive", variant: "destructive" });
     try {
       const { data, error } = await supabase.from("games")
-        .insert({ name: name.trim(), starting_cash: cash, commission, allow_short: allowShort, created_by: userId })
+        .insert({ name: name.trim(), starting_cash: cash, commission, allow_short: allowShort, is_public: isPublic, created_by: userId })
         .select().single();
       if (error || !data) {
         console.error("create game error", error);
@@ -146,14 +146,31 @@ const Sim = () => {
 
   const joinGame = async (code: string) => {
     if (!userId) return;
-    const { data: g, error } = await supabase.from("games").select("*").eq("join_code", code.toUpperCase()).single();
-    if (error || !g) return toast({ title: "Game not found", variant: "destructive" });
+    const { data: g, error } = await supabase.from("games").select("*").eq("join_code", code.toUpperCase()).maybeSingle();
+    if (error || !g) return toast({ title: "Game not found", description: error?.message, variant: "destructive" });
+    return joinGameById(g.id, Number(g.starting_cash), g.join_code);
+  };
+
+  const joinGameById = async (gameId: string, startingCash: number, joinCode?: string) => {
+    if (!userId) return;
     const { error: jErr } = await supabase.from("game_members")
-      .upsert({ game_id: g.id, user_id: userId, cash: g.starting_cash }, { onConflict: "game_id,user_id", ignoreDuplicates: true });
-    if (jErr && !/duplicate/i.test(jErr.message)) return toast({ title: "Couldn't join", description: jErr.message, variant: "destructive" });
-    try { localStorage.setItem("lastJoinCode", g.join_code); } catch {}
+      .upsert({ game_id: gameId, user_id: userId, cash: startingCash }, { onConflict: "game_id,user_id", ignoreDuplicates: true });
+    if (jErr && !/duplicate/i.test(jErr.message)) {
+      console.error("join error", jErr);
+      return toast({ title: "Couldn't join", description: jErr.message, variant: "destructive" });
+    }
+    if (joinCode) { try { localStorage.setItem("lastJoinCode", joinCode); } catch {} }
     setShowJoin(false);
-    setActiveGameId(g.id);
+    setActiveGameId(gameId);
+    await reloadGames();
+    toast({ title: "Joined game" });
+  };
+
+  const togglePublic = async (g: Game) => {
+    if (g.created_by !== userId) return;
+    const { error } = await supabase.from("games").update({ is_public: !g.is_public }).eq("id", g.id);
+    if (error) return toast({ title: "Update failed", description: error.message, variant: "destructive" });
+    toast({ title: g.is_public ? "Set to private" : "Set to public" });
     await reloadGames();
   };
 
