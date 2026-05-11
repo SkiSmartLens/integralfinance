@@ -26,6 +26,7 @@ const Sim = () => {
   const [prevCloses, setPrevCloses] = useState<Record<string, number>>({});
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
+  const [showBrowse, setShowBrowse] = useState(false);
 
   // Order ticket
   const [symbol, setSymbol] = useState("AAPL");
