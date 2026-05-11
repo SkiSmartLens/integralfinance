@@ -224,8 +224,23 @@ const Sim = () => {
                 {games.map((g) => <option key={g.id} value={g.id}>{g.name} · {g.join_code}</option>)}
               </select>
             )}
+            {activeGameId && (() => {
+              const g = games.find((x) => x.id === activeGameId);
+              if (!g || g.created_by !== userId) return null;
+              return (
+                <button onClick={() => togglePublic(g)}
+                  className="ml-1 px-2 py-1 text-[11px] rounded bg-muted flex items-center gap-1"
+                  title={g.is_public ? "Public — anyone can browse and join" : "Private — code required"}>
+                  {g.is_public ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+                  {g.is_public ? "Public" : "Private"}
+                </button>
+              );
+            })()}
           </div>
           <div className="flex items-center gap-2">
+            <button onClick={() => setShowBrowse(true)} className="px-3 py-1.5 text-xs rounded bg-muted flex items-center gap-1">
+              <Search className="w-3.5 h-3.5" /> Browse
+            </button>
             <button onClick={() => setShowJoin(true)} className="px-3 py-1.5 text-xs rounded bg-muted flex items-center gap-1">
               <Users className="w-3.5 h-3.5" /> Join
             </button>
