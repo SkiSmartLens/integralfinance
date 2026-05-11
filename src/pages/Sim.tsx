@@ -5,9 +5,9 @@ import { Header } from "@/components/Header";
 import { fetchQuotes, formatNumber, formatLargeNumber } from "@/lib/yahoo";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { LogOut, Plus, Users } from "lucide-react";
+import { LogOut, Plus, Users, Search, Globe, Lock } from "lucide-react";
 
-interface Game { id: string; name: string; starting_cash: number; commission: number; join_code: string; created_by: string; }
+interface Game { id: string; name: string; starting_cash: number; commission: number; join_code: string; created_by: string; is_public?: boolean; }
 interface Member { id: string; game_id: string; user_id: string; cash: number; }
 interface Position { id: string; symbol: string; shares: number; avg_cost: number; }
 interface Tx { id: string; symbol: string; side: string; shares: number; price: number; created_at: string; }
@@ -26,6 +26,7 @@ const Sim = () => {
   const [prevCloses, setPrevCloses] = useState<Record<string, number>>({});
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
+  const [showBrowse, setShowBrowse] = useState(false);
 
   // Order ticket
   const [symbol, setSymbol] = useState("AAPL");
@@ -112,13 +113,13 @@ const Sim = () => {
   const startCash = games.find((g) => g.id === activeGameId)?.starting_cash ?? 100000;
   const totalReturnPct = ((equity - Number(startCash)) / Number(startCash)) * 100;
 
-  const createGame = async (name: string, cash: number, commission: number, allowShort: boolean) => {
+  const createGame = async (name: string, cash: number, commission: number, allowShort: boolean, isPublic: boolean) => {
     if (!userId) return toast({ title: "Not signed in", variant: "destructive" });
     if (!name.trim()) return toast({ title: "Name required", variant: "destructive" });
     if (!Number.isFinite(cash) || cash <= 0) return toast({ title: "Starting cash must be positive", variant: "destructive" });
     try {
       const { data, error } = await supabase.from("games")
-        .insert({ name: name.trim(), starting_cash: cash, commission, allow_short: allowShort, created_by: userId })
+        .insert({ name: name.trim(), starting_cash: cash, commission, allow_short: allowShort, is_public: isPublic, created_by: userId })
         .select().single();
       if (error || !data) {
         console.error("create game error", error);
@@ -146,14 +147,31 @@ const Sim = () => {
 
   const joinGame = async (code: string) => {
     if (!userId) return;
-    const { data: g, error } = await supabase.from("games").select("*").eq("join_code", code.toUpperCase()).single();
-    if (error || !g) return toast({ title: "Game not found", variant: "destructive" });
+    const { data: g, error } = await supabase.from("games").select("*").eq("join_code", code.toUpperCase()).maybeSingle();
+    if (error || !g) return toast({ title: "Game not found", description: error?.message, variant: "destructive" });
+    return joinGameById(g.id, Number(g.starting_cash), g.join_code);
+  };
+
+  const joinGameById = async (gameId: string, startingCash: number, joinCode?: string) => {
+    if (!userId) return;
     const { error: jErr } = await supabase.from("game_members")
-      .upsert({ game_id: g.id, user_id: userId, cash: g.starting_cash }, { onConflict: "game_id,user_id", ignoreDuplicates: true });
-    if (jErr && !/duplicate/i.test(jErr.message)) return toast({ title: "Couldn't join", description: jErr.message, variant: "destructive" });
-    try { localStorage.setItem("lastJoinCode", g.join_code); } catch {}
+      .upsert({ game_id: gameId, user_id: userId, cash: startingCash }, { onConflict: "game_id,user_id", ignoreDuplicates: true });
+    if (jErr && !/duplicate/i.test(jErr.message)) {
+      console.error("join error", jErr);
+      return toast({ title: "Couldn't join", description: jErr.message, variant: "destructive" });
+    }
+    if (joinCode) { try { localStorage.setItem("lastJoinCode", joinCode); } catch {} }
     setShowJoin(false);
-    setActiveGameId(g.id);
+    setActiveGameId(gameId);
+    await reloadGames();
+    toast({ title: "Joined game" });
+  };
+
+  const togglePublic = async (g: Game) => {
+    if (g.created_by !== userId) return;
+    const { error } = await supabase.from("games").update({ is_public: !g.is_public }).eq("id", g.id);
+    if (error) return toast({ title: "Update failed", description: error.message, variant: "destructive" });
+    toast({ title: g.is_public ? "Set to private" : "Set to public" });
     await reloadGames();
   };
 
@@ -206,8 +224,23 @@ const Sim = () => {
                 {games.map((g) => <option key={g.id} value={g.id}>{g.name} · {g.join_code}</option>)}
               </select>
             )}
+            {activeGameId && (() => {
+              const g = games.find((x) => x.id === activeGameId);
+              if (!g || g.created_by !== userId) return null;
+              return (
+                <button onClick={() => togglePublic(g)}
+                  className="ml-1 px-2 py-1 text-[11px] rounded bg-muted flex items-center gap-1"
+                  title={g.is_public ? "Public — anyone can browse and join" : "Private — code required"}>
+                  {g.is_public ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+                  {g.is_public ? "Public" : "Private"}
+                </button>
+              );
+            })()}
           </div>
           <div className="flex items-center gap-2">
+            <button onClick={() => setShowBrowse(true)} className="px-3 py-1.5 text-xs rounded bg-muted flex items-center gap-1">
+              <Search className="w-3.5 h-3.5" /> Browse
+            </button>
             <button onClick={() => setShowJoin(true)} className="px-3 py-1.5 text-xs rounded bg-muted flex items-center gap-1">
               <Users className="w-3.5 h-3.5" /> Join
             </button>
@@ -388,6 +421,12 @@ const Sim = () => {
 
       {showCreate && <CreateGameModal onClose={() => setShowCreate(false)} onCreate={createGame} />}
       {showJoin && <JoinGameModal onClose={() => setShowJoin(false)} onJoin={joinGame} />}
+      {showBrowse && (
+        <BrowseGamesModal
+          onClose={() => setShowBrowse(false)}
+          onJoin={(g) => joinGameById(g.id, Number(g.starting_cash), g.join_code)}
+        />
+      )}
     </div>
   );
 };
@@ -457,11 +496,12 @@ const Modal = ({ children, onClose }: any) => (
   </div>
 );
 
-const CreateGameModal = ({ onClose, onCreate }: { onClose: () => void; onCreate: (n: string, c: number, commission: number, allowShort: boolean) => void }) => {
+const CreateGameModal = ({ onClose, onCreate }: { onClose: () => void; onCreate: (n: string, c: number, commission: number, allowShort: boolean, isPublic: boolean) => void }) => {
   const [name, setName] = useState("My Game");
   const [cash, setCash] = useState(100000);
   const [commission, setCommission] = useState(0);
   const [allowShort, setAllowShort] = useState(false);
+  const [isPublic, setIsPublic] = useState(false);
   return (
     <Modal onClose={onClose}>
       <h3 className="font-bold text-lg mb-3">New game</h3>
@@ -476,7 +516,11 @@ const CreateGameModal = ({ onClose, onCreate }: { onClose: () => void; onCreate:
           <input type="checkbox" checked={allowShort} onChange={(e) => setAllowShort(e.target.checked)} />
           Allow short selling
         </label>
-        <button onClick={() => onCreate(name, cash, commission, allowShort)} className="w-full py-2 rounded bg-primary text-primary-foreground font-semibold">Create</button>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={isPublic} onChange={(e) => setIsPublic(e.target.checked)} />
+          Public — listed in Browse (otherwise code-only)
+        </label>
+        <button onClick={() => onCreate(name, cash, commission, allowShort, isPublic)} className="w-full py-2 rounded bg-primary text-primary-foreground font-semibold">Create</button>
       </div>
     </Modal>
   );
@@ -492,6 +536,74 @@ const JoinGameModal = ({ onClose, onJoin }: { onClose: () => void; onJoin: (c: s
         <button onClick={() => onJoin(code)} className="w-full py-2 rounded bg-primary text-primary-foreground font-semibold">Join</button>
       </div>
     </Modal>
+  );
+};
+
+const BrowseGamesModal = ({ onClose, onJoin }: { onClose: () => void; onJoin: (g: Game) => void }) => {
+  const [q, setQ] = useState("");
+  const [list, setList] = useState<Game[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const { data } = await supabase
+        .from("games")
+        .select("*")
+        .eq("is_public", true)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (alive) { setList((data ?? []) as Game[]); setLoading(false); }
+    })();
+    return () => { alive = false; };
+  }, []);
+  const filtered = list.filter((g) =>
+    !q.trim() || g.name.toLowerCase().includes(q.toLowerCase()) || g.join_code.toLowerCase().includes(q.toLowerCase())
+  );
+  return (
+    <div onClick={onClose} className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div onClick={(e) => e.stopPropagation()} className="bg-card border rounded-lg p-6 max-w-lg w-full max-h-[80vh] flex flex-col">
+        <h3 className="font-bold text-lg mb-3">Browse public games</h3>
+        <div className="relative mb-3">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            autoFocus
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search by name or code…"
+            className="w-full pl-9 pr-3 py-2 bg-muted rounded outline-none"
+          />
+        </div>
+        <div className="overflow-y-auto -mx-2">
+          {loading ? (
+            <p className="text-sm text-muted-foreground py-8 text-center">Loading…</p>
+          ) : filtered.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-8 text-center">No public games yet. Create one and toggle it public!</p>
+          ) : (
+            <ul className="divide-y">
+              {filtered.map((g) => (
+                <li key={g.id} className="px-2 py-2.5 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-semibold truncate flex items-center gap-1.5">
+                      <Globe className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      {g.name}
+                    </div>
+                    <div className="text-xs text-muted-foreground tabular-nums">
+                      Code {g.join_code} · ${formatNumber(Number(g.starting_cash))} start
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => onJoin(g)}
+                    className="px-3 py-1.5 text-xs rounded bg-primary text-primary-foreground font-semibold shrink-0"
+                  >
+                    Join
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
   );
 };
 
