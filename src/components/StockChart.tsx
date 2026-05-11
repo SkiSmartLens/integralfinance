@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import {
   ComposedChart,
   Area,
+  Line,
   XAxis,
   YAxis,
   Tooltip,
