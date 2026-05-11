@@ -312,6 +312,15 @@ const Sim = () => {
                     </table>
                   </div>
                 )}
+                {positions.length > 0 && (
+                  <Allocation
+                    cash={Number(activeMember.cash)}
+                    rows={positions.map((p) => ({
+                      symbol: p.symbol,
+                      value: (prices[p.symbol] ?? Number(p.avg_cost)) * Number(p.shares),
+                    }))}
+                  />
+                )}
               </section>
 
               <aside className="bg-card border rounded-lg p-4">
