@@ -421,6 +421,12 @@ const Sim = () => {
 
       {showCreate && <CreateGameModal onClose={() => setShowCreate(false)} onCreate={createGame} />}
       {showJoin && <JoinGameModal onClose={() => setShowJoin(false)} onJoin={joinGame} />}
+      {showBrowse && (
+        <BrowseGamesModal
+          onClose={() => setShowBrowse(false)}
+          onJoin={(g) => joinGameById(g.id, Number(g.starting_cash), g.join_code)}
+        />
+      )}
     </div>
   );
 };
