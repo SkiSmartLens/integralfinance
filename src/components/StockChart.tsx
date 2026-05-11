@@ -490,9 +490,19 @@ export const StockChart = ({ symbol }: Props) => {
           </div>
         )}
       </div>
-      <div className="text-[10px] text-muted-foreground mt-2 md:hidden">
-        Tip: touch with two fingers to compare two points.
-      </div>
+      {is1D && chartType === "mountain" && (
+        <div className="flex items-center gap-3 text-[10px] text-muted-foreground mt-2 flex-wrap">
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block w-3 h-0.5" style={{ background: isUp ? "hsl(var(--chart-up))" : "hsl(var(--chart-down))" }} />
+            Regular session
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block w-3 h-px border-t border-dashed border-muted-foreground" />
+            After-hours
+          </span>
+          <span className="md:hidden ml-auto">Two-finger pinch to compare</span>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t text-sm">
         <Stat label="Open" value={formatNumber(quote?.regularMarketOpen)} />
