@@ -35,6 +35,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/sim" element={<Sim />} />
             <Route path="/screener" element={<Screener />} />
+            <Route path="/calendar" element={<Calendar />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
