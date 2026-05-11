@@ -86,8 +86,11 @@ export const StockChart = ({ symbol }: Props) => {
   const [rangeIdx, setRangeIdx] = useState(0);
   const [chartType, setChartType] = useState<ChartType>("mountain");
   const [intradayIdx, setIntradayIdx] = useState(0);
+  const [showSMA20, setShowSMA20] = useState(false);
+  const [showSMA50, setShowSMA50] = useState(false);
   const r = chartType === "candle" ? INTRADAY[intradayIdx] : RANGES[rangeIdx];
-  const { data, loading } = useLiveChart(symbol, r.range, r.interval);
+  const is1D = chartType === "mountain" && rangeIdx === 0;
+  const { data, loading } = useLiveChart(symbol, r.range, r.interval, 20000, is1D);
   const { quotes } = useLiveQuotes([symbol], 10000);
   const quote = quotes[0];
 
