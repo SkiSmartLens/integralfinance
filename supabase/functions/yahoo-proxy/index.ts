@@ -101,12 +101,13 @@ Deno.serve(async (req) => {
       if (!symbol) return json({ error: "symbol required" }, 400);
       const range = url.searchParams.get("range") ?? "1d";
       const interval = url.searchParams.get("interval") ?? "5m";
-      const cacheKey = `c:${symbol}:${range}:${interval}`;
+      const includePrePost = url.searchParams.get("includePrePost") === "true";
+      const cacheKey = `c:${symbol}:${range}:${interval}:${includePrePost ? "pp" : "n"}`;
       const cached = getCache(cacheKey);
       if (cached) return new Response(cached, jsonHeaders());
       const upstream = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
         symbol
-      )}?range=${range}&interval=${interval}&includePrePost=false`;
+      )}?range=${range}&interval=${interval}&includePrePost=${includePrePost ? "true" : "false"}`;
       const r = await yahooFetch(upstream);
       const body = await r.text();
       if (r.ok) setCache(cacheKey, body, 10000);
