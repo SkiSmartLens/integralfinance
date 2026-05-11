@@ -123,6 +123,23 @@ export const StockChart = ({ symbol }: Props) => {
     return pts;
   }, [data, chartType]);
 
+  // SMA helper — returns rolling simple moving average over `price` field.
+  const withSMA = useMemo(() => {
+    if (!chartData.length || (!showSMA20 && !showSMA50)) return chartData;
+    const prices = chartData.map((p) => p.price);
+    const sma = (window: number, i: number) => {
+      if (i < window - 1) return undefined;
+      let s = 0;
+      for (let k = i - window + 1; k <= i; k++) s += prices[k];
+      return s / window;
+    };
+    return chartData.map((p, i) => ({
+      ...p,
+      sma20: showSMA20 ? sma(20, i) : undefined,
+      sma50: showSMA50 ? sma(50, i) : undefined,
+    }));
+  }, [chartData, showSMA20, showSMA50]);
+
   const formatTime = (t: number) => {
     const d = new Date(t);
     if (r.range === "1d") {
