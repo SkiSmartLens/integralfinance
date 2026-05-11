@@ -496,11 +496,12 @@ const Modal = ({ children, onClose }: any) => (
   </div>
 );
 
-const CreateGameModal = ({ onClose, onCreate }: { onClose: () => void; onCreate: (n: string, c: number, commission: number, allowShort: boolean) => void }) => {
+const CreateGameModal = ({ onClose, onCreate }: { onClose: () => void; onCreate: (n: string, c: number, commission: number, allowShort: boolean, isPublic: boolean) => void }) => {
   const [name, setName] = useState("My Game");
   const [cash, setCash] = useState(100000);
   const [commission, setCommission] = useState(0);
   const [allowShort, setAllowShort] = useState(false);
+  const [isPublic, setIsPublic] = useState(false);
   return (
     <Modal onClose={onClose}>
       <h3 className="font-bold text-lg mb-3">New game</h3>
@@ -515,7 +516,11 @@ const CreateGameModal = ({ onClose, onCreate }: { onClose: () => void; onCreate:
           <input type="checkbox" checked={allowShort} onChange={(e) => setAllowShort(e.target.checked)} />
           Allow short selling
         </label>
-        <button onClick={() => onCreate(name, cash, commission, allowShort)} className="w-full py-2 rounded bg-primary text-primary-foreground font-semibold">Create</button>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={isPublic} onChange={(e) => setIsPublic(e.target.checked)} />
+          Public — listed in Browse (otherwise code-only)
+        </label>
+        <button onClick={() => onCreate(name, cash, commission, allowShort, isPublic)} className="w-full py-2 rounded bg-primary text-primary-foreground font-semibold">Create</button>
       </div>
     </Modal>
   );
@@ -531,6 +536,74 @@ const JoinGameModal = ({ onClose, onJoin }: { onClose: () => void; onJoin: (c: s
         <button onClick={() => onJoin(code)} className="w-full py-2 rounded bg-primary text-primary-foreground font-semibold">Join</button>
       </div>
     </Modal>
+  );
+};
+
+const BrowseGamesModal = ({ onClose, onJoin }: { onClose: () => void; onJoin: (g: Game) => void }) => {
+  const [q, setQ] = useState("");
+  const [list, setList] = useState<Game[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const { data } = await supabase
+        .from("games")
+        .select("*")
+        .eq("is_public", true)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (alive) { setList((data ?? []) as Game[]); setLoading(false); }
+    })();
+    return () => { alive = false; };
+  }, []);
+  const filtered = list.filter((g) =>
+    !q.trim() || g.name.toLowerCase().includes(q.toLowerCase()) || g.join_code.toLowerCase().includes(q.toLowerCase())
+  );
+  return (
+    <div onClick={onClose} className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div onClick={(e) => e.stopPropagation()} className="bg-card border rounded-lg p-6 max-w-lg w-full max-h-[80vh] flex flex-col">
+        <h3 className="font-bold text-lg mb-3">Browse public games</h3>
+        <div className="relative mb-3">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            autoFocus
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search by name or code…"
+            className="w-full pl-9 pr-3 py-2 bg-muted rounded outline-none"
+          />
+        </div>
+        <div className="overflow-y-auto -mx-2">
+          {loading ? (
+            <p className="text-sm text-muted-foreground py-8 text-center">Loading…</p>
+          ) : filtered.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-8 text-center">No public games yet. Create one and toggle it public!</p>
+          ) : (
+            <ul className="divide-y">
+              {filtered.map((g) => (
+                <li key={g.id} className="px-2 py-2.5 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-semibold truncate flex items-center gap-1.5">
+                      <Globe className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      {g.name}
+                    </div>
+                    <div className="text-xs text-muted-foreground tabular-nums">
+                      Code {g.join_code} · ${formatNumber(Number(g.starting_cash))} start
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => onJoin(g)}
+                    className="px-3 py-1.5 text-xs rounded bg-primary text-primary-foreground font-semibold shrink-0"
+                  >
+                    Join
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
   );
 };
 
