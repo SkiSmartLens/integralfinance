@@ -94,8 +94,6 @@ export const StockChart = ({ symbol }: Props) => {
   const { quotes } = useLiveQuotes([symbol], 10000);
   const quote = quotes[0];
 
-  const is1D = chartType === "mountain" && rangeIdx === 0;
-
   // For non-1D ranges, derive change from the chart's first vs last point
   const firstPrice = data?.points[0]?.price;
   const lastPrice = data?.points.at(-1)?.price ?? quote?.regularMarketPrice;
