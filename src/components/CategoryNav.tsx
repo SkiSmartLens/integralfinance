@@ -1,7 +1,7 @@
 import { CATEGORIES, TRENDING } from "@/lib/categories";
 import { cn } from "@/lib/utils";
 import { Link, useNavigate } from "react-router-dom";
-import { LineChart, Filter, Star } from "lucide-react";
+import { LineChart, Filter, Star, Calendar } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { formatNumber } from "@/lib/yahoo";
@@ -9,9 +9,13 @@ import { formatNumber } from "@/lib/yahoo";
 interface Props {
   active: string;
   onChange: (id: string) => void;
+  activeSub?: string;
+  onSubChange?: (subId: string | undefined) => void;
 }
 
-export const CategoryNav = ({ active, onChange }: Props) => {
+export const CategoryNav = ({ active, onChange, activeSub, onSubChange }: Props) => {
+  const activeCat = CATEGORIES.find((c) => c.id === active);
+  const subs = activeCat?.subTopics ?? [];
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const nav = useNavigate();
@@ -94,6 +98,13 @@ export const CategoryNav = ({ active, onChange }: Props) => {
             )}
           </div>
           <Link
+            to="/calendar"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap bg-muted hover:bg-muted/70"
+          >
+            <Calendar className="w-4 h-4" />
+            Calendar
+          </Link>
+          <Link
             to="/screener"
             className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap bg-muted hover:bg-muted/70"
           >
@@ -108,6 +119,38 @@ export const CategoryNav = ({ active, onChange }: Props) => {
             Simulator
           </Link>
         </div>
+        {subs.length > 0 && (
+          <div className="flex gap-1 overflow-x-auto no-scrollbar pb-2 -mt-1 items-center">
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground pr-2 shrink-0">
+              {activeCat?.label}:
+            </span>
+            <button
+              onClick={() => onSubChange?.(undefined)}
+              className={cn(
+                "px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors border",
+                !activeSub
+                  ? "bg-foreground text-background border-foreground"
+                  : "border-border text-muted-foreground hover:bg-muted"
+              )}
+            >
+              All
+            </button>
+            {subs.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => onSubChange?.(s.id)}
+                className={cn(
+                  "px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors border",
+                  activeSub === s.id
+                    ? "bg-foreground text-background border-foreground"
+                    : "border-border text-muted-foreground hover:bg-muted"
+                )}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -312,6 +312,15 @@ const Sim = () => {
                     </table>
                   </div>
                 )}
+                {positions.length > 0 && (
+                  <Allocation
+                    cash={Number(activeMember.cash)}
+                    rows={positions.map((p) => ({
+                      symbol: p.symbol,
+                      value: (prices[p.symbol] ?? Number(p.avg_cost)) * Number(p.shares),
+                    }))}
+                  />
+                )}
               </section>
 
               <aside className="bg-card border rounded-lg p-4">
@@ -495,6 +504,64 @@ const Modal = ({ children, onClose }: any) => (
     </div>
   </div>
 );
+
+const ALLOC_COLORS = [
+  "hsl(var(--primary))",
+  "hsl(var(--chart-up))",
+  "hsl(var(--chart-down))",
+  "hsl(45 95% 55%)",
+  "hsl(280 70% 60%)",
+  "hsl(190 80% 50%)",
+  "hsl(20 90% 60%)",
+  "hsl(150 60% 45%)",
+  "hsl(330 70% 60%)",
+  "hsl(220 60% 60%)",
+];
+
+const Allocation = ({ cash, rows }: { cash: number; rows: { symbol: string; value: number }[] }) => {
+  const total = cash + rows.reduce((s, r) => s + r.value, 0);
+  if (total <= 0) return null;
+  const slices = [
+    ...rows.map((r, i) => ({ label: r.symbol, value: r.value, color: ALLOC_COLORS[i % ALLOC_COLORS.length] })),
+    { label: "Cash", value: cash, color: "hsl(var(--muted-foreground) / 0.5)" },
+  ].filter((s) => s.value > 0);
+  // Conic gradient slices.
+  let acc = 0;
+  const stops = slices
+    .map((s) => {
+      const start = (acc / total) * 100;
+      acc += s.value;
+      const end = (acc / total) * 100;
+      return `${s.color} ${start}% ${end}%`;
+    })
+    .join(", ");
+  return (
+    <div className="mt-4 pt-4 border-t flex items-center gap-5 flex-wrap">
+      <div
+        className="w-28 h-28 rounded-full shrink-0 relative"
+        style={{ background: `conic-gradient(${stops})` }}
+        aria-label="Allocation pie chart"
+      >
+        <div className="absolute inset-3 rounded-full bg-card flex flex-col items-center justify-center">
+          <div className="text-[10px] text-muted-foreground uppercase">Equity</div>
+          <div className="text-xs font-bold tabular-nums">${formatLargeNumber(total)}</div>
+        </div>
+      </div>
+      <ul className="flex-1 min-w-0 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+        {slices.map((s) => {
+          const pct = (s.value / total) * 100;
+          return (
+            <li key={s.label} className="flex items-center gap-2 min-w-0">
+              <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: s.color }} />
+              <span className="font-semibold truncate">{s.label}</span>
+              <span className="ml-auto tabular-nums text-muted-foreground">{pct.toFixed(1)}%</span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+};
 
 const CreateGameModal = ({ onClose, onCreate }: { onClose: () => void; onCreate: (n: string, c: number, commission: number, allowShort: boolean, isPublic: boolean) => void }) => {
   const [name, setName] = useState("My Game");

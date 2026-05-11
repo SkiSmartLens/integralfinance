@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import {
   ComposedChart,
   Area,
+  Line,
   XAxis,
   YAxis,
   Tooltip,
@@ -85,12 +86,13 @@ export const StockChart = ({ symbol }: Props) => {
   const [rangeIdx, setRangeIdx] = useState(0);
   const [chartType, setChartType] = useState<ChartType>("mountain");
   const [intradayIdx, setIntradayIdx] = useState(0);
+  const [showSMA20, setShowSMA20] = useState(false);
+  const [showSMA50, setShowSMA50] = useState(false);
   const r = chartType === "candle" ? INTRADAY[intradayIdx] : RANGES[rangeIdx];
-  const { data, loading } = useLiveChart(symbol, r.range, r.interval);
+  const is1D = chartType === "mountain" && rangeIdx === 0;
+  const { data, loading } = useLiveChart(symbol, r.range, r.interval, 20000, is1D);
   const { quotes } = useLiveQuotes([symbol], 10000);
   const quote = quotes[0];
-
-  const is1D = chartType === "mountain" && rangeIdx === 0;
 
   // For non-1D ranges, derive change from the chart's first vs last point
   const firstPrice = data?.points[0]?.price;
@@ -120,6 +122,23 @@ export const StockChart = ({ symbol }: Props) => {
     }
     return pts;
   }, [data, chartType]);
+
+  // SMA helper — returns rolling simple moving average over `price` field.
+  const withSMA = useMemo(() => {
+    if (!chartData.length || (!showSMA20 && !showSMA50)) return chartData;
+    const prices = chartData.map((p) => p.price);
+    const sma = (window: number, i: number) => {
+      if (i < window - 1) return undefined;
+      let s = 0;
+      for (let k = i - window + 1; k <= i; k++) s += prices[k];
+      return s / window;
+    };
+    return chartData.map((p, i) => ({
+      ...p,
+      sma20: showSMA20 ? sma(20, i) : undefined,
+      sma50: showSMA50 ? sma(50, i) : undefined,
+    }));
+  }, [chartData, showSMA20, showSMA50]);
 
   const formatTime = (t: number) => {
     const d = new Date(t);
@@ -310,6 +329,28 @@ export const StockChart = ({ symbol }: Props) => {
               ))}
             </div>
           )}
+          {chartType === "mountain" && (
+            <div className="flex gap-1 text-[10px]">
+              <button
+                onClick={() => setShowSMA20((v) => !v)}
+                className={cn(
+                  "px-2 py-1 rounded font-semibold border transition-colors",
+                  showSMA20 ? "bg-primary/15 border-primary text-primary" : "border-border text-muted-foreground hover:bg-muted"
+                )}
+              >
+                SMA 20
+              </button>
+              <button
+                onClick={() => setShowSMA50((v) => !v)}
+                className={cn(
+                  "px-2 py-1 rounded font-semibold border transition-colors",
+                  showSMA50 ? "bg-yellow-500/15 border-yellow-500 text-yellow-600 dark:text-yellow-400" : "border-border text-muted-foreground hover:bg-muted"
+                )}
+              >
+                SMA 50
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -324,7 +365,7 @@ export const StockChart = ({ symbol }: Props) => {
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
-              data={chartData}
+              data={withSMA}
               margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
             >
               <defs>
@@ -376,12 +417,51 @@ export const StockChart = ({ symbol }: Props) => {
               {chartType === "mountain" && (
                 <Area
                   type="linear"
-                  dataKey="price"
+                  dataKey={is1D ? "regularPrice" : "price"}
+                  name="Price"
                   stroke={isUp ? "hsl(var(--chart-up))" : "hsl(var(--chart-down))"}
                   strokeWidth={1.75}
                   fill={isUp ? "url(#gradUp)" : "url(#gradDown)"}
                   isAnimationActive={false}
+                  connectNulls={false}
                   dot={false}
+                />
+              )}
+              {chartType === "mountain" && is1D && (
+                <Line
+                  type="linear"
+                  dataKey="afterHoursPrice"
+                  name="After-hours"
+                  stroke="hsl(var(--muted-foreground))"
+                  strokeWidth={1.5}
+                  strokeDasharray="2 3"
+                  isAnimationActive={false}
+                  connectNulls={false}
+                  dot={false}
+                />
+              )}
+              {showSMA20 && (
+                <Line
+                  type="monotone"
+                  dataKey="sma20"
+                  name="SMA 20"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth={1.25}
+                  isAnimationActive={false}
+                  dot={false}
+                  connectNulls
+                />
+              )}
+              {showSMA50 && (
+                <Line
+                  type="monotone"
+                  dataKey="sma50"
+                  name="SMA 50"
+                  stroke="hsl(45 95% 55%)"
+                  strokeWidth={1.25}
+                  isAnimationActive={false}
+                  dot={false}
+                  connectNulls
                 />
               )}
               {chartType === "candle" && (
@@ -410,9 +490,19 @@ export const StockChart = ({ symbol }: Props) => {
           </div>
         )}
       </div>
-      <div className="text-[10px] text-muted-foreground mt-2 md:hidden">
-        Tip: touch with two fingers to compare two points.
-      </div>
+      {is1D && chartType === "mountain" && (
+        <div className="flex items-center gap-3 text-[10px] text-muted-foreground mt-2 flex-wrap">
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block w-3 h-0.5" style={{ background: isUp ? "hsl(var(--chart-up))" : "hsl(var(--chart-down))" }} />
+            Regular session
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block w-3 h-px border-t border-dashed border-muted-foreground" />
+            After-hours
+          </span>
+          <span className="md:hidden ml-auto">Two-finger pinch to compare</span>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t text-sm">
         <Stat label="Open" value={formatNumber(quote?.regularMarketOpen)} />

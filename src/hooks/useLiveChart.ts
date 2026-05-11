@@ -1,7 +1,13 @@
 import { useEffect, useState, useRef } from "react";
 import { fetchChart, ChartResult } from "@/lib/yahoo";
 
-export function useLiveChart(symbol: string, range: string, interval: string, refreshMs = 20000) {
+export function useLiveChart(
+  symbol: string,
+  range: string,
+  interval: string,
+  refreshMs = 20000,
+  includePrePost = false,
+) {
   const [data, setData] = useState<ChartResult | null>(null);
   const [loading, setLoading] = useState(true);
   const mounted = useRef(true);
@@ -12,7 +18,7 @@ export function useLiveChart(symbol: string, range: string, interval: string, re
     let timer: number | undefined;
     const load = async () => {
       try {
-        const r = await fetchChart(symbol, range, interval);
+        const r = await fetchChart(symbol, range, interval, includePrePost);
         if (!mounted.current) return;
         setData(r);
       } catch (e) {
@@ -27,7 +33,7 @@ export function useLiveChart(symbol: string, range: string, interval: string, re
       mounted.current = false;
       if (timer) clearInterval(timer);
     };
-  }, [symbol, range, interval, refreshMs]);
+  }, [symbol, range, interval, refreshMs, includePrePost]);
 
   return { data, loading };
 }

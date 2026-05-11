@@ -55,6 +55,12 @@ export interface ChartPoint {
   low?: number;
   close?: number;
   volume?: number;
+  /** Set when this candle is from pre/post-market (extended hours). */
+  afterHours?: boolean;
+  /** Mirror of price when in regular session, else undefined — useful for charting. */
+  regularPrice?: number;
+  /** Mirror of price when in extended session, else undefined. */
+  afterHoursPrice?: number;
 }
 
 export interface ChartResult {
@@ -70,9 +76,16 @@ const finiteNumber = (value: unknown): number | undefined =>
 export async function fetchChart(
   symbol: string,
   range: string,
-  interval: string
+  interval: string,
+  includePrePost = false
 ): Promise<ChartResult> {
-  const data = await callProxy({ kind: "chart", symbol, range, interval });
+  const data = await callProxy({
+    kind: "chart",
+    symbol,
+    range,
+    interval,
+    ...(includePrePost ? { includePrePost: "true" } : {}),
+  });
   const result = data?.chart?.result?.[0];
   if (!result) return { symbol, points: [] };
   const ts: number[] = result.timestamp ?? [];
@@ -82,23 +95,46 @@ export async function fetchChart(
   const highs: (number | null)[] = q.high ?? [];
   const lows: (number | null)[] = q.low ?? [];
   const vols: (number | null)[] = q.volume ?? [];
-  const points: ChartPoint[] = ts.flatMap((t, i) => {
-      const close = finiteNumber(closes[i]);
-      if (close == null) return [];
-      const open = finiteNumber(opens[i]);
-      const high = finiteNumber(highs[i]);
-      const low = finiteNumber(lows[i]);
-      const volume = finiteNumber(vols[i]);
-      return {
-        t: t * 1000,
-        price: close,
-        ...(open != null ? { open } : {}),
-        ...(high != null ? { high } : {}),
-        ...(low != null ? { low } : {}),
-        close,
-        ...(volume != null ? { volume } : {}),
-      };
+  // Determine regular session window to flag pre/post-market candles.
+  const meta = result.meta ?? {};
+  const tradingPeriods = meta.tradingPeriods;
+  const regular: { start: number; end: number }[] = [];
+  if (Array.isArray(tradingPeriods?.regular)) {
+    for (const day of tradingPeriods.regular) {
+      const seg = Array.isArray(day) ? day[0] : day;
+      if (seg?.start != null && seg?.end != null) regular.push({ start: seg.start, end: seg.end });
+    }
+  } else if (meta.currentTradingPeriod?.regular) {
+    regular.push({
+      start: meta.currentTradingPeriod.regular.start,
+      end: meta.currentTradingPeriod.regular.end,
     });
+  }
+  const isAfterHours = (sec: number) => {
+    if (!regular.length) return false;
+    return !regular.some((r) => sec >= r.start && sec < r.end);
+  };
+  const points: ChartPoint[] = ts.flatMap((t, i) => {
+    const close = finiteNumber(closes[i]);
+    if (close == null) return [];
+    const open = finiteNumber(opens[i]);
+    const high = finiteNumber(highs[i]);
+    const low = finiteNumber(lows[i]);
+    const volume = finiteNumber(vols[i]);
+    const afterHours = includePrePost && isAfterHours(t);
+    return {
+      t: t * 1000,
+      price: close,
+      ...(open != null ? { open } : {}),
+      ...(high != null ? { high } : {}),
+      ...(low != null ? { low } : {}),
+      close,
+      ...(volume != null ? { volume } : {}),
+      afterHours,
+      regularPrice: afterHours ? undefined : close,
+      afterHoursPrice: afterHours ? close : undefined,
+    };
+  });
   return {
     symbol,
     points,
