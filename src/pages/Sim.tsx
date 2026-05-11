@@ -5,9 +5,9 @@ import { Header } from "@/components/Header";
 import { fetchQuotes, formatNumber, formatLargeNumber } from "@/lib/yahoo";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { LogOut, Plus, Users } from "lucide-react";
+import { LogOut, Plus, Users, Search, Globe, Lock } from "lucide-react";
 
-interface Game { id: string; name: string; starting_cash: number; commission: number; join_code: string; created_by: string; }
+interface Game { id: string; name: string; starting_cash: number; commission: number; join_code: string; created_by: string; is_public?: boolean; }
 interface Member { id: string; game_id: string; user_id: string; cash: number; }
 interface Position { id: string; symbol: string; shares: number; avg_cost: number; }
 interface Tx { id: string; symbol: string; side: string; shares: number; price: number; created_at: string; }
