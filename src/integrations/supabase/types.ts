@@ -54,6 +54,7 @@ export type Database = {
           created_by: string
           ends_at: string | null
           id: string
+          is_public: boolean
           join_code: string
           name: string
           starting_cash: number
@@ -65,6 +66,7 @@ export type Database = {
           created_by: string
           ends_at?: string | null
           id?: string
+          is_public?: boolean
           join_code?: string
           name: string
           starting_cash?: number
@@ -76,6 +78,7 @@ export type Database = {
           created_by?: string
           ends_at?: string | null
           id?: string
+          is_public?: boolean
           join_code?: string
           name?: string
           starting_cash?: number
