@@ -343,7 +343,7 @@ export const StockChart = ({ symbol }: Props) => {
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
-              data={chartData}
+              data={withSMA}
               margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
             >
               <defs>
@@ -395,12 +395,51 @@ export const StockChart = ({ symbol }: Props) => {
               {chartType === "mountain" && (
                 <Area
                   type="linear"
-                  dataKey="price"
+                  dataKey={is1D ? "regularPrice" : "price"}
+                  name="Price"
                   stroke={isUp ? "hsl(var(--chart-up))" : "hsl(var(--chart-down))"}
                   strokeWidth={1.75}
                   fill={isUp ? "url(#gradUp)" : "url(#gradDown)"}
                   isAnimationActive={false}
+                  connectNulls={false}
                   dot={false}
+                />
+              )}
+              {chartType === "mountain" && is1D && (
+                <Line
+                  type="linear"
+                  dataKey="afterHoursPrice"
+                  name="After-hours"
+                  stroke="hsl(var(--muted-foreground))"
+                  strokeWidth={1.5}
+                  strokeDasharray="2 3"
+                  isAnimationActive={false}
+                  connectNulls={false}
+                  dot={false}
+                />
+              )}
+              {showSMA20 && (
+                <Line
+                  type="monotone"
+                  dataKey="sma20"
+                  name="SMA 20"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth={1.25}
+                  isAnimationActive={false}
+                  dot={false}
+                  connectNulls
+                />
+              )}
+              {showSMA50 && (
+                <Line
+                  type="monotone"
+                  dataKey="sma50"
+                  name="SMA 50"
+                  stroke="hsl(45 95% 55%)"
+                  strokeWidth={1.25}
+                  isAnimationActive={false}
+                  dot={false}
+                  connectNulls
                 />
               )}
               {chartType === "candle" && (
