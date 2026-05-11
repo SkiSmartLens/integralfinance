@@ -329,6 +329,28 @@ export const StockChart = ({ symbol }: Props) => {
               ))}
             </div>
           )}
+          {chartType === "mountain" && (
+            <div className="flex gap-1 text-[10px]">
+              <button
+                onClick={() => setShowSMA20((v) => !v)}
+                className={cn(
+                  "px-2 py-1 rounded font-semibold border transition-colors",
+                  showSMA20 ? "bg-primary/15 border-primary text-primary" : "border-border text-muted-foreground hover:bg-muted"
+                )}
+              >
+                SMA 20
+              </button>
+              <button
+                onClick={() => setShowSMA50((v) => !v)}
+                className={cn(
+                  "px-2 py-1 rounded font-semibold border transition-colors",
+                  showSMA50 ? "bg-yellow-500/15 border-yellow-500 text-yellow-600 dark:text-yellow-400" : "border-border text-muted-foreground hover:bg-muted"
+                )}
+              >
+                SMA 50
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
