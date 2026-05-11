@@ -13,7 +13,9 @@ interface Props {
   onSubChange?: (subId: string | undefined) => void;
 }
 
-export const CategoryNav = ({ active, onChange }: Props) => {
+export const CategoryNav = ({ active, onChange, activeSub, onSubChange }: Props) => {
+  const activeCat = CATEGORIES.find((c) => c.id === active);
+  const subs = activeCat?.subTopics ?? [];
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const nav = useNavigate();
