@@ -4,6 +4,7 @@ import { Ticker } from "@/components/Ticker";
 import { CategoryNav } from "@/components/CategoryNav";
 import { StockChart } from "@/components/StockChart";
 import { Watchlist } from "@/components/Watchlist";
+import { SectorHeatmap } from "@/components/SectorHeatmap";
 import { CATEGORIES, TRENDING } from "@/lib/categories";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +17,7 @@ const NewsList = lazy(() =>
 
 const Index = () => {
   const [activeCat, setActiveCat] = useState("news");
+  const [activeSub, setActiveSub] = useState<string | undefined>(undefined);
   const [activeSymbol, setActiveSymbol] = useState("AAPL");
   const [newsTab, setNewsTab] = useState<"my" | "general">("general");
 
@@ -23,22 +25,40 @@ const Index = () => {
     () => CATEGORIES.find((c) => c.id === activeCat) ?? CATEGORIES[0],
     [activeCat]
   );
+  const sub = useMemo(
+    () => cat.subTopics?.find((s) => s.id === activeSub),
+    [cat, activeSub]
+  );
 
+  // Reset sub-topic when category changes.
   useEffect(() => {
-    const first = cat.symbols?.[0] ?? "^GSPC";
-    setActiveSymbol(first);
-  }, [cat]);
+    setActiveSub(undefined);
+  }, [activeCat]);
 
-  const watchSymbols = cat.symbols && cat.symbols.length ? cat.symbols : TRENDING;
-  const myNewsQuery = watchSymbols.slice(0, 8).join(" OR ");
+  // Pick first symbol when category or sub-topic changes.
+  useEffect(() => {
+    const first = (sub?.symbols ?? cat.symbols)?.[0] ?? "^GSPC";
+    setActiveSymbol(first);
+  }, [cat, sub]);
+
+  const watchSymbols = (sub?.symbols ?? cat.symbols ?? TRENDING);
+  const newsQuery = sub?.query ?? cat.query;
+  const myNewsQuery = (watchSymbols ?? TRENDING).slice(0, 8).join(" OR ");
 
   return (
     <div className="min-h-screen bg-background">
       <Header onSearch={(s) => setActiveSymbol(s)} />
       <Ticker />
-      <CategoryNav active={activeCat} onChange={setActiveCat} />
+      <CategoryNav
+        active={activeCat}
+        onChange={setActiveCat}
+        activeSub={activeSub}
+        onSubChange={setActiveSub}
+      />
 
-      <main className="container mx-auto px-4 py-6">
+      <main className="container mx-auto px-4 py-6 space-y-6">
+        <SectorHeatmap onSelect={setActiveSymbol} />
+
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
           <div className="space-y-6 min-w-0">
             <StockChart symbol={activeSymbol} />
@@ -48,7 +68,7 @@ const Index = () => {
             <section>
               <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                 <h2 className="text-2xl font-bold">
-                  {newsTab === "my" ? "My News" : cat.label}{" "}
+                  {newsTab === "my" ? "My News" : (sub?.label ?? cat.label)}{" "}
                   <span className="text-muted-foreground font-normal text-base">
                     · latest stories
                   </span>
@@ -72,8 +92,8 @@ const Index = () => {
               </div>
               <Suspense fallback={<div className="text-muted-foreground py-8 text-center">Loading stories…</div>}>
                 <NewsList
-                  key={newsTab + ":" + (newsTab === "my" ? myNewsQuery : cat.query)}
-                  query={newsTab === "my" ? myNewsQuery : cat.query}
+                  key={newsTab + ":" + (newsTab === "my" ? myNewsQuery : newsQuery)}
+                  query={newsTab === "my" ? myNewsQuery : newsQuery}
                 />
               </Suspense>
             </section>
@@ -83,7 +103,7 @@ const Index = () => {
               symbols={watchSymbols}
               active={activeSymbol}
               onSelect={setActiveSymbol}
-              title={cat.label === "News" ? "Trending" : cat.label}
+              title={sub?.label ?? (cat.label === "News" ? "Trending" : cat.label)}
             />
             <Watchlist
               symbols={TRENDING}
