@@ -25,21 +25,41 @@ async function yahooFetch(url: string) {
   });
 }
 
+// Try to fetch market cap (and a few extra fields) via quoteSummary "price" module.
+async function fetchMarketCap(symbol: string): Promise<number | undefined> {
+  const tryHosts = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"];
+  for (const host of tryHosts) {
+    try {
+      const r = await yahooFetch(
+        `https://${host}/v10/finance/quoteSummary/${encodeURIComponent(symbol)}?modules=price`
+      );
+      if (!r.ok) continue;
+      const j = await r.json();
+      const p = j?.quoteSummary?.result?.[0]?.price;
+      const cap = p?.marketCap?.raw ?? p?.marketCap;
+      if (typeof cap === "number" && Number.isFinite(cap)) return cap;
+    } catch {
+      // try next
+    }
+  }
+  return undefined;
+}
+
 // Get a "quote-like" object derived from chart meta (works without crumb).
 async function chartMetaQuote(symbol: string): Promise<any | null> {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
     symbol
   )}?range=1d&interval=1m&includePrePost=false`;
   try {
-    const r = await yahooFetch(url);
+    const [r, marketCap] = await Promise.all([yahooFetch(url), fetchMarketCap(symbol)]);
     if (!r.ok) {
       await r.text();
-      return { symbol, error: `HTTP ${r.status}` };
+      return { symbol, error: `HTTP ${r.status}`, marketCap };
     }
     const j = await r.json();
     const result = j?.chart?.result?.[0];
     const m = result?.meta;
-    if (!m) return { symbol, error: "no meta" };
+    if (!m) return { symbol, error: "no meta", marketCap };
     const price = m.regularMarketPrice;
     const prev = m.chartPreviousClose ?? m.previousClose;
     const change = price != null && prev != null ? price - prev : undefined;
@@ -63,6 +83,7 @@ async function chartMetaQuote(symbol: string): Promise<any | null> {
       regularMarketVolume: m.regularMarketVolume,
       fiftyTwoWeekHigh: m.fiftyTwoWeekHigh,
       fiftyTwoWeekLow: m.fiftyTwoWeekLow,
+      marketCap,
     };
   } catch (e) {
     return { symbol, error: e instanceof Error ? e.message : "err" };
