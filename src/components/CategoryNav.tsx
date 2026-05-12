@@ -1,10 +1,8 @@
-import { CATEGORIES, TRENDING } from "@/lib/categories";
+import { CATEGORIES } from "@/lib/categories";
 import { cn } from "@/lib/utils";
-import { Link, useNavigate } from "react-router-dom";
-import { LineChart, Filter, Star, Calendar } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { useLiveQuotes } from "@/hooks/useLiveQuotes";
-import { formatNumber } from "@/lib/yahoo";
+import { Link } from "react-router-dom";
+import { LineChart, Filter, Calendar } from "lucide-react";
+import { WatchlistButton } from "@/components/WatchlistButton";
 
 interface Props {
   active: string;
