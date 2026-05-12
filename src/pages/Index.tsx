@@ -57,10 +57,6 @@ const Index = () => {
         activeSub={activeSub}
         onSubChange={setActiveSub}
       />
-      <div className="container mx-auto px-4 pt-4">
-        <SectorHeatmap onSelect={setActiveSymbol} />
-      </div>
-
       <main className="container mx-auto px-4 py-6 space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
           <div className="space-y-6 min-w-0">
