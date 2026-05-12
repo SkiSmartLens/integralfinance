@@ -21,6 +21,7 @@ const Index = () => {
   const [activeSub, setActiveSub] = useState<string | undefined>(undefined);
   const [activeSymbol, setActiveSymbol] = useState("AAPL");
   const [newsTab, setNewsTab] = useState<"my" | "general">("general");
+  const { symbols: myWatchlist } = useWatchlist();
 
   const cat = useMemo(
     () => CATEGORIES.find((c) => c.id === activeCat) ?? CATEGORIES[0],
