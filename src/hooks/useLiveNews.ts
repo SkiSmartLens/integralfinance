@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { fetchNews, NewsItem } from "@/lib/yahoo";
 
-export function useLiveNews(query: string, refreshMs = 60000) {
+export function useLiveNews(query: string, refreshMs = 30000) {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const mounted = useRef(true);
