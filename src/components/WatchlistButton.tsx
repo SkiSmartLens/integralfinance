@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Star, Search, Plus, X, Trash2 } from "lucide-react";
+import { Star, Search, Plus, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
