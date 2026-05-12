@@ -58,7 +58,6 @@ export const CATEGORIES: Category[] = [
       { id: "miners", label: "Miners / Stocks", query: "crypto stocks miners", symbols: ["COIN","MSTR","MARA","RIOT","HUT","CLSK"] },
     ],
   },
-  { id: "earnings", label: "Earnings", query: "earnings report beat miss" },
   {
     id: "energy", label: "Energy", query: "energy stocks oil",
     symbols: ["XOM","CVX","COP","SLB","BP","SHEL","OXY"],
