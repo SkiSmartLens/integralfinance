@@ -95,7 +95,6 @@ export const CATEGORIES: Category[] = [
       { id: "ecom", label: "E-Commerce", query: "ecommerce online retail", symbols: ["AMZN","SHOP","EBAY","ETSY","MELI"] },
     ],
   },
-  { id: "ipo", label: "IPOs", query: "IPO new listing" },
   {
     id: "world", label: "World", query: "global markets europe asia",
     symbols: ["^FTSE","^GDAXI","^FCHI","^N225","^HSI","000001.SS"],
