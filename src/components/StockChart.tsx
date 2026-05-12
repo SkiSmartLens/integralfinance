@@ -383,7 +383,9 @@ export const StockChart = ({ symbol }: Props) => {
                   stroke={isUp ? "hsl(var(--chart-up))" : "hsl(var(--chart-down))"}
                   strokeWidth={1.75}
                   fill={isUp ? "url(#gradUp)" : "url(#gradDown)"}
-                  isAnimationActive={false}
+                  isAnimationActive={true}
+                  animationDuration={2200}
+                  animationEasing="ease-out"
                   connectNulls={false}
                   dot={false}
                 />
@@ -396,33 +398,11 @@ export const StockChart = ({ symbol }: Props) => {
                   stroke="hsl(var(--muted-foreground))"
                   strokeWidth={1.5}
                   strokeDasharray="2 3"
-                  isAnimationActive={false}
+                  isAnimationActive={true}
+                  animationDuration={2200}
+                  animationEasing="ease-out"
                   connectNulls={false}
                   dot={false}
-                />
-              )}
-              {showSMA20 && (
-                <Line
-                  type="monotone"
-                  dataKey="sma20"
-                  name="SMA 20"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth={1.25}
-                  isAnimationActive={false}
-                  dot={false}
-                  connectNulls
-                />
-              )}
-              {showSMA50 && (
-                <Line
-                  type="monotone"
-                  dataKey="sma50"
-                  name="SMA 50"
-                  stroke="hsl(45 95% 55%)"
-                  strokeWidth={1.25}
-                  isAnimationActive={false}
-                  dot={false}
-                  connectNulls
                 />
               )}
               {chartType === "candle" && (
