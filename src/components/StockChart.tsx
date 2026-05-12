@@ -86,8 +86,6 @@ export const StockChart = ({ symbol }: Props) => {
   const [rangeIdx, setRangeIdx] = useState(0);
   const [chartType, setChartType] = useState<ChartType>("mountain");
   const [intradayIdx, setIntradayIdx] = useState(0);
-  const [showSMA20, setShowSMA20] = useState(false);
-  const [showSMA50, setShowSMA50] = useState(false);
   const r = chartType === "candle" ? INTRADAY[intradayIdx] : RANGES[rangeIdx];
   const is1D = chartType === "mountain" && rangeIdx === 0;
   const { data, loading } = useLiveChart(symbol, r.range, r.interval, 20000, is1D);
@@ -123,22 +121,7 @@ export const StockChart = ({ symbol }: Props) => {
     return pts;
   }, [data, chartType]);
 
-  // SMA helper — returns rolling simple moving average over `price` field.
-  const withSMA = useMemo(() => {
-    if (!chartData.length || (!showSMA20 && !showSMA50)) return chartData;
-    const prices = chartData.map((p) => p.price);
-    const sma = (window: number, i: number) => {
-      if (i < window - 1) return undefined;
-      let s = 0;
-      for (let k = i - window + 1; k <= i; k++) s += prices[k];
-      return s / window;
-    };
-    return chartData.map((p, i) => ({
-      ...p,
-      sma20: showSMA20 ? sma(20, i) : undefined,
-      sma50: showSMA50 ? sma(50, i) : undefined,
-    }));
-  }, [chartData, showSMA20, showSMA50]);
+  const withSMA = chartData;
 
   const formatTime = (t: number) => {
     const d = new Date(t);
