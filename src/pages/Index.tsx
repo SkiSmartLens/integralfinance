@@ -5,6 +5,7 @@ import { CategoryNav } from "@/components/CategoryNav";
 import { StockChart } from "@/components/StockChart";
 import { Watchlist } from "@/components/Watchlist";
 import { SectorHeatmap } from "@/components/SectorHeatmap";
+import { useWatchlist } from "@/hooks/useWatchlist";
 import { CATEGORIES, TRENDING } from "@/lib/categories";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,7 @@ const Index = () => {
   const [activeSub, setActiveSub] = useState<string | undefined>(undefined);
   const [activeSymbol, setActiveSymbol] = useState("AAPL");
   const [newsTab, setNewsTab] = useState<"my" | "general">("general");
+  const { symbols: myWatchlist } = useWatchlist();
 
   const cat = useMemo(
     () => CATEGORIES.find((c) => c.id === activeCat) ?? CATEGORIES[0],
@@ -55,10 +57,11 @@ const Index = () => {
         activeSub={activeSub}
         onSubChange={setActiveSub}
       />
+      <div className="container mx-auto px-4 pt-4">
+        <SectorHeatmap onSelect={setActiveSymbol} />
+      </div>
 
       <main className="container mx-auto px-4 py-6 space-y-6">
-        <SectorHeatmap onSelect={setActiveSymbol} />
-
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
           <div className="space-y-6 min-w-0">
             <StockChart symbol={activeSymbol} />
@@ -104,6 +107,12 @@ const Index = () => {
               active={activeSymbol}
               onSelect={setActiveSymbol}
               title={sub?.label ?? (cat.label === "News" ? "Trending" : cat.label)}
+            />
+            <Watchlist
+              symbols={myWatchlist}
+              active={activeSymbol}
+              onSelect={setActiveSymbol}
+              title="My Watchlist"
             />
             <Watchlist
               symbols={TRENDING}
