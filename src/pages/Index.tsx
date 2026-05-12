@@ -107,6 +107,12 @@ const Index = () => {
               title={sub?.label ?? (cat.label === "News" ? "Trending" : cat.label)}
             />
             <Watchlist
+              symbols={myWatchlist}
+              active={activeSymbol}
+              onSelect={setActiveSymbol}
+              title="My Watchlist"
+            />
+            <Watchlist
               symbols={TRENDING}
               active={activeSymbol}
               onSelect={setActiveSymbol}
