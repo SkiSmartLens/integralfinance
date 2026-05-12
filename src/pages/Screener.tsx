@@ -14,7 +14,7 @@ const PRESETS: { id: string; label: string; desc: string }[] = [
   { id: "aggressive_small_caps", label: "Aggressive Small-Caps", desc: "Small-cap growth bets" },
   { id: "small_cap_gainers", label: "Small-Cap Gainers", desc: "Top small-cap movers" },
   { id: "undervalued_large_caps", label: "Undervalued Large-Caps", desc: "Cheap mega-caps" },
-  { id: "top_options_implied_volatility", label: "High IV Options", desc: "Volatile options chains" },
+  
 ];
 
 type SortKey = "symbol" | "regularMarketPrice" | "regularMarketChangePercent" | "regularMarketVolume" | "marketCap" | "trailingPE";
