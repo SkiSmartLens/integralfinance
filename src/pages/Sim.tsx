@@ -212,6 +212,12 @@ const Sim = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="Trading Simulator — Integral Stocks"
+        description="Multiplayer paper-trading simulator with live prices, leaderboards, limit/stop orders, and shareable game codes."
+        path="/sim"
+      />
+      <h1 className="sr-only">Trading Simulator</h1>
       <Header onSearch={(s) => setSymbol(s)} />
       <div className="border-b bg-card">
         <div className="container mx-auto px-4 py-3 flex flex-wrap items-center gap-3 justify-between">
