@@ -1,5 +1,6 @@
 import { Header } from "@/components/Header";
 import { Ticker } from "@/components/Ticker";
+import { SEO } from "@/components/SEO";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
