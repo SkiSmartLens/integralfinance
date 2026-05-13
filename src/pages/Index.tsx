@@ -5,6 +5,7 @@ import { CategoryNav } from "@/components/CategoryNav";
 import { StockChart } from "@/components/StockChart";
 import { Watchlist } from "@/components/Watchlist";
 import { SectorHeatmap } from "@/components/SectorHeatmap";
+import { SEO } from "@/components/SEO";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { CATEGORIES, TRENDING } from "@/lib/categories";
 import { cn } from "@/lib/utils";
