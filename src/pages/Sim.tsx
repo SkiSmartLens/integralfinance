@@ -255,7 +255,7 @@ const Sim = () => {
         </div>
       </div>
 
-      <main className="container mx-auto px-4 py-6 space-y-6">
+      <main className="container mx-auto px-4 py-6 space-y-6 pb-[80px]">
         {!activeMember ? (
           <div className="bg-card border rounded-lg p-8 text-center">
             <h2 className="text-xl font-bold mb-2">Welcome to the Simulator</h2>
