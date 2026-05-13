@@ -122,6 +122,7 @@ export const StockChart = ({ symbol }: Props) => {
     ? (displayChange / prevClose) * 100
     : null;
   const isUp = (displayChange ?? 0) >= 0;
+  const priceFlash = usePriceFlash(typeof lastPrice === "number" ? lastPrice : null);
 
   const chartData = useMemo(() => {
     const pts = data?.points ?? [];
