@@ -278,7 +278,13 @@ export const StockChart = ({ symbol }: Props) => {
             </span>
           </div>
           <div className="flex items-baseline gap-3 flex-wrap">
-            <span className="text-4xl font-bold tabular-nums">
+            <span
+              className={cn(
+                "text-4xl font-bold tabular-nums rounded px-1 -mx-1 transition-colors",
+                priceFlash === "up" && "bg-up/25 text-up",
+                priceFlash === "down" && "bg-down/25 text-down",
+              )}
+            >
               {formatNumber(lastPrice)}
             </span>
             {displayChange != null && (
