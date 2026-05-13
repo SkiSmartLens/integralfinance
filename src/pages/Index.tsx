@@ -109,6 +109,7 @@ const Index = () => {
               active={activeSymbol}
               onSelect={setActiveSymbol}
               title="My Watchlist"
+              addable
             />
             <Watchlist
               symbols={TRENDING}
