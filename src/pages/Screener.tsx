@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
+import { SEO } from "@/components/SEO";
 import { fetchScreener, formatNumber, formatLargeNumber, ScreenerQuote } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
 import { LineChart, ArrowUpDown } from "lucide-react";
