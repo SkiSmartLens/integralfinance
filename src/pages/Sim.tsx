@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
+import { SEO } from "@/components/SEO";
 import { DragSheet } from "@/components/DragSheet";
 import { fetchQuotes, formatNumber, formatLargeNumber } from "@/lib/yahoo";
 import { toast } from "@/hooks/use-toast";
