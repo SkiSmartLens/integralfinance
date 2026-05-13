@@ -74,6 +74,11 @@ const Calendar = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="Personal Market Calendar — Integral Stocks"
+        description="Track your own earnings dates, IPOs, dividends, and macro events on a personal market calendar."
+        path="/calendar"
+      />
       <Header />
       <Ticker />
       <div className="border-b bg-background sticky top-0 z-30">
