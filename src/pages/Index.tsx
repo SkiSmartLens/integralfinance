@@ -50,6 +50,19 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="Integral Stocks — Live Markets, News & Trading Sim"
+        description="Real-time stock quotes, interactive charts, financial news, sector heatmaps, an economic calendar, and a multiplayer paper-trading simulator."
+        path="/"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "WebPage",
+          name: "Integral Stocks",
+          description: "Real-time markets dashboard with live quotes, news and trading simulator.",
+          url: "https://integralstocks.lovable.app/",
+        }}
+      />
+      <h1 className="sr-only">Integral Stocks — Real-time market dashboard</h1>
       <Header onSearch={(s) => setActiveSymbol(s)} />
       <Ticker />
       <CategoryNav
