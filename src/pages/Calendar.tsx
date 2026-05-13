@@ -1,5 +1,6 @@
 import { Header } from "@/components/Header";
 import { Ticker } from "@/components/Ticker";
+import { SEO } from "@/components/SEO";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -73,6 +74,11 @@ const Calendar = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="Personal Market Calendar — Integral Stocks"
+        description="Track your own earnings dates, IPOs, dividends, and macro events on a personal market calendar."
+        path="/calendar"
+      />
       <Header />
       <Ticker />
       <div className="border-b bg-background sticky top-0 z-30">

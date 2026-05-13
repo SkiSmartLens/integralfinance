@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
+import { SEO } from "@/components/SEO";
 import { fetchScreener, formatNumber, formatLargeNumber, ScreenerQuote } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
 import { LineChart, ArrowUpDown } from "lucide-react";
@@ -68,6 +69,18 @@ export default function Screener() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="Stock Screeners — Top Gainers, Losers & Most Active"
+        description="Browse curated stock screeners: top gainers, losers, most actives, undervalued growth, small-cap movers, and more — with sortable tables and filters."
+        path="/screener"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          name: "Stock Screeners",
+          url: "https://integralstocks.lovable.app/screener",
+        }}
+      />
+      <h1 className="sr-only">Stock Screeners</h1>
       <Header />
       <div className="border-b bg-card">
         <div className="container mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">

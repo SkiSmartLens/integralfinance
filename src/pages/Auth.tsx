@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
+import { SEO } from "@/components/SEO";
 import { toast } from "@/hooks/use-toast";
 
 const Auth = () => {
@@ -42,6 +43,11 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="Sign in — Integral Stocks"
+        description="Sign in to Integral Stocks to access the trading simulator and your personal watchlist."
+        path="/auth"
+      />
       <Header onSearch={() => {}} />
       <div className="container mx-auto px-4 py-12 max-w-md">
         <div className="bg-card border rounded-lg p-6">
