@@ -82,6 +82,23 @@ const makeCandleLayer = (data: ChartPoint[]) => (props: any) => {
   );
 };
 
+const usePriceFlash = (value: number | null | undefined) => {
+  const prev = useRef<number | null | undefined>(value);
+  const [dir, setDir] = useState<"up" | "down" | null>(null);
+  useEffect(() => {
+    if (value == null) return;
+    if (prev.current != null) {
+      if (value > prev.current) setDir("up");
+      else if (value < prev.current) setDir("down");
+      const t = setTimeout(() => setDir(null), 800);
+      prev.current = value;
+      return () => clearTimeout(t);
+    }
+    prev.current = value;
+  }, [value]);
+  return dir;
+};
+
 export const StockChart = ({ symbol }: Props) => {
   const [rangeIdx, setRangeIdx] = useState(0);
   const [chartType, setChartType] = useState<ChartType>("mountain");
