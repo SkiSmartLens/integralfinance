@@ -118,8 +118,32 @@ export const StockChart = ({ symbol }: Props) => {
           p.low! <= Math.min(p.open!, p.close!, p.high!)
       );
     }
+    // For 1D mountain: pad with empty future slots from now → market close
+    // so the chart starts mostly empty and slowly fills up over the day.
+    if (is1D) {
+      const sessionEnd = (data?.meta?.currentTradingPeriod?.regular?.end as number | undefined);
+      const sessionStart = (data?.meta?.currentTradingPeriod?.regular?.start as number | undefined);
+      const stepMs = 5 * 60 * 1000;
+      const lastT = pts.at(-1)?.t;
+      const startMs = sessionStart ? sessionStart * 1000 : (pts[0]?.t ?? Date.now());
+      const endMs = sessionEnd ? sessionEnd * 1000 : (lastT ?? Date.now()) + 6.5 * 60 * 60 * 1000;
+      // Optionally backfill leading empty slots so axis starts at the open.
+      const head: ChartPoint[] = [];
+      if (pts.length === 0 || (pts[0]?.t ?? endMs) > startMs) {
+        const firstReal = pts[0]?.t ?? endMs;
+        for (let t = startMs; t < firstReal; t += stepMs) {
+          head.push({ t, price: null as any, regularPrice: null as any, afterHoursPrice: null as any });
+        }
+      }
+      const tail: ChartPoint[] = [];
+      const tailStart = (lastT ?? startMs) + stepMs;
+      for (let t = tailStart; t <= endMs; t += stepMs) {
+        tail.push({ t, price: null as any, regularPrice: null as any, afterHoursPrice: null as any });
+      }
+      return [...head, ...pts, ...tail];
+    }
     return pts;
-  }, [data, chartType]);
+  }, [data, chartType, is1D]);
 
   const withSMA = chartData;
 
