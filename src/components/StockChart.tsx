@@ -82,6 +82,23 @@ const makeCandleLayer = (data: ChartPoint[]) => (props: any) => {
   );
 };
 
+const usePriceFlash = (value: number | null | undefined) => {
+  const prev = useRef<number | null | undefined>(value);
+  const [dir, setDir] = useState<"up" | "down" | null>(null);
+  useEffect(() => {
+    if (value == null) return;
+    if (prev.current != null) {
+      if (value > prev.current) setDir("up");
+      else if (value < prev.current) setDir("down");
+      const t = setTimeout(() => setDir(null), 800);
+      prev.current = value;
+      return () => clearTimeout(t);
+    }
+    prev.current = value;
+  }, [value]);
+  return dir;
+};
+
 export const StockChart = ({ symbol }: Props) => {
   const [rangeIdx, setRangeIdx] = useState(0);
   const [chartType, setChartType] = useState<ChartType>("mountain");
@@ -105,6 +122,7 @@ export const StockChart = ({ symbol }: Props) => {
     ? (displayChange / prevClose) * 100
     : null;
   const isUp = (displayChange ?? 0) >= 0;
+  const priceFlash = usePriceFlash(typeof lastPrice === "number" ? lastPrice : null);
 
   const chartData = useMemo(() => {
     const pts = data?.points ?? [];
@@ -118,8 +136,32 @@ export const StockChart = ({ symbol }: Props) => {
           p.low! <= Math.min(p.open!, p.close!, p.high!)
       );
     }
+    // For 1D mountain: pad with empty future slots from now → market close
+    // so the chart starts mostly empty and slowly fills up over the day.
+    if (is1D) {
+      const sessionEnd = (data?.meta?.currentTradingPeriod?.regular?.end as number | undefined);
+      const sessionStart = (data?.meta?.currentTradingPeriod?.regular?.start as number | undefined);
+      const stepMs = 5 * 60 * 1000;
+      const lastT = pts.at(-1)?.t;
+      const startMs = sessionStart ? sessionStart * 1000 : (pts[0]?.t ?? Date.now());
+      const endMs = sessionEnd ? sessionEnd * 1000 : (lastT ?? Date.now()) + 6.5 * 60 * 60 * 1000;
+      // Optionally backfill leading empty slots so axis starts at the open.
+      const head: ChartPoint[] = [];
+      if (pts.length === 0 || (pts[0]?.t ?? endMs) > startMs) {
+        const firstReal = pts[0]?.t ?? endMs;
+        for (let t = startMs; t < firstReal; t += stepMs) {
+          head.push({ t, price: null as any, regularPrice: null as any, afterHoursPrice: null as any });
+        }
+      }
+      const tail: ChartPoint[] = [];
+      const tailStart = (lastT ?? startMs) + stepMs;
+      for (let t = tailStart; t <= endMs; t += stepMs) {
+        tail.push({ t, price: null as any, regularPrice: null as any, afterHoursPrice: null as any });
+      }
+      return [...head, ...pts, ...tail];
+    }
     return pts;
-  }, [data, chartType]);
+  }, [data, chartType, is1D]);
 
   const withSMA = chartData;
 
@@ -237,7 +279,13 @@ export const StockChart = ({ symbol }: Props) => {
             </span>
           </div>
           <div className="flex items-baseline gap-3 flex-wrap">
-            <span className="text-4xl font-bold tabular-nums">
+            <span
+              className={cn(
+                "text-4xl font-bold tabular-nums rounded px-1 -mx-1 transition-colors",
+                priceFlash === "up" && "bg-up/25 text-up",
+                priceFlash === "down" && "bg-down/25 text-down",
+              )}
+            >
               {formatNumber(lastPrice)}
             </span>
             {displayChange != null && (
