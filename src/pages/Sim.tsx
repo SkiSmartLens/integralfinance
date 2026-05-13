@@ -437,6 +437,53 @@ const Sim = () => {
           onJoin={(g) => joinGameById(g.id, Number(g.starting_cash), g.join_code)}
         />
       )}
+
+      <DragSheet title="Integral Stocks">
+        <div className="p-4 space-y-3">
+          {activeMember ? (
+            <>
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div>
+                  <div className="text-[10px] text-muted-foreground uppercase">Cash</div>
+                  <div className="font-bold tabular-nums">${formatNumber(Number(activeMember.cash))}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-muted-foreground uppercase">Equity</div>
+                  <div className="font-bold tabular-nums">${formatNumber(equity)}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-muted-foreground uppercase">Total</div>
+                  <div className={cn("font-bold tabular-nums", totalReturnPct >= 0 ? "text-up" : "text-down")}>
+                    {totalReturnPct >= 0 ? "+" : ""}{formatNumber(totalReturnPct)}%
+                  </div>
+                </div>
+              </div>
+              <form onSubmit={placeOrder} className="grid grid-cols-2 gap-2">
+                <div className="col-span-2 flex gap-1 bg-muted rounded p-1">
+                  {(["buy", "sell"] as const).map((s) => (
+                    <button type="button" key={s} onClick={() => setSide(s)}
+                      className={cn("flex-1 py-1.5 rounded text-sm font-semibold capitalize",
+                        side === s ? (s === "buy" ? "bg-up text-white" : "bg-down text-white") : "text-muted-foreground")}>
+                      {s}
+                    </button>
+                  ))}
+                </div>
+                <input value={symbol} onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+                  placeholder="Symbol" className="px-3 py-2 bg-muted rounded outline-none text-sm" />
+                <input type="number" min={1} value={shares} onChange={(e) => setShares(Number(e.target.value))}
+                  placeholder="Shares" className="px-3 py-2 bg-muted rounded outline-none text-sm" />
+                <button disabled={placing} className="col-span-2 py-2 rounded bg-primary text-primary-foreground font-semibold disabled:opacity-60 text-sm">
+                  {placing ? "Placing…" : `${side === "buy" ? "Buy" : "Sell"} ${shares || ""} ${symbol}`}
+                </button>
+              </form>
+            </>
+          ) : (
+            <p className="text-center text-sm text-muted-foreground py-4">
+              Join or create a game to use the quick ticket.
+            </p>
+          )}
+        </div>
+      </DragSheet>
     </div>
   );
 };
