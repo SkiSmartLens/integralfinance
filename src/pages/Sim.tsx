@@ -4,10 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { SEO } from "@/components/SEO";
 import { DragSheet } from "@/components/DragSheet";
+import { useFlash } from "@/hooks/useFlash";
 import { fetchQuotes, formatNumber, formatLargeNumber } from "@/lib/yahoo";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { LogOut, Plus, Users, Search, Globe, Lock } from "lucide-react";
+import { LogOut, Plus, Users, Search, Globe, Lock, Wrench } from "lucide-react";
 
 interface Game { id: string; name: string; starting_cash: number; commission: number; join_code: string; created_by: string; is_public?: boolean; }
 interface Member { id: string; game_id: string; user_id: string; cash: number; }
