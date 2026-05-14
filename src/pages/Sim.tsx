@@ -845,10 +845,6 @@ const DevModal = ({
               className="w-full py-2 rounded bg-primary text-primary-foreground font-semibold disabled:opacity-60">
               Add cash to me
             </button>
-            <button disabled={busy} onClick={addCashToAll}
-              className="w-full py-2 rounded bg-muted font-semibold disabled:opacity-60">
-              Add cash to all players
-            </button>
             <button disabled={busy} onClick={resetMyCash}
               className="w-full py-2 rounded border border-down text-down font-semibold disabled:opacity-60">
               Reset my portfolio
