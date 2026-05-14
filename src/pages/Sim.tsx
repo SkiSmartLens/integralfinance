@@ -30,6 +30,8 @@ const Sim = () => {
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
   const [showBrowse, setShowBrowse] = useState(false);
+  const [showDev, setShowDev] = useState(false);
+  const [sheetSignal, setSheetSignal] = useState(0);
 
   // Order ticket
   const [symbol, setSymbol] = useState("AAPL");
