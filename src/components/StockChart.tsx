@@ -16,14 +16,11 @@ import { formatNumber, formatLargeNumber, ChartPoint } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
 
 const RANGES: { label: string; range: string; interval: string }[] = [
-  { label: "1D", range: "1d", interval: "5m" },
-  { label: "5D", range: "5d", interval: "15m" },
+  { label: "Today", range: "1d", interval: "5m" },
   { label: "1M", range: "1mo", interval: "1d" },
-  { label: "6M", range: "6mo", interval: "1d" },
-  { label: "YTD", range: "ytd", interval: "1d" },
   { label: "1Y", range: "1y", interval: "1d" },
   { label: "5Y", range: "5y", interval: "1wk" },
-  { label: "Max", range: "max", interval: "1mo" },
+  { label: "All", range: "max", interval: "1mo" },
 ];
 
 // Intraday interval presets used for candle mode
@@ -309,57 +306,22 @@ export const StockChart = ({ symbol }: Props) => {
           </div>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <div className="flex gap-1">
-            {(["mountain", "candle"] as ChartType[]).map((t) => (
+          <div className="flex flex-wrap gap-1 justify-end">
+            {RANGES.map((rg, i) => (
               <button
-                key={t}
-                onClick={() => setChartType(t)}
+                key={rg.label}
+                onClick={() => setRangeIdx(i)}
                 className={cn(
-                  "px-3 py-1.5 rounded text-xs font-semibold capitalize transition-colors",
-                  chartType === t
-                    ? "bg-primary text-primary-foreground"
+                  "px-3 py-1.5 rounded text-xs font-semibold transition-colors",
+                  rangeIdx === i
+                    ? "bg-foreground text-background"
                     : "text-muted-foreground hover:bg-muted"
                 )}
               >
-                {t}
+                {rg.label}
               </button>
             ))}
           </div>
-          {chartType === "candle" ? (
-            <div className="flex flex-wrap gap-1 justify-end">
-              {INTRADAY.map((rg, i) => (
-                <button
-                  key={rg.label}
-                  onClick={() => setIntradayIdx(i)}
-                  className={cn(
-                    "px-3 py-1.5 rounded text-xs font-semibold transition-colors",
-                    intradayIdx === i
-                      ? "bg-foreground text-background"
-                      : "text-muted-foreground hover:bg-muted"
-                  )}
-                >
-                  {rg.label}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-1 justify-end">
-              {RANGES.map((rg, i) => (
-                <button
-                  key={rg.label}
-                  onClick={() => setRangeIdx(i)}
-                  className={cn(
-                    "px-3 py-1.5 rounded text-xs font-semibold transition-colors",
-                    rangeIdx === i
-                      ? "bg-foreground text-background"
-                      : "text-muted-foreground hover:bg-muted"
-                  )}
-                >
-                  {rg.label}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 

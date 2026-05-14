@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { symbol } = await req.json();
+    const { symbol, mode } = await req.json();
     if (!symbol || typeof symbol !== "string") {
       return new Response(JSON.stringify({ error: "symbol required" }), {
         status: 400,
@@ -17,7 +17,8 @@ Deno.serve(async (req) => {
       });
     }
     const sym = symbol.toUpperCase();
-    const key = `sum:${sym}`;
+    const isBeginner = mode === "beginner";
+    const key = `sum:${isBeginner ? "b:" : ""}${sym}`;
     const hit = cache.get(key);
     if (hit && hit.exp > Date.now()) {
       return new Response(hit.body, {
@@ -45,7 +46,22 @@ Deno.serve(async (req) => {
       .map((n: any) => `- ${n.title} (${n.publisher})`);
     const q = quoteJson?.quoteResponse?.result?.[0] ?? {};
 
-    const prompt = `Stock: ${q.shortName ?? sym} (${sym})
+    const beginnerPrompt = `Stock: ${q.shortName ?? sym} (${sym})
+Sector: ${q.sector ?? ""}  Industry: ${q.industry ?? ""}
+Price: ${q.regularMarketPrice} ${q.currency ?? ""}
+Mkt cap: ${q.marketCap}
+
+Recent headlines:
+${headlines.join("\n") || "(none)"}
+
+Explain this company to a complete beginner who has never invested before.
+Return strict JSON: {"whatItDoes": string, "whyPeopleBuy": string, "whatToWatch": string}
+- whatItDoes: 1-2 plain-English sentences. Avoid jargon. Imagine explaining to a teenager.
+- whyPeopleBuy: 1-2 sentences on the bull case (growth, dividends, brand, etc.).
+- whatToWatch: 1-2 sentences on key risks or what could move the price.
+No disclaimers, no markdown, no jargon.`;
+
+    const analystPrompt = `Stock: ${q.shortName ?? sym} (${sym})
 Price: ${q.regularMarketPrice} ${q.currency ?? ""}
 Change: ${q.regularMarketChangePercent?.toFixed?.(2)}%
 Day range: ${q.regularMarketDayLow}-${q.regularMarketDayHigh}
@@ -57,10 +73,30 @@ ${headlines.join("\n") || "(none)"}
 
 Return strict JSON with shape:
 {"positives":[string], "negatives":[string], "earnings": string, "outlook": string}
-- 3-5 short bullets each for positives & negatives
+- 3-5 short bullets each. Use simple language a beginner can understand — no jargon.
 - earnings: 1-2 sentences on most recent / upcoming earnings if known
 - outlook: 1 sentence neutral synthesis
-Be concise, factual, no disclaimers.`;
+Be concise, no disclaimers.`;
+
+    const beginnerSchema = {
+      type: "object",
+      properties: {
+        whatItDoes: { type: "string" },
+        whyPeopleBuy: { type: "string" },
+        whatToWatch: { type: "string" },
+      },
+      required: ["whatItDoes", "whyPeopleBuy", "whatToWatch"],
+    };
+    const analystSchema = {
+      type: "object",
+      properties: {
+        positives: { type: "array", items: { type: "string" } },
+        negatives: { type: "array", items: { type: "string" } },
+        earnings: { type: "string" },
+        outlook: { type: "string" },
+      },
+      required: ["positives", "negatives", "earnings", "outlook"],
+    };
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -71,24 +107,17 @@ Be concise, factual, no disclaimers.`;
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: "You are a concise equity research analyst. Output only valid JSON." },
-          { role: "user", content: prompt },
+          { role: "system", content: isBeginner
+              ? "You explain stocks to first-time investors in friendly plain English. Output only valid JSON."
+              : "You are a concise equity research analyst writing for beginners. Output only valid JSON." },
+          { role: "user", content: isBeginner ? beginnerPrompt : analystPrompt },
         ],
         tools: [{
           type: "function",
           function: {
             name: "stock_summary",
             description: "Return structured summary",
-            parameters: {
-              type: "object",
-              properties: {
-                positives: { type: "array", items: { type: "string" } },
-                negatives: { type: "array", items: { type: "string" } },
-                earnings: { type: "string" },
-                outlook: { type: "string" },
-              },
-              required: ["positives", "negatives", "earnings", "outlook"],
-            },
+            parameters: isBeginner ? beginnerSchema : analystSchema,
           },
         }],
         tool_choice: { type: "function", function: { name: "stock_summary" } },
