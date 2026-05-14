@@ -308,24 +308,17 @@ const Sim = () => {
                           <th className="text-right">Value</th><th className="text-right">P&amp;L</th></tr>
                       </thead>
                       <tbody>
-                        {positions.map((p) => {
-                          const last = prices[p.symbol] ?? p.avg_cost;
-                          const value = last * Number(p.shares);
-                          const pl = (last - Number(p.avg_cost)) * Number(p.shares);
-                          const pct = ((last - Number(p.avg_cost)) / Number(p.avg_cost)) * 100;
-                          return (
-                            <tr key={p.id} className="border-b last:border-0">
-                              <td className="py-2 font-semibold">{p.symbol}</td>
-                              <td className="text-right tabular-nums">{p.shares}</td>
-                              <td className="text-right tabular-nums">{formatNumber(p.avg_cost)}</td>
-                              <td className="text-right tabular-nums">{formatNumber(last)}</td>
-                              <td className="text-right tabular-nums">{formatLargeNumber(value)}</td>
-                              <td className={cn("text-right tabular-nums font-semibold", pl >= 0 ? "text-up" : "text-down")}>
-                                {pl >= 0 ? "+" : ""}{formatNumber(pl)} ({formatNumber(pct)}%)
-                              </td>
-                            </tr>
-                          );
-                        })}
+                        {positions.map((p) => (
+                          <PositionRow
+                            key={p.id}
+                            p={p}
+                            last={prices[p.symbol] ?? Number(p.avg_cost)}
+                            onClick={() => {
+                              setSymbol(p.symbol);
+                              setSheetSignal((s) => s + 1);
+                            }}
+                          />
+                        ))}
                       </tbody>
                     </table>
                   </div>
