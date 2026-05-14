@@ -446,9 +446,17 @@ const Sim = () => {
           onClose={() => setShowBrowse(false)}
           onJoin={(g) => joinGameById(g.id, Number(g.starting_cash), g.join_code)}
         />
+      {showDev && activeMember && (
+        <DevModal
+          onClose={() => setShowDev(false)}
+          memberId={activeMember.id}
+          gameId={activeGameId!}
+          currentCash={Number(activeMember.cash)}
+          onChanged={() => { reloadGames(); reloadPortfolio(); }}
+        />
       )}
 
-      <DragSheet title="Integral Stocks">
+      <DragSheet title="Integral Stocks" openSignal={sheetSignal}>
         <div className="p-4 space-y-3">
           {activeMember ? (
             <>
