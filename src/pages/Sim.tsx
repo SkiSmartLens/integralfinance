@@ -741,4 +741,134 @@ const BrowseGamesModal = ({ onClose, onJoin }: { onClose: () => void; onJoin: (g
   );
 };
 
+const PositionRow = ({
+  p, last, onClick,
+}: {
+  p: Position;
+  last: number;
+  onClick: () => void;
+}) => {
+  const flash = useFlash(last);
+  const value = last * Number(p.shares);
+  const pl = (last - Number(p.avg_cost)) * Number(p.shares);
+  const pct = ((last - Number(p.avg_cost)) / Number(p.avg_cost)) * 100;
+  // Highlight symbol when overall return crosses ±5%.
+  const symBg =
+    pct >= 5 ? "bg-up/15 text-up" :
+    pct <= -5 ? "bg-down/15 text-down" : "";
+  return (
+    <tr onClick={onClick} className="border-b last:border-0 cursor-pointer hover:bg-muted/40 transition-colors">
+      <td className="py-2">
+        <span className={cn("font-semibold rounded px-1.5 py-0.5", symBg)}>{p.symbol}</span>
+      </td>
+      <td className="text-right tabular-nums">{p.shares}</td>
+      <td className="text-right tabular-nums">{formatNumber(p.avg_cost)}</td>
+      <td className="text-right tabular-nums">
+        <span className={cn(
+          "rounded px-1.5 py-0.5 transition-colors",
+          flash === "up" && "bg-up/20 text-up",
+          flash === "down" && "bg-down/20 text-down",
+        )}>
+          {formatNumber(last)}
+        </span>
+      </td>
+      <td className="text-right tabular-nums">{formatLargeNumber(value)}</td>
+      <td className={cn("text-right tabular-nums font-semibold", pl >= 0 ? "text-up" : "text-down")}>
+        {pl >= 0 ? "+" : ""}{formatNumber(pl)} ({formatNumber(pct)}%)
+      </td>
+    </tr>
+  );
+};
+
+const DevModal = ({
+  onClose, memberId, gameId, currentCash, onChanged,
+}: {
+  onClose: () => void;
+  memberId: string;
+  gameId: string;
+  currentCash: number;
+  onChanged: () => void;
+}) => {
+  const [amount, setAmount] = useState(10000);
+  const [busy, setBusy] = useState(false);
+
+  const addCashToMe = async () => {
+    setBusy(true);
+    const { error } = await supabase
+      .from("game_members")
+      .update({ cash: currentCash + amount })
+      .eq("id", memberId);
+    setBusy(false);
+    if (error) return toast({ title: "Failed", description: error.message, variant: "destructive" });
+    toast({ title: `+ $${formatNumber(amount)} added` });
+    onChanged();
+  };
+
+  const addCashToAll = async () => {
+    setBusy(true);
+    const { data: ms, error: e1 } = await supabase
+      .from("game_members").select("id, cash").eq("game_id", gameId);
+    if (e1 || !ms) { setBusy(false); return toast({ title: "Failed", description: e1?.message, variant: "destructive" }); }
+    for (const m of ms) {
+      await supabase.from("game_members").update({ cash: Number(m.cash) + amount }).eq("id", m.id);
+    }
+    setBusy(false);
+    toast({ title: `+ $${formatNumber(amount)} added to all players` });
+    onChanged();
+  };
+
+  const resetMyCash = async () => {
+    setBusy(true);
+    const { data: g } = await supabase.from("games").select("starting_cash").eq("id", gameId).maybeSingle();
+    const start = Number(g?.starting_cash ?? 100000);
+    await supabase.from("positions").delete().eq("member_id", memberId);
+    await supabase.from("orders").delete().eq("member_id", memberId).eq("status", "pending");
+    const { error } = await supabase.from("game_members").update({ cash: start }).eq("id", memberId);
+    setBusy(false);
+    if (error) return toast({ title: "Reset failed", description: error.message, variant: "destructive" });
+    toast({ title: "Portfolio reset" });
+    onChanged();
+  };
+
+  return (
+    <div onClick={onClose} className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div onClick={(e) => e.stopPropagation()} className="bg-card border rounded-lg p-6 max-w-sm w-full">
+        <div className="flex items-center gap-2 mb-1">
+          <Wrench className="w-4 h-4 text-amber-500" />
+          <h3 className="font-bold text-lg">Creator dev tools</h3>
+        </div>
+        <p className="text-xs text-muted-foreground mb-4">
+          Only you (the game creator) can see this menu.
+        </p>
+        <div className="space-y-3">
+          <label className="block text-xs text-muted-foreground">Amount ($)</label>
+          <input
+            type="number"
+            value={amount}
+            min={0}
+            step={1000}
+            onChange={(e) => setAmount(Number(e.target.value))}
+            className="w-full px-3 py-2 bg-muted rounded outline-none"
+          />
+          <div className="grid gap-2">
+            <button disabled={busy} onClick={addCashToMe}
+              className="w-full py-2 rounded bg-primary text-primary-foreground font-semibold disabled:opacity-60">
+              Add cash to me
+            </button>
+            <button disabled={busy} onClick={addCashToAll}
+              className="w-full py-2 rounded bg-muted font-semibold disabled:opacity-60">
+              Add cash to all players
+            </button>
+            <button disabled={busy} onClick={resetMyCash}
+              className="w-full py-2 rounded border border-down text-down font-semibold disabled:opacity-60">
+              Reset my portfolio
+            </button>
+          </div>
+          <button onClick={onClose} className="w-full text-xs text-muted-foreground py-1">Close</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default Sim;
