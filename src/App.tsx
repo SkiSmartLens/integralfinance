@@ -12,6 +12,7 @@ const Auth = lazy(() => import("./pages/Auth.tsx"));
 const Sim = lazy(() => import("./pages/Sim.tsx"));
 const Screener = lazy(() => import("./pages/Screener.tsx"));
 const Calendar = lazy(() => import("./pages/Calendar.tsx"));
+const Watchlist = lazy(() => import("./pages/Watchlist.tsx"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/sim" element={<Sim />} />
             <Route path="/screener" element={<Screener />} />
             <Route path="/calendar" element={<Calendar />} />
+            <Route path="/watchlist" element={<Watchlist />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
