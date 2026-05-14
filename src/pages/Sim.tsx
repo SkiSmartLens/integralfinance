@@ -804,18 +804,8 @@ const DevModal = ({
     onChanged();
   };
 
-  const addCashToAll = async () => {
-    setBusy(true);
-    const { data: ms, error: e1 } = await supabase
-      .from("game_members").select("id, cash").eq("game_id", gameId);
-    if (e1 || !ms) { setBusy(false); return toast({ title: "Failed", description: e1?.message, variant: "destructive" }); }
-    for (const m of ms) {
-      await supabase.from("game_members").update({ cash: Number(m.cash) + amount }).eq("id", m.id);
-    }
-    setBusy(false);
-    toast({ title: `+ $${formatNumber(amount)} added to all players` });
-    onChanged();
-  };
+  // Note: RLS only allows updating your own membership row, so dev tools
+  // are scoped to the creator's own portfolio.
 
   const resetMyCash = async () => {
     setBusy(true);
