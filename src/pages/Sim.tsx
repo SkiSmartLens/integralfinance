@@ -446,6 +446,7 @@ const Sim = () => {
           onClose={() => setShowBrowse(false)}
           onJoin={(g) => joinGameById(g.id, Number(g.starting_cash), g.join_code)}
         />
+      )}
       {showDev && activeMember && (
         <DevModal
           onClose={() => setShowDev(false)}
