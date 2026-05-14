@@ -125,13 +125,6 @@ const Index = () => {
           </div>
           <aside className="space-y-6">
             <Watchlist
-              symbols={myWatchlist}
-              active={activeSymbol}
-              onSelect={setActiveSymbol}
-              title="My Watchlist"
-              addable
-            />
-            <Watchlist
               symbols={watchSymbols}
               active={activeSymbol}
               onSelect={setActiveSymbol}
