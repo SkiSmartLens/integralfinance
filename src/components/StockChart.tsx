@@ -180,18 +180,22 @@ export const StockChart = ({ symbol }: Props) => {
     if (!chartData.length) return [0, 0];
     const vals: number[] = [];
     chartData.forEach((d) => {
-      if (chartType === "mountain") vals.push(d.price);
-      else {
-        if (d.high != null) vals.push(d.high);
-        if (d.low != null) vals.push(d.low);
+      if (chartType === "mountain") {
+        if (typeof d.price === "number" && Number.isFinite(d.price)) vals.push(d.price);
+      } else {
+        if (typeof d.high === "number" && Number.isFinite(d.high)) vals.push(d.high);
+        if (typeof d.low === "number" && Number.isFinite(d.low)) vals.push(d.low);
       }
     });
-    if (is1D && prevClose != null) vals.push(prevClose);
+    if (is1D && typeof prevClose === "number") vals.push(prevClose);
+    if (!vals.length) return [0, 1];
     const min = Math.min(...vals);
     const max = Math.max(...vals);
-    const pad = (max - min) * 0.1 || 1;
+    const range = max - min;
+    // Tight padding so intraday wiggles look spiky and accurate, not flat.
+    const pad = range > 0 ? range * 0.08 : Math.max(1, max * 0.005);
     return [min - pad, max + pad];
-  }, [chartData, prevClose, chartType]);
+  }, [chartData, prevClose, chartType, is1D]);
 
   // ===== Pinch-to-compare (two-finger) =====
   const wrapRef = useRef<HTMLDivElement>(null);
