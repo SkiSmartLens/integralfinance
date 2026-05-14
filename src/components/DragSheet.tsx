@@ -66,6 +66,12 @@ export const DragSheet = ({
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
+  // Force-expand when caller bumps openSignal.
+  useEffect(() => {
+    if (openSignal == null) return;
+    setHeight(lastOpen.current);
+  }, [openSignal]);
+
   const open = height > minHeight + 4;
 
   return (
