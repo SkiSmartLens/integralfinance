@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { symbol } = await req.json();
+    const { symbol, mode } = await req.json();
     if (!symbol || typeof symbol !== "string") {
       return new Response(JSON.stringify({ error: "symbol required" }), {
         status: 400,
@@ -17,7 +17,8 @@ Deno.serve(async (req) => {
       });
     }
     const sym = symbol.toUpperCase();
-    const key = `sum:${sym}`;
+    const isBeginner = mode === "beginner";
+    const key = `sum:${isBeginner ? "b:" : ""}${sym}`;
     const hit = cache.get(key);
     if (hit && hit.exp > Date.now()) {
       return new Response(hit.body, {
