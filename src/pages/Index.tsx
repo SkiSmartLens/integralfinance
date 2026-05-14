@@ -4,11 +4,12 @@ import { Ticker } from "@/components/Ticker";
 import { CategoryNav } from "@/components/CategoryNav";
 import { StockChart } from "@/components/StockChart";
 import { Watchlist } from "@/components/Watchlist";
-import { SectorHeatmap } from "@/components/SectorHeatmap";
+import { StockExplainer } from "@/components/StockExplainer";
 import { SEO } from "@/components/SEO";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { CATEGORIES, TRENDING } from "@/lib/categories";
 import { cn } from "@/lib/utils";
+import { GraduationCap } from "lucide-react";
 
 const StockSummary = lazy(() =>
   import("@/components/StockSummary").then((m) => ({ default: m.StockSummary }))
