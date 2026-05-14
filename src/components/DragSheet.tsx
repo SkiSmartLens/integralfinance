@@ -22,6 +22,7 @@ export const DragSheet = ({
   children,
   minHeight = 52,
   defaultHeight = 380,
+  openSignal,
 }: Props) => {
   const [height, setHeight] = useState<number>(minHeight);
   const lastOpen = useRef<number>(defaultHeight);
