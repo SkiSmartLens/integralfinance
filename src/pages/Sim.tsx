@@ -239,12 +239,19 @@ const Sim = () => {
               const g = games.find((x) => x.id === activeGameId);
               if (!g || g.created_by !== userId) return null;
               return (
-                <button onClick={() => togglePublic(g)}
-                  className="ml-1 px-2 py-1 text-[11px] rounded bg-muted flex items-center gap-1"
-                  title={g.is_public ? "Public — anyone can browse and join" : "Private — code required"}>
-                  {g.is_public ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
-                  {g.is_public ? "Public" : "Private"}
-                </button>
+                <>
+                  <button onClick={() => togglePublic(g)}
+                    className="ml-1 px-2 py-1 text-[11px] rounded bg-muted flex items-center gap-1"
+                    title={g.is_public ? "Public — anyone can browse and join" : "Private — code required"}>
+                    {g.is_public ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+                    {g.is_public ? "Public" : "Private"}
+                  </button>
+                  <button onClick={() => setShowDev(true)}
+                    className="px-2 py-1 text-[11px] rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center gap-1 font-semibold"
+                    title="Creator dev tools">
+                    <Wrench className="w-3 h-3" /> Dev
+                  </button>
+                </>
               );
             })()}
           </div>
