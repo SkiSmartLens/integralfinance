@@ -306,57 +306,22 @@ export const StockChart = ({ symbol }: Props) => {
           </div>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <div className="flex gap-1">
-            {(["mountain", "candle"] as ChartType[]).map((t) => (
+          <div className="flex flex-wrap gap-1 justify-end">
+            {RANGES.map((rg, i) => (
               <button
-                key={t}
-                onClick={() => setChartType(t)}
+                key={rg.label}
+                onClick={() => setRangeIdx(i)}
                 className={cn(
-                  "px-3 py-1.5 rounded text-xs font-semibold capitalize transition-colors",
-                  chartType === t
-                    ? "bg-primary text-primary-foreground"
+                  "px-3 py-1.5 rounded text-xs font-semibold transition-colors",
+                  rangeIdx === i
+                    ? "bg-foreground text-background"
                     : "text-muted-foreground hover:bg-muted"
                 )}
               >
-                {t}
+                {rg.label}
               </button>
             ))}
           </div>
-          {chartType === "candle" ? (
-            <div className="flex flex-wrap gap-1 justify-end">
-              {INTRADAY.map((rg, i) => (
-                <button
-                  key={rg.label}
-                  onClick={() => setIntradayIdx(i)}
-                  className={cn(
-                    "px-3 py-1.5 rounded text-xs font-semibold transition-colors",
-                    intradayIdx === i
-                      ? "bg-foreground text-background"
-                      : "text-muted-foreground hover:bg-muted"
-                  )}
-                >
-                  {rg.label}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-1 justify-end">
-              {RANGES.map((rg, i) => (
-                <button
-                  key={rg.label}
-                  onClick={() => setRangeIdx(i)}
-                  className={cn(
-                    "px-3 py-1.5 rounded text-xs font-semibold transition-colors",
-                    rangeIdx === i
-                      ? "bg-foreground text-background"
-                      : "text-muted-foreground hover:bg-muted"
-                  )}
-                >
-                  {rg.label}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 
