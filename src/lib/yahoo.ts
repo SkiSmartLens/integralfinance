@@ -36,6 +36,8 @@ export interface Quote {
   marketCap?: number;
   fiftyTwoWeekHigh?: number;
   fiftyTwoWeekLow?: number;
+  trailingPE?: number;
+  dividendYield?: number;
   currency?: string;
   exchange?: string;
   quoteType?: string;
