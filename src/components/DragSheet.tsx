@@ -9,6 +9,8 @@ interface Props {
   minHeight?: number;
   /** Default expanded height (px) on first open */
   defaultHeight?: number;
+  /** Bump this number to force-expand the sheet. */
+  openSignal?: number;
 }
 
 /**
@@ -20,6 +22,7 @@ export const DragSheet = ({
   children,
   minHeight = 52,
   defaultHeight = 380,
+  openSignal,
 }: Props) => {
   const [height, setHeight] = useState<number>(minHeight);
   const lastOpen = useRef<number>(defaultHeight);
@@ -62,6 +65,12 @@ export const DragSheet = ({
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+
+  // Force-expand when caller bumps openSignal.
+  useEffect(() => {
+    if (openSignal == null) return;
+    setHeight(lastOpen.current);
+  }, [openSignal]);
 
   const open = height > minHeight + 4;
 

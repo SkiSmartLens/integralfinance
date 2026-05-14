@@ -4,10 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { SEO } from "@/components/SEO";
 import { DragSheet } from "@/components/DragSheet";
+import { useFlash } from "@/hooks/useFlash";
 import { fetchQuotes, formatNumber, formatLargeNumber } from "@/lib/yahoo";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { LogOut, Plus, Users, Search, Globe, Lock } from "lucide-react";
+import { LogOut, Plus, Users, Search, Globe, Lock, Wrench } from "lucide-react";
 
 interface Game { id: string; name: string; starting_cash: number; commission: number; join_code: string; created_by: string; is_public?: boolean; }
 interface Member { id: string; game_id: string; user_id: string; cash: number; }
@@ -29,6 +30,8 @@ const Sim = () => {
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
   const [showBrowse, setShowBrowse] = useState(false);
+  const [showDev, setShowDev] = useState(false);
+  const [sheetSignal, setSheetSignal] = useState(0);
 
   // Order ticket
   const [symbol, setSymbol] = useState("AAPL");
@@ -236,12 +239,19 @@ const Sim = () => {
               const g = games.find((x) => x.id === activeGameId);
               if (!g || g.created_by !== userId) return null;
               return (
-                <button onClick={() => togglePublic(g)}
-                  className="ml-1 px-2 py-1 text-[11px] rounded bg-muted flex items-center gap-1"
-                  title={g.is_public ? "Public — anyone can browse and join" : "Private — code required"}>
-                  {g.is_public ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
-                  {g.is_public ? "Public" : "Private"}
-                </button>
+                <>
+                  <button onClick={() => togglePublic(g)}
+                    className="ml-1 px-2 py-1 text-[11px] rounded bg-muted flex items-center gap-1"
+                    title={g.is_public ? "Public — anyone can browse and join" : "Private — code required"}>
+                    {g.is_public ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+                    {g.is_public ? "Public" : "Private"}
+                  </button>
+                  <button onClick={() => setShowDev(true)}
+                    className="px-2 py-1 text-[11px] rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center gap-1 font-semibold"
+                    title="Creator dev tools">
+                    <Wrench className="w-3 h-3" /> Dev
+                  </button>
+                </>
               );
             })()}
           </div>
@@ -298,24 +308,17 @@ const Sim = () => {
                           <th className="text-right">Value</th><th className="text-right">P&amp;L</th></tr>
                       </thead>
                       <tbody>
-                        {positions.map((p) => {
-                          const last = prices[p.symbol] ?? p.avg_cost;
-                          const value = last * Number(p.shares);
-                          const pl = (last - Number(p.avg_cost)) * Number(p.shares);
-                          const pct = ((last - Number(p.avg_cost)) / Number(p.avg_cost)) * 100;
-                          return (
-                            <tr key={p.id} className="border-b last:border-0">
-                              <td className="py-2 font-semibold">{p.symbol}</td>
-                              <td className="text-right tabular-nums">{p.shares}</td>
-                              <td className="text-right tabular-nums">{formatNumber(p.avg_cost)}</td>
-                              <td className="text-right tabular-nums">{formatNumber(last)}</td>
-                              <td className="text-right tabular-nums">{formatLargeNumber(value)}</td>
-                              <td className={cn("text-right tabular-nums font-semibold", pl >= 0 ? "text-up" : "text-down")}>
-                                {pl >= 0 ? "+" : ""}{formatNumber(pl)} ({formatNumber(pct)}%)
-                              </td>
-                            </tr>
-                          );
-                        })}
+                        {positions.map((p) => (
+                          <PositionRow
+                            key={p.id}
+                            p={p}
+                            last={prices[p.symbol] ?? Number(p.avg_cost)}
+                            onClick={() => {
+                              setSymbol(p.symbol);
+                              setSheetSignal((s) => s + 1);
+                            }}
+                          />
+                        ))}
                       </tbody>
                     </table>
                   </div>
@@ -444,8 +447,17 @@ const Sim = () => {
           onJoin={(g) => joinGameById(g.id, Number(g.starting_cash), g.join_code)}
         />
       )}
+      {showDev && activeMember && (
+        <DevModal
+          onClose={() => setShowDev(false)}
+          memberId={activeMember.id}
+          gameId={activeGameId!}
+          currentCash={Number(activeMember.cash)}
+          onChanged={() => { reloadGames(); reloadPortfolio(); }}
+        />
+      )}
 
-      <DragSheet title="Integral Stocks">
+      <DragSheet title="Integral Stocks" openSignal={sheetSignal}>
         <div className="p-4 space-y-3">
           {activeMember ? (
             <>
@@ -723,6 +735,122 @@ const BrowseGamesModal = ({ onClose, onJoin }: { onClose: () => void; onJoin: (g
               ))}
             </ul>
           )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const PositionRow = ({
+  p, last, onClick,
+}: {
+  p: Position;
+  last: number;
+  onClick: () => void;
+}) => {
+  const flash = useFlash(last);
+  const value = last * Number(p.shares);
+  const pl = (last - Number(p.avg_cost)) * Number(p.shares);
+  const pct = ((last - Number(p.avg_cost)) / Number(p.avg_cost)) * 100;
+  // Highlight symbol when overall return crosses ±5%.
+  const symBg =
+    pct >= 5 ? "bg-up/15 text-up" :
+    pct <= -5 ? "bg-down/15 text-down" : "";
+  return (
+    <tr onClick={onClick} className="border-b last:border-0 cursor-pointer hover:bg-muted/40 transition-colors">
+      <td className="py-2">
+        <span className={cn("font-semibold rounded px-1.5 py-0.5", symBg)}>{p.symbol}</span>
+      </td>
+      <td className="text-right tabular-nums">{p.shares}</td>
+      <td className="text-right tabular-nums">{formatNumber(p.avg_cost)}</td>
+      <td className="text-right tabular-nums">
+        <span className={cn(
+          "rounded px-1.5 py-0.5 transition-colors",
+          flash === "up" && "bg-up/20 text-up",
+          flash === "down" && "bg-down/20 text-down",
+        )}>
+          {formatNumber(last)}
+        </span>
+      </td>
+      <td className="text-right tabular-nums">{formatLargeNumber(value)}</td>
+      <td className={cn("text-right tabular-nums font-semibold", pl >= 0 ? "text-up" : "text-down")}>
+        {pl >= 0 ? "+" : ""}{formatNumber(pl)} ({formatNumber(pct)}%)
+      </td>
+    </tr>
+  );
+};
+
+const DevModal = ({
+  onClose, memberId, gameId, currentCash, onChanged,
+}: {
+  onClose: () => void;
+  memberId: string;
+  gameId: string;
+  currentCash: number;
+  onChanged: () => void;
+}) => {
+  const [amount, setAmount] = useState(10000);
+  const [busy, setBusy] = useState(false);
+
+  const addCashToMe = async () => {
+    setBusy(true);
+    const { error } = await supabase
+      .from("game_members")
+      .update({ cash: currentCash + amount })
+      .eq("id", memberId);
+    setBusy(false);
+    if (error) return toast({ title: "Failed", description: error.message, variant: "destructive" });
+    toast({ title: `+ $${formatNumber(amount)} added` });
+    onChanged();
+  };
+
+  // Note: RLS only allows updating your own membership row, so dev tools
+  // are scoped to the creator's own portfolio.
+
+  const resetMyCash = async () => {
+    setBusy(true);
+    const { data: g } = await supabase.from("games").select("starting_cash").eq("id", gameId).maybeSingle();
+    const start = Number(g?.starting_cash ?? 100000);
+    await supabase.from("positions").delete().eq("member_id", memberId);
+    await supabase.from("orders").delete().eq("member_id", memberId).eq("status", "pending");
+    const { error } = await supabase.from("game_members").update({ cash: start }).eq("id", memberId);
+    setBusy(false);
+    if (error) return toast({ title: "Reset failed", description: error.message, variant: "destructive" });
+    toast({ title: "Portfolio reset" });
+    onChanged();
+  };
+
+  return (
+    <div onClick={onClose} className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div onClick={(e) => e.stopPropagation()} className="bg-card border rounded-lg p-6 max-w-sm w-full">
+        <div className="flex items-center gap-2 mb-1">
+          <Wrench className="w-4 h-4 text-amber-500" />
+          <h3 className="font-bold text-lg">Creator dev tools</h3>
+        </div>
+        <p className="text-xs text-muted-foreground mb-4">
+          Only you (the game creator) can see this menu.
+        </p>
+        <div className="space-y-3">
+          <label className="block text-xs text-muted-foreground">Amount ($)</label>
+          <input
+            type="number"
+            value={amount}
+            min={0}
+            step={1000}
+            onChange={(e) => setAmount(Number(e.target.value))}
+            className="w-full px-3 py-2 bg-muted rounded outline-none"
+          />
+          <div className="grid gap-2">
+            <button disabled={busy} onClick={addCashToMe}
+              className="w-full py-2 rounded bg-primary text-primary-foreground font-semibold disabled:opacity-60">
+              Add cash to me
+            </button>
+            <button disabled={busy} onClick={resetMyCash}
+              className="w-full py-2 rounded border border-down text-down font-semibold disabled:opacity-60">
+              Reset my portfolio
+            </button>
+          </div>
+          <button onClick={onClose} className="w-full text-xs text-muted-foreground py-1">Close</button>
         </div>
       </div>
     </div>
