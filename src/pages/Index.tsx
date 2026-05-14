@@ -72,10 +72,21 @@ const Index = () => {
         activeSub={activeSub}
         onSubChange={setActiveSub}
       />
-      <main className="container mx-auto px-4 py-6 space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+      <main className="container mx-auto px-4 py-8 space-y-8 max-w-6xl">
+        {/* Beginner welcome banner — minimalist single sentence */}
+        <div className="flex items-start gap-3 bg-accent/40 border border-accent rounded-lg p-4 text-sm">
+          <GraduationCap className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+          <p className="leading-relaxed">
+            <span className="font-semibold">New to investing?</span>{" "}
+            Pick any stock to see a plain-English explanation, the price, and what's happening today.
+            Hover any underlined term for a definition.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8">
           <div className="space-y-6 min-w-0">
             <StockChart symbol={activeSymbol} />
+            <StockExplainer symbol={activeSymbol} />
             <Suspense fallback={<div className="h-32" />}>
               <StockSummary symbol={activeSymbol} />
             </Suspense>
@@ -114,12 +125,6 @@ const Index = () => {
           </div>
           <aside className="space-y-6">
             <Watchlist
-              symbols={watchSymbols}
-              active={activeSymbol}
-              onSelect={setActiveSymbol}
-              title={sub?.label ?? (cat.label === "News" ? "Trending" : cat.label)}
-            />
-            <Watchlist
               symbols={myWatchlist}
               active={activeSymbol}
               onSelect={setActiveSymbol}
@@ -127,10 +132,10 @@ const Index = () => {
               addable
             />
             <Watchlist
-              symbols={TRENDING}
+              symbols={watchSymbols}
               active={activeSymbol}
               onSelect={setActiveSymbol}
-              title="Most Active"
+              title={sub?.label ?? (cat.label === "News" ? "Popular Stocks" : cat.label)}
             />
           </aside>
         </div>
