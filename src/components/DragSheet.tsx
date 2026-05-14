@@ -9,6 +9,8 @@ interface Props {
   minHeight?: number;
   /** Default expanded height (px) on first open */
   defaultHeight?: number;
+  /** Bump this number to force-expand the sheet. */
+  openSignal?: number;
 }
 
 /**
