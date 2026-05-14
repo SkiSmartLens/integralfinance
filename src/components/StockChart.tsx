@@ -16,14 +16,11 @@ import { formatNumber, formatLargeNumber, ChartPoint } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
 
 const RANGES: { label: string; range: string; interval: string }[] = [
-  { label: "1D", range: "1d", interval: "5m" },
-  { label: "5D", range: "5d", interval: "15m" },
+  { label: "Today", range: "1d", interval: "5m" },
   { label: "1M", range: "1mo", interval: "1d" },
-  { label: "6M", range: "6mo", interval: "1d" },
-  { label: "YTD", range: "ytd", interval: "1d" },
   { label: "1Y", range: "1y", interval: "1d" },
   { label: "5Y", range: "5y", interval: "1wk" },
-  { label: "Max", range: "max", interval: "1mo" },
+  { label: "All", range: "max", interval: "1mo" },
 ];
 
 // Intraday interval presets used for candle mode
