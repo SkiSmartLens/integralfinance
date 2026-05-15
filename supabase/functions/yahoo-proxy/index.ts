@@ -44,11 +44,14 @@ async function fetchMarketCap(
       const q = j?.quoteResponse?.result?.[0];
       const cap = q?.marketCap;
       const so = q?.sharesOutstanding;
+      const pe = q?.trailingPE;
+      const fpe = q?.forwardPE;
+      const eps = q?.epsTrailingTwelveMonths;
       if (typeof cap === "number" && Number.isFinite(cap) && cap > 0) {
-        return { marketCap: cap, sharesOutstanding: so };
+        return { marketCap: cap, sharesOutstanding: so, trailingPE: pe, forwardPE: fpe, epsTrailingTwelveMonths: eps };
       }
       if (typeof so === "number" && so > 0 && typeof priceHint === "number") {
-        return { marketCap: so * priceHint, sharesOutstanding: so };
+        return { marketCap: so * priceHint, sharesOutstanding: so, trailingPE: pe, forwardPE: fpe, epsTrailingTwelveMonths: eps };
       }
     } catch { /* try next */ }
   }
@@ -69,11 +72,25 @@ async function fetchMarketCap(
       const so =
         res?.defaultKeyStatistics?.sharesOutstanding?.raw ??
         res?.defaultKeyStatistics?.sharesOutstanding;
+      const pe =
+        res?.summaryDetail?.trailingPE?.raw ??
+        res?.summaryDetail?.trailingPE;
+      const fpe =
+        res?.summaryDetail?.forwardPE?.raw ??
+        res?.defaultKeyStatistics?.forwardPE?.raw;
+      const eps =
+        res?.defaultKeyStatistics?.trailingEps?.raw ??
+        res?.defaultKeyStatistics?.trailingEps;
+      // Compute PE from price/eps if missing
+      let computedPE = typeof pe === "number" ? pe : undefined;
+      if (computedPE == null && typeof eps === "number" && eps > 0 && typeof priceHint === "number") {
+        computedPE = priceHint / eps;
+      }
       if (typeof cap === "number" && Number.isFinite(cap) && cap > 0) {
-        return { marketCap: cap, sharesOutstanding: so };
+        return { marketCap: cap, sharesOutstanding: so, trailingPE: computedPE, forwardPE: fpe, epsTrailingTwelveMonths: eps };
       }
       if (typeof so === "number" && so > 0 && typeof priceHint === "number") {
-        return { marketCap: so * priceHint, sharesOutstanding: so };
+        return { marketCap: so * priceHint, sharesOutstanding: so, trailingPE: computedPE, forwardPE: fpe, epsTrailingTwelveMonths: eps };
       }
     } catch { /* try next */ }
   }
