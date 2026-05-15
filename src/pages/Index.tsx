@@ -159,7 +159,8 @@ const HomeDragSheet = ({
   onPick: (s: string) => void;
 }) => {
   const syms = myWatchlist.length ? myWatchlist : TRENDING.slice(0, 6);
-  const quotes = useLiveQuotes(syms);
+  const { quotes } = useLiveQuotes(syms);
+  const qMap = useMemo(() => Object.fromEntries(quotes.map((q) => [q.symbol, q])), [quotes]);
   return (
     <DragSheet title="Integral Stocks">
       <div className="p-4 space-y-4">
