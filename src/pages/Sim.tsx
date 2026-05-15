@@ -508,9 +508,9 @@ const Sim = () => {
 };
 
 const Stat = ({ label, value, cls }: { label: string; value: string; cls?: string }) => (
-  <div className="bg-card border rounded-lg p-3">
-    <div className="text-xs text-muted-foreground uppercase tracking-wide">{label}</div>
-    <div className={cn("text-xl font-bold tabular-nums", cls)}>{value}</div>
+  <div className="relative overflow-hidden bg-gradient-to-br from-card to-muted/40 border rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+    <div className="text-[10px] text-muted-foreground uppercase tracking-[0.18em] font-bold">{label}</div>
+    <div className={cn("text-2xl font-bold tabular-nums mt-1", cls)}>{value}</div>
   </div>
 );
 
