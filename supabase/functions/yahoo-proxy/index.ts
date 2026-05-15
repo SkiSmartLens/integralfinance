@@ -84,20 +84,23 @@ async function fetchMarketCap(
 // Get a "quote-like" object derived from chart meta (works without crumb).
 async function chartMetaQuote(symbol: string): Promise<any | null> {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
-    symbol
+    symbol,
   )}?range=1d&interval=1m&includePrePost=false`;
   try {
-    const [r, marketCap] = await Promise.all([yahooFetch(url), fetchMarketCap(symbol)]);
-    if (!r.ok) {
-      await r.text();
-      return { symbol, error: `HTTP ${r.status}`, marketCap };
+    const r = await yahooFetch(url);
+    let m: any = null;
+    let result: any = null;
+    let price: number | undefined;
+    let prev: number | undefined;
+    if (r.ok) {
+      const j = await r.json();
+      result = j?.chart?.result?.[0];
+      m = result?.meta;
+      price = m?.regularMarketPrice;
+      prev = m?.chartPreviousClose ?? m?.previousClose;
     }
-    const j = await r.json();
-    const result = j?.chart?.result?.[0];
-    const m = result?.meta;
-    if (!m) return { symbol, error: "no meta", marketCap };
-    const price = m.regularMarketPrice;
-    const prev = m.chartPreviousClose ?? m.previousClose;
+    const { marketCap } = await fetchMarketCap(symbol, price);
+    if (!m) return { symbol, error: r.ok ? "no meta" : `HTTP ${r.status}`, marketCap };
     const change = price != null && prev != null ? price - prev : undefined;
     const changePct =
       change != null && prev ? (change / prev) * 100 : undefined;
