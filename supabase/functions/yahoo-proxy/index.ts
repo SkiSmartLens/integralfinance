@@ -116,8 +116,8 @@ async function chartMetaQuote(symbol: string): Promise<any | null> {
       price = m?.regularMarketPrice;
       prev = m?.chartPreviousClose ?? m?.previousClose;
     }
-    const { marketCap } = await fetchMarketCap(symbol, price);
-    if (!m) return { symbol, error: r.ok ? "no meta" : `HTTP ${r.status}`, marketCap };
+    const { marketCap, trailingPE, forwardPE, epsTrailingTwelveMonths } = await fetchMarketCap(symbol, price);
+    if (!m) return { symbol, error: r.ok ? "no meta" : `HTTP ${r.status}`, marketCap, trailingPE, forwardPE, epsTrailingTwelveMonths };
     const change = price != null && prev != null ? price - prev : undefined;
     const changePct =
       change != null && prev ? (change / prev) * 100 : undefined;
@@ -140,6 +140,9 @@ async function chartMetaQuote(symbol: string): Promise<any | null> {
       fiftyTwoWeekHigh: m.fiftyTwoWeekHigh,
       fiftyTwoWeekLow: m.fiftyTwoWeekLow,
       marketCap,
+      trailingPE,
+      forwardPE,
+      epsTrailingTwelveMonths,
     };
   } catch (e) {
     return { symbol, error: e instanceof Error ? e.message : "err" };
