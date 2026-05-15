@@ -25,43 +25,82 @@ async function yahooFetch(url: string) {
   });
 }
 
-// Try to fetch market cap (and a few extra fields) via quoteSummary "price" module.
-async function fetchMarketCap(symbol: string): Promise<number | undefined> {
-  const tryHosts = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"];
-  for (const host of tryHosts) {
+// Try to fetch market cap from a few endpoints. Yahoo's quoteSummary often
+// requires a crumb/consent now, so we try the simpler v7/quote first, then
+// fall back to quoteSummary modules and finally to price * sharesOutstanding.
+async function fetchMarketCap(
+  symbol: string,
+  priceHint?: number,
+): Promise<{ marketCap?: number; sharesOutstanding?: number }> {
+  const enc = encodeURIComponent(symbol);
+  const hosts = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"];
+
+  // 1) v7/finance/quote — returns marketCap + sharesOutstanding when it works.
+  for (const host of hosts) {
+    try {
+      const r = await yahooFetch(`https://${host}/v7/finance/quote?symbols=${enc}`);
+      if (!r.ok) continue;
+      const j = await r.json();
+      const q = j?.quoteResponse?.result?.[0];
+      const cap = q?.marketCap;
+      const so = q?.sharesOutstanding;
+      if (typeof cap === "number" && Number.isFinite(cap) && cap > 0) {
+        return { marketCap: cap, sharesOutstanding: so };
+      }
+      if (typeof so === "number" && so > 0 && typeof priceHint === "number") {
+        return { marketCap: so * priceHint, sharesOutstanding: so };
+      }
+    } catch { /* try next */ }
+  }
+
+  // 2) quoteSummary with multiple modules.
+  for (const host of hosts) {
     try {
       const r = await yahooFetch(
-        `https://${host}/v10/finance/quoteSummary/${encodeURIComponent(symbol)}?modules=price`
+        `https://${host}/v10/finance/quoteSummary/${enc}?modules=price,summaryDetail,defaultKeyStatistics`,
       );
       if (!r.ok) continue;
       const j = await r.json();
-      const p = j?.quoteSummary?.result?.[0]?.price;
-      const cap = p?.marketCap?.raw ?? p?.marketCap;
-      if (typeof cap === "number" && Number.isFinite(cap)) return cap;
-    } catch {
-      // try next
-    }
+      const res = j?.quoteSummary?.result?.[0];
+      const cap =
+        res?.price?.marketCap?.raw ??
+        res?.summaryDetail?.marketCap?.raw ??
+        res?.price?.marketCap;
+      const so =
+        res?.defaultKeyStatistics?.sharesOutstanding?.raw ??
+        res?.defaultKeyStatistics?.sharesOutstanding;
+      if (typeof cap === "number" && Number.isFinite(cap) && cap > 0) {
+        return { marketCap: cap, sharesOutstanding: so };
+      }
+      if (typeof so === "number" && so > 0 && typeof priceHint === "number") {
+        return { marketCap: so * priceHint, sharesOutstanding: so };
+      }
+    } catch { /* try next */ }
   }
-  return undefined;
+
+  return {};
 }
 
 // Get a "quote-like" object derived from chart meta (works without crumb).
 async function chartMetaQuote(symbol: string): Promise<any | null> {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
-    symbol
+    symbol,
   )}?range=1d&interval=1m&includePrePost=false`;
   try {
-    const [r, marketCap] = await Promise.all([yahooFetch(url), fetchMarketCap(symbol)]);
-    if (!r.ok) {
-      await r.text();
-      return { symbol, error: `HTTP ${r.status}`, marketCap };
+    const r = await yahooFetch(url);
+    let m: any = null;
+    let result: any = null;
+    let price: number | undefined;
+    let prev: number | undefined;
+    if (r.ok) {
+      const j = await r.json();
+      result = j?.chart?.result?.[0];
+      m = result?.meta;
+      price = m?.regularMarketPrice;
+      prev = m?.chartPreviousClose ?? m?.previousClose;
     }
-    const j = await r.json();
-    const result = j?.chart?.result?.[0];
-    const m = result?.meta;
-    if (!m) return { symbol, error: "no meta", marketCap };
-    const price = m.regularMarketPrice;
-    const prev = m.chartPreviousClose ?? m.previousClose;
+    const { marketCap } = await fetchMarketCap(symbol, price);
+    if (!m) return { symbol, error: r.ok ? "no meta" : `HTTP ${r.status}`, marketCap };
     const change = price != null && prev != null ? price - prev : undefined;
     const changePct =
       change != null && prev ? (change / prev) * 100 : undefined;

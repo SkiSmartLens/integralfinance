@@ -223,15 +223,15 @@ const Sim = () => {
       />
       <h1 className="sr-only">Trading Simulator</h1>
       <Header onSearch={(s) => setSymbol(s)} />
-      <div className="border-b bg-card">
+      <div className="border-b bg-gradient-to-r from-card via-card to-muted/30 backdrop-blur">
         <div className="container mx-auto px-4 py-3 flex flex-wrap items-center gap-3 justify-between">
           <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={() => nav("/")} className="text-sm text-muted-foreground hover:text-foreground">← Markets</button>
+            <button onClick={() => nav("/")} className="text-sm text-muted-foreground hover:text-foreground transition-colors">← Markets</button>
             <span className="text-muted-foreground">/</span>
-            <span className="font-bold">Simulator</span>
+            <span className="font-bold tracking-tight bg-gradient-to-r from-primary to-foreground bg-clip-text text-transparent">Simulator</span>
             {games.length > 0 && (
               <select value={activeGameId ?? ""} onChange={(e) => setActiveGameId(e.target.value)}
-                className="bg-muted px-2 py-1 rounded text-sm ml-2">
+                className="bg-muted/70 border border-border/50 px-2.5 py-1 rounded-md text-sm ml-2 focus:outline-none focus:ring-2 focus:ring-primary/40">
                 {games.map((g) => <option key={g.id} value={g.id}>{g.name} · {g.join_code}</option>)}
               </select>
             )}
@@ -241,13 +241,13 @@ const Sim = () => {
               return (
                 <>
                   <button onClick={() => togglePublic(g)}
-                    className="ml-1 px-2 py-1 text-[11px] rounded bg-muted flex items-center gap-1"
+                    className="ml-1 px-2 py-1 text-[11px] rounded-md bg-muted/70 border border-border/50 flex items-center gap-1 hover:bg-muted transition-colors"
                     title={g.is_public ? "Public — anyone can browse and join" : "Private — code required"}>
                     {g.is_public ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
                     {g.is_public ? "Public" : "Private"}
                   </button>
                   <button onClick={() => setShowDev(true)}
-                    className="px-2 py-1 text-[11px] rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center gap-1 font-semibold"
+                    className="px-2 py-1 text-[11px] rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center gap-1 font-semibold hover:bg-amber-500/25 transition-colors"
                     title="Creator dev tools">
                     <Wrench className="w-3 h-3" /> Dev
                   </button>
@@ -256,13 +256,13 @@ const Sim = () => {
             })()}
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setShowBrowse(true)} className="px-3 py-1.5 text-xs rounded bg-muted flex items-center gap-1">
+            <button onClick={() => setShowBrowse(true)} className="px-3 py-1.5 text-xs rounded-md bg-muted/70 hover:bg-muted flex items-center gap-1 transition-colors">
               <Search className="w-3.5 h-3.5" /> Browse
             </button>
-            <button onClick={() => setShowJoin(true)} className="px-3 py-1.5 text-xs rounded bg-muted flex items-center gap-1">
+            <button onClick={() => setShowJoin(true)} className="px-3 py-1.5 text-xs rounded-md bg-muted/70 hover:bg-muted flex items-center gap-1 transition-colors">
               <Users className="w-3.5 h-3.5" /> Join
             </button>
-            <button onClick={() => setShowCreate(true)} className="px-3 py-1.5 text-xs rounded bg-primary text-primary-foreground flex items-center gap-1">
+            <button onClick={() => setShowCreate(true)} className="px-3 py-1.5 text-xs rounded-md bg-primary text-primary-foreground flex items-center gap-1 shadow-sm hover:shadow-md hover:opacity-95 transition">
               <Plus className="w-3.5 h-3.5" /> New game
             </button>
             <button onClick={signOut} className="px-2 py-1.5 text-xs rounded text-muted-foreground hover:text-foreground" title="Sign out">
@@ -295,7 +295,7 @@ const Sim = () => {
             </div>
 
             <div className="grid lg:grid-cols-[1fr_360px] gap-6">
-              <section className="bg-card border rounded-lg p-4">
+              <section className="bg-card border rounded-xl p-5 shadow-sm">
                 <h3 className="font-bold mb-3">Positions</h3>
                 {positions.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-6 text-center">No positions yet. Place an order to begin.</p>
@@ -334,7 +334,7 @@ const Sim = () => {
                 )}
               </section>
 
-              <aside className="bg-card border rounded-lg p-4">
+              <aside className="bg-card border rounded-xl p-5 shadow-sm">
                 <h3 className="font-bold mb-3">Place order</h3>
                 <form onSubmit={placeOrder} className="space-y-3">
                   <div className="flex gap-1 bg-muted rounded p-1">
@@ -364,7 +364,10 @@ const Sim = () => {
                     <input type="number" step="0.01" value={stopPrice} onChange={(e) => setStopPrice(Number(e.target.value))}
                       placeholder="Stop price" className="w-full px-3 py-2 bg-muted rounded outline-none" />
                   )}
-                  <button disabled={placing} className="w-full py-2 rounded bg-primary text-primary-foreground font-semibold disabled:opacity-60">
+                  <button disabled={placing} className={cn(
+                    "w-full py-2.5 rounded-lg font-semibold text-white shadow-sm hover:shadow-md transition disabled:opacity-60",
+                    side === "buy" ? "bg-up hover:brightness-110" : "bg-down hover:brightness-110"
+                  )}>
                     {placing ? "Placing…" : `${side === "buy" ? "Buy" : "Sell"} ${shares || ""} ${symbol}`}
                   </button>
                   <p className="text-[10px] text-muted-foreground">
@@ -376,7 +379,7 @@ const Sim = () => {
 
             <Leaderboard gameId={activeGameId!} />
 
-            <section className="bg-card border rounded-lg p-4">
+            <section className="bg-card border rounded-xl p-5 shadow-sm">
               <h3 className="font-bold mb-3">Pending orders</h3>
               {pending.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-4 text-center">No queued or working orders.</p>
@@ -412,7 +415,7 @@ const Sim = () => {
               )}
             </section>
 
-            <section className="bg-card border rounded-lg p-4">
+            <section className="bg-card border rounded-xl p-5 shadow-sm">
               <h3 className="font-bold mb-3">Recent transactions</h3>
               {txs.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-4 text-center">No trades yet.</p>
@@ -508,9 +511,9 @@ const Sim = () => {
 };
 
 const Stat = ({ label, value, cls }: { label: string; value: string; cls?: string }) => (
-  <div className="bg-card border rounded-lg p-3">
-    <div className="text-xs text-muted-foreground uppercase tracking-wide">{label}</div>
-    <div className={cn("text-xl font-bold tabular-nums", cls)}>{value}</div>
+  <div className="relative overflow-hidden bg-gradient-to-br from-card to-muted/40 border rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+    <div className="text-[10px] text-muted-foreground uppercase tracking-[0.18em] font-bold">{label}</div>
+    <div className={cn("text-2xl font-bold tabular-nums mt-1", cls)}>{value}</div>
   </div>
 );
 
@@ -544,7 +547,7 @@ const Leaderboard = ({ gameId }: { gameId: string }) => {
     return () => { alive = false; clearInterval(t); };
   }, [gameId]);
   return (
-    <section className="bg-card border rounded-lg p-4">
+    <section className="bg-card border rounded-xl p-5 shadow-sm">
       <h3 className="font-bold mb-3">Leaderboard</h3>
       <table className="w-full text-sm">
         <thead className="text-xs text-muted-foreground border-b">

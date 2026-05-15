@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Ticker } from "@/components/Ticker";
 import { CategoryNav } from "@/components/CategoryNav";
@@ -6,10 +7,14 @@ import { StockChart } from "@/components/StockChart";
 import { Watchlist } from "@/components/Watchlist";
 import { StockExplainer } from "@/components/StockExplainer";
 import { SEO } from "@/components/SEO";
+import { DragSheet } from "@/components/DragSheet";
 import { useWatchlist } from "@/hooks/useWatchlist";
+import { useLiveQuotes } from "@/hooks/useLiveQuotes";
+import { useFlash } from "@/hooks/useFlash";
 import { CATEGORIES, TRENDING } from "@/lib/categories";
+import { formatNumber } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
-import { GraduationCap } from "lucide-react";
+import { GraduationCap, LineChart, TrendingUp, Briefcase } from "lucide-react";
 
 const StockSummary = lazy(() =>
   import("@/components/StockSummary").then((m) => ({ default: m.StockSummary }))
@@ -134,10 +139,91 @@ const Index = () => {
         </div>
       </main>
 
-      <footer className="border-t py-6 text-center text-xs text-muted-foreground mt-8">
+      <footer className="border-t py-6 text-center text-xs text-muted-foreground mt-8 pb-[80px]">
         Live data via Yahoo Finance public endpoints. Prices may be delayed. Not investment advice.
       </footer>
+
+      <HomeDragSheet
+        myWatchlist={myWatchlist}
+        onPick={setActiveSymbol}
+      />
     </div>
+  );
+};
+
+const HomeDragSheet = ({
+  myWatchlist,
+  onPick,
+}: {
+  myWatchlist: string[];
+  onPick: (s: string) => void;
+}) => {
+  const syms = myWatchlist.length ? myWatchlist : TRENDING.slice(0, 6);
+  const { quotes } = useLiveQuotes(syms);
+  const qMap = useMemo(() => Object.fromEntries(quotes.map((q) => [q.symbol, q])), [quotes]);
+  return (
+    <DragSheet title="Integral Stocks">
+      <div className="p-4 space-y-4">
+        <div className="grid grid-cols-3 gap-2">
+          <Link to="/watchlist" className="flex flex-col items-center gap-1 py-3 rounded-lg bg-muted hover:bg-accent transition-colors">
+            <Briefcase className="w-4 h-4" />
+            <span className="text-xs font-semibold">Watchlist</span>
+          </Link>
+          <Link to="/screener" className="flex flex-col items-center gap-1 py-3 rounded-lg bg-muted hover:bg-accent transition-colors">
+            <TrendingUp className="w-4 h-4" />
+            <span className="text-xs font-semibold">Screener</span>
+          </Link>
+          <Link to="/sim" className="flex flex-col items-center gap-1 py-3 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity">
+            <LineChart className="w-4 h-4" />
+            <span className="text-xs font-semibold">Trade</span>
+          </Link>
+        </div>
+        <div>
+          <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-bold mb-2">
+            {myWatchlist.length ? "My Watchlist" : "Trending"}
+          </div>
+          <ul className="divide-y border rounded-lg overflow-hidden">
+            {syms.map((s) => {
+              const q = qMap[s];
+              return (
+                <SheetRow key={s} sym={s} price={q?.regularMarketPrice} chgPct={q?.regularMarketChangePercent} onClick={() => onPick(s)} />
+              );
+            })}
+          </ul>
+        </div>
+      </div>
+    </DragSheet>
+  );
+};
+
+const SheetRow = ({
+  sym, price, chgPct, onClick,
+}: { sym: string; price?: number; chgPct?: number; onClick: () => void }) => {
+  const flash = useFlash(price);
+  const up = (chgPct ?? 0) >= 0;
+  return (
+    <li>
+      <button
+        onClick={onClick}
+        className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-muted/60 transition-colors"
+      >
+        <span className="font-bold text-sm tabular-nums">{sym}</span>
+        <span className="flex items-center gap-3">
+          <span
+            className={cn(
+              "tabular-nums text-sm font-semibold transition-colors duration-300",
+              flash === "up" && "text-up",
+              flash === "down" && "text-down",
+            )}
+          >
+            {price != null ? formatNumber(price) : "—"}
+          </span>
+          <span className={cn("text-xs tabular-nums font-semibold w-16 text-right", up ? "text-up" : "text-down")}>
+            {chgPct != null ? `${up ? "+" : ""}${chgPct.toFixed(2)}%` : "—"}
+          </span>
+        </span>
+      </button>
+    </li>
   );
 };
 
