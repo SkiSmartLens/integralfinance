@@ -31,7 +31,7 @@ async function yahooFetch(url: string) {
 async function fetchMarketCap(
   symbol: string,
   priceHint?: number,
-): Promise<{ marketCap?: number; sharesOutstanding?: number }> {
+): Promise<{ marketCap?: number; sharesOutstanding?: number; trailingPE?: number; forwardPE?: number; epsTrailingTwelveMonths?: number }> {
   const enc = encodeURIComponent(symbol);
   const hosts = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"];
 
