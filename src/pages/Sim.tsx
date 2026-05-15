@@ -295,7 +295,7 @@ const Sim = () => {
             </div>
 
             <div className="grid lg:grid-cols-[1fr_360px] gap-6">
-              <section className="bg-card border rounded-lg p-4">
+              <section className="bg-card border rounded-xl p-5 shadow-sm">
                 <h3 className="font-bold mb-3">Positions</h3>
                 {positions.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-6 text-center">No positions yet. Place an order to begin.</p>
@@ -334,7 +334,7 @@ const Sim = () => {
                 )}
               </section>
 
-              <aside className="bg-card border rounded-lg p-4">
+              <aside className="bg-card border rounded-xl p-5 shadow-sm">
                 <h3 className="font-bold mb-3">Place order</h3>
                 <form onSubmit={placeOrder} className="space-y-3">
                   <div className="flex gap-1 bg-muted rounded p-1">
@@ -376,7 +376,7 @@ const Sim = () => {
 
             <Leaderboard gameId={activeGameId!} />
 
-            <section className="bg-card border rounded-lg p-4">
+            <section className="bg-card border rounded-xl p-5 shadow-sm">
               <h3 className="font-bold mb-3">Pending orders</h3>
               {pending.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-4 text-center">No queued or working orders.</p>
@@ -412,7 +412,7 @@ const Sim = () => {
               )}
             </section>
 
-            <section className="bg-card border rounded-lg p-4">
+            <section className="bg-card border rounded-xl p-5 shadow-sm">
               <h3 className="font-bold mb-3">Recent transactions</h3>
               {txs.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-4 text-center">No trades yet.</p>
@@ -544,7 +544,7 @@ const Leaderboard = ({ gameId }: { gameId: string }) => {
     return () => { alive = false; clearInterval(t); };
   }, [gameId]);
   return (
-    <section className="bg-card border rounded-lg p-4">
+    <section className="bg-card border rounded-xl p-5 shadow-sm">
       <h3 className="font-bold mb-3">Leaderboard</h3>
       <table className="w-full text-sm">
         <thead className="text-xs text-muted-foreground border-b">
