@@ -31,7 +31,7 @@ async function yahooFetch(url: string) {
 async function fetchMarketCap(
   symbol: string,
   priceHint?: number,
-): Promise<{ marketCap?: number; sharesOutstanding?: number }> {
+): Promise<{ marketCap?: number; sharesOutstanding?: number; trailingPE?: number; forwardPE?: number; epsTrailingTwelveMonths?: number }> {
   const enc = encodeURIComponent(symbol);
   const hosts = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"];
 
@@ -44,11 +44,14 @@ async function fetchMarketCap(
       const q = j?.quoteResponse?.result?.[0];
       const cap = q?.marketCap;
       const so = q?.sharesOutstanding;
+      const pe = q?.trailingPE;
+      const fpe = q?.forwardPE;
+      const eps = q?.epsTrailingTwelveMonths;
       if (typeof cap === "number" && Number.isFinite(cap) && cap > 0) {
-        return { marketCap: cap, sharesOutstanding: so };
+        return { marketCap: cap, sharesOutstanding: so, trailingPE: pe, forwardPE: fpe, epsTrailingTwelveMonths: eps };
       }
       if (typeof so === "number" && so > 0 && typeof priceHint === "number") {
-        return { marketCap: so * priceHint, sharesOutstanding: so };
+        return { marketCap: so * priceHint, sharesOutstanding: so, trailingPE: pe, forwardPE: fpe, epsTrailingTwelveMonths: eps };
       }
     } catch { /* try next */ }
   }
@@ -69,11 +72,25 @@ async function fetchMarketCap(
       const so =
         res?.defaultKeyStatistics?.sharesOutstanding?.raw ??
         res?.defaultKeyStatistics?.sharesOutstanding;
+      const pe =
+        res?.summaryDetail?.trailingPE?.raw ??
+        res?.summaryDetail?.trailingPE;
+      const fpe =
+        res?.summaryDetail?.forwardPE?.raw ??
+        res?.defaultKeyStatistics?.forwardPE?.raw;
+      const eps =
+        res?.defaultKeyStatistics?.trailingEps?.raw ??
+        res?.defaultKeyStatistics?.trailingEps;
+      // Compute PE from price/eps if missing
+      let computedPE = typeof pe === "number" ? pe : undefined;
+      if (computedPE == null && typeof eps === "number" && eps > 0 && typeof priceHint === "number") {
+        computedPE = priceHint / eps;
+      }
       if (typeof cap === "number" && Number.isFinite(cap) && cap > 0) {
-        return { marketCap: cap, sharesOutstanding: so };
+        return { marketCap: cap, sharesOutstanding: so, trailingPE: computedPE, forwardPE: fpe, epsTrailingTwelveMonths: eps };
       }
       if (typeof so === "number" && so > 0 && typeof priceHint === "number") {
-        return { marketCap: so * priceHint, sharesOutstanding: so };
+        return { marketCap: so * priceHint, sharesOutstanding: so, trailingPE: computedPE, forwardPE: fpe, epsTrailingTwelveMonths: eps };
       }
     } catch { /* try next */ }
   }
@@ -99,8 +116,8 @@ async function chartMetaQuote(symbol: string): Promise<any | null> {
       price = m?.regularMarketPrice;
       prev = m?.chartPreviousClose ?? m?.previousClose;
     }
-    const { marketCap } = await fetchMarketCap(symbol, price);
-    if (!m) return { symbol, error: r.ok ? "no meta" : `HTTP ${r.status}`, marketCap };
+    const { marketCap, trailingPE, forwardPE, epsTrailingTwelveMonths } = await fetchMarketCap(symbol, price);
+    if (!m) return { symbol, error: r.ok ? "no meta" : `HTTP ${r.status}`, marketCap, trailingPE, forwardPE, epsTrailingTwelveMonths };
     const change = price != null && prev != null ? price - prev : undefined;
     const changePct =
       change != null && prev ? (change / prev) * 100 : undefined;
@@ -123,6 +140,9 @@ async function chartMetaQuote(symbol: string): Promise<any | null> {
       fiftyTwoWeekHigh: m.fiftyTwoWeekHigh,
       fiftyTwoWeekLow: m.fiftyTwoWeekLow,
       marketCap,
+      trailingPE,
+      forwardPE,
+      epsTrailingTwelveMonths,
     };
   } catch (e) {
     return { symbol, error: e instanceof Error ? e.message : "err" };
