@@ -16,7 +16,7 @@ import { formatNumber, formatLargeNumber, ChartPoint } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
 
 const RANGES: { label: string; range: string; interval: string }[] = [
-  { label: "Today", range: "1d", interval: "5m" },
+  { label: "Today", range: "1d", interval: "1m" },
   { label: "1M", range: "1mo", interval: "1d" },
   { label: "1Y", range: "1y", interval: "1d" },
   { label: "5Y", range: "5y", interval: "1wk" },
