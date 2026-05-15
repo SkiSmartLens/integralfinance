@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
       const body = JSON.stringify({
         quoteResponse: { result: results.filter(Boolean) },
       });
-      setCache(cacheKey, body, 8000);
+      setCache(cacheKey, body, 1500);
       return new Response(body, jsonHeaders());
     }
 
@@ -170,7 +170,7 @@ Deno.serve(async (req) => {
       )}?range=${range}&interval=${interval}&includePrePost=${includePrePost ? "true" : "false"}`;
       const r = await yahooFetch(upstream);
       const body = await r.text();
-      if (r.ok) setCache(cacheKey, body, 10000);
+      if (r.ok) setCache(cacheKey, body, 2000);
       return new Response(body, { ...jsonHeaders(), status: r.ok ? 200 : r.status });
     }
 

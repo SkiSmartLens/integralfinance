@@ -5,7 +5,7 @@ export function useLiveChart(
   symbol: string,
   range: string,
   interval: string,
-  refreshMs = 20000,
+  refreshMs = 3000,
   includePrePost = false,
 ) {
   const [data, setData] = useState<ChartResult | null>(null);
