@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Ticker } from "@/components/Ticker";
 import { CategoryNav } from "@/components/CategoryNav";
@@ -6,10 +7,14 @@ import { StockChart } from "@/components/StockChart";
 import { Watchlist } from "@/components/Watchlist";
 import { StockExplainer } from "@/components/StockExplainer";
 import { SEO } from "@/components/SEO";
+import { DragSheet } from "@/components/DragSheet";
 import { useWatchlist } from "@/hooks/useWatchlist";
+import { useLiveQuotes } from "@/hooks/useLiveQuotes";
+import { useFlash } from "@/hooks/useFlash";
 import { CATEGORIES, TRENDING } from "@/lib/categories";
+import { formatNumber } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
-import { GraduationCap } from "lucide-react";
+import { GraduationCap, LineChart, TrendingUp, Briefcase } from "lucide-react";
 
 const StockSummary = lazy(() =>
   import("@/components/StockSummary").then((m) => ({ default: m.StockSummary }))
