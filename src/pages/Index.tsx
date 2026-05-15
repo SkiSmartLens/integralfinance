@@ -184,7 +184,7 @@ const HomeDragSheet = ({
           </div>
           <ul className="divide-y border rounded-lg overflow-hidden">
             {syms.map((s) => {
-              const q = quotes[s];
+              const q = qMap[s];
               return (
                 <SheetRow key={s} sym={s} price={q?.regularMarketPrice} chgPct={q?.regularMarketChangePercent} onClick={() => onPick(s)} />
               );
