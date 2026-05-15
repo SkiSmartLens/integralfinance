@@ -223,15 +223,15 @@ const Sim = () => {
       />
       <h1 className="sr-only">Trading Simulator</h1>
       <Header onSearch={(s) => setSymbol(s)} />
-      <div className="border-b bg-card">
+      <div className="border-b bg-gradient-to-r from-card via-card to-muted/30 backdrop-blur">
         <div className="container mx-auto px-4 py-3 flex flex-wrap items-center gap-3 justify-between">
           <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={() => nav("/")} className="text-sm text-muted-foreground hover:text-foreground">← Markets</button>
+            <button onClick={() => nav("/")} className="text-sm text-muted-foreground hover:text-foreground transition-colors">← Markets</button>
             <span className="text-muted-foreground">/</span>
-            <span className="font-bold">Simulator</span>
+            <span className="font-bold tracking-tight bg-gradient-to-r from-primary to-foreground bg-clip-text text-transparent">Simulator</span>
             {games.length > 0 && (
               <select value={activeGameId ?? ""} onChange={(e) => setActiveGameId(e.target.value)}
-                className="bg-muted px-2 py-1 rounded text-sm ml-2">
+                className="bg-muted/70 border border-border/50 px-2.5 py-1 rounded-md text-sm ml-2 focus:outline-none focus:ring-2 focus:ring-primary/40">
                 {games.map((g) => <option key={g.id} value={g.id}>{g.name} · {g.join_code}</option>)}
               </select>
             )}
@@ -241,13 +241,13 @@ const Sim = () => {
               return (
                 <>
                   <button onClick={() => togglePublic(g)}
-                    className="ml-1 px-2 py-1 text-[11px] rounded bg-muted flex items-center gap-1"
+                    className="ml-1 px-2 py-1 text-[11px] rounded-md bg-muted/70 border border-border/50 flex items-center gap-1 hover:bg-muted transition-colors"
                     title={g.is_public ? "Public — anyone can browse and join" : "Private — code required"}>
                     {g.is_public ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
                     {g.is_public ? "Public" : "Private"}
                   </button>
                   <button onClick={() => setShowDev(true)}
-                    className="px-2 py-1 text-[11px] rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center gap-1 font-semibold"
+                    className="px-2 py-1 text-[11px] rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center gap-1 font-semibold hover:bg-amber-500/25 transition-colors"
                     title="Creator dev tools">
                     <Wrench className="w-3 h-3" /> Dev
                   </button>
@@ -256,13 +256,13 @@ const Sim = () => {
             })()}
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setShowBrowse(true)} className="px-3 py-1.5 text-xs rounded bg-muted flex items-center gap-1">
+            <button onClick={() => setShowBrowse(true)} className="px-3 py-1.5 text-xs rounded-md bg-muted/70 hover:bg-muted flex items-center gap-1 transition-colors">
               <Search className="w-3.5 h-3.5" /> Browse
             </button>
-            <button onClick={() => setShowJoin(true)} className="px-3 py-1.5 text-xs rounded bg-muted flex items-center gap-1">
+            <button onClick={() => setShowJoin(true)} className="px-3 py-1.5 text-xs rounded-md bg-muted/70 hover:bg-muted flex items-center gap-1 transition-colors">
               <Users className="w-3.5 h-3.5" /> Join
             </button>
-            <button onClick={() => setShowCreate(true)} className="px-3 py-1.5 text-xs rounded bg-primary text-primary-foreground flex items-center gap-1">
+            <button onClick={() => setShowCreate(true)} className="px-3 py-1.5 text-xs rounded-md bg-primary text-primary-foreground flex items-center gap-1 shadow-sm hover:shadow-md hover:opacity-95 transition">
               <Plus className="w-3.5 h-3.5" /> New game
             </button>
             <button onClick={signOut} className="px-2 py-1.5 text-xs rounded text-muted-foreground hover:text-foreground" title="Sign out">
