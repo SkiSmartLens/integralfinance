@@ -102,8 +102,8 @@ export const StockChart = ({ symbol }: Props) => {
   const [intradayIdx, setIntradayIdx] = useState(0);
   const r = chartType === "candle" ? INTRADAY[intradayIdx] : RANGES[rangeIdx];
   const is1D = chartType === "mountain" && rangeIdx === 0;
-  const { data, loading } = useLiveChart(symbol, r.range, r.interval, 20000, is1D);
-  const { quotes } = useLiveQuotes([symbol], 10000);
+  const { data, loading } = useLiveChart(symbol, r.range, r.interval, 3000, is1D);
+  const { quotes } = useLiveQuotes([symbol], 2000);
   const quote = quotes[0];
 
   // For non-1D ranges, derive change from the chart's first vs last point
