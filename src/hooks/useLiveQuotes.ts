@@ -6,7 +6,7 @@ import { fetchQuotes, Quote } from "@/lib/yahoo";
 // instant cached data on mount so multiple watchlists don't refetch.
 const quoteCache = new Map<string, { exp: number; quotes: Quote[] }>();
 const inflight = new Map<string, Promise<Quote[]>>();
-const CACHE_TTL = 10_000;
+const CACHE_TTL = 1_500;
 
 async function getQuotesShared(symbols: string[]): Promise<Quote[]> {
   const key = symbols.slice().sort().join(",");
