@@ -364,7 +364,10 @@ const Sim = () => {
                     <input type="number" step="0.01" value={stopPrice} onChange={(e) => setStopPrice(Number(e.target.value))}
                       placeholder="Stop price" className="w-full px-3 py-2 bg-muted rounded outline-none" />
                   )}
-                  <button disabled={placing} className="w-full py-2 rounded bg-primary text-primary-foreground font-semibold disabled:opacity-60">
+                  <button disabled={placing} className={cn(
+                    "w-full py-2.5 rounded-lg font-semibold text-white shadow-sm hover:shadow-md transition disabled:opacity-60",
+                    side === "buy" ? "bg-up hover:brightness-110" : "bg-down hover:brightness-110"
+                  )}>
                     {placing ? "Placing…" : `${side === "buy" ? "Buy" : "Sell"} ${shares || ""} ${symbol}`}
                   </button>
                   <p className="text-[10px] text-muted-foreground">
