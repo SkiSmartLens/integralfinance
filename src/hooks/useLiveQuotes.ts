@@ -24,7 +24,7 @@ async function getQuotesShared(symbols: string[]): Promise<Quote[]> {
   return p;
 }
 
-export function useLiveQuotes(symbols: string[], intervalMs = 15000) {
+export function useLiveQuotes(symbols: string[], intervalMs = 2000) {
   const symbolsKey = symbols.slice().sort().join(",");
   const initial = quoteCache.get(symbolsKey)?.quotes ?? [];
   const [quotes, setQuotes] = useState<Quote[]>(initial);
