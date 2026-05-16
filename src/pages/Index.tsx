@@ -8,12 +8,15 @@ import { Watchlist } from "@/components/Watchlist";
 import { StockExplainer } from "@/components/StockExplainer";
 import { SEO } from "@/components/SEO";
 import { DragSheet } from "@/components/DragSheet";
+import { WidgetBar } from "@/components/WidgetBar";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { useFlash } from "@/hooks/useFlash";
 import { CATEGORIES, TRENDING } from "@/lib/categories";
 import { formatNumber } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
+import { onAction } from "@/lib/actions";
+import { useWidgets } from "@/lib/widgets";
 import { GraduationCap, LineChart, TrendingUp, Briefcase } from "lucide-react";
 
 const StockSummary = lazy(() =>
@@ -28,7 +31,8 @@ const Index = () => {
   const [activeSub, setActiveSub] = useState<string | undefined>(undefined);
   const [activeSymbol, setActiveSymbol] = useState("AAPL");
   const [newsTab, setNewsTab] = useState<"my" | "general">("general");
-  const { symbols: myWatchlist } = useWatchlist();
+  const { symbols: myWatchlist, add: addWatch, remove: removeWatch } = useWatchlist();
+  const { add: addWidget, remove: removeWidget, reorder: reorderWidgets, reset: resetWidgets } = useWidgets();
 
   const cat = useMemo(
     () => CATEGORIES.find((c) => c.id === activeCat) ?? CATEGORIES[0],
@@ -39,16 +43,38 @@ const Index = () => {
     [cat, activeSub]
   );
 
-  // Reset sub-topic when category changes.
-  useEffect(() => {
-    setActiveSub(undefined);
-  }, [activeCat]);
+  useEffect(() => { setActiveSub(undefined); }, [activeCat]);
 
-  // Pick first symbol when category or sub-topic changes.
   useEffect(() => {
     const first = (sub?.symbols ?? cat.symbols)?.[0] ?? "^GSPC";
     setActiveSymbol(first);
   }, [cat, sub]);
+
+  // Listen to AI-driven actions
+  useEffect(() => onAction((a) => {
+    switch (a.type) {
+      case "setCategory":
+        if (CATEGORIES.some((c) => c.id === a.id)) {
+          setActiveCat(a.id);
+          if (a.sub) setTimeout(() => setActiveSub(a.sub), 0);
+        }
+        break;
+      case "selectSymbol":
+        if (a.symbol) setActiveSymbol(a.symbol.toUpperCase());
+        break;
+      case "addWidget": addWidget(a.id); break;
+      case "removeWidget": removeWidget(a.id); break;
+      case "reorderWidgets": reorderWidgets(a.order); break;
+      case "resetWidgets": resetWidgets(); break;
+      case "addToWatchlist": if (a.symbol) addWatch(a.symbol); break;
+      case "removeFromWatchlist": if (a.symbol) removeWatch(a.symbol); break;
+      case "scrollTo": {
+        const el = document.getElementById(a.target);
+        el?.scrollIntoView({ behavior: "smooth", block: "start" });
+        break;
+      }
+    }
+  }), [addWidget, removeWidget, reorderWidgets, resetWidgets, addWatch, removeWatch]);
 
   const watchSymbols = (sub?.symbols ?? cat.symbols ?? TRENDING);
   const newsQuery = sub?.query ?? cat.query;
@@ -77,31 +103,31 @@ const Index = () => {
         activeSub={activeSub}
         onSubChange={setActiveSub}
       />
-      <main className="container mx-auto px-4 py-8 space-y-8 max-w-6xl">
-        {/* Beginner welcome banner — minimalist single sentence */}
+      <main className="container mx-auto px-4 py-6 space-y-8 max-w-6xl">
+        <div id="widgets">
+          <WidgetBar />
+        </div>
+
         <div className="flex items-start gap-3 bg-accent/40 border border-accent rounded-lg p-4 text-sm">
           <GraduationCap className="w-5 h-5 text-primary shrink-0 mt-0.5" />
           <p className="leading-relaxed">
-            <span className="font-semibold">New to investing?</span>{" "}
-            Pick any stock to see a plain-English explanation, the price, and what's happening today.
-            Hover any underlined term for a definition.
+            <span className="font-semibold">New?</span>{" "}
+            Pick any stock for a plain-English explainer, or tap the ✨ sparkle in the corner — Integral AI can take you anywhere and customize the dashboard for you.
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8">
           <div className="space-y-6 min-w-0">
-            <StockChart symbol={activeSymbol} />
-            <StockExplainer symbol={activeSymbol} />
+            <div id="chart"><StockChart symbol={activeSymbol} /></div>
+            <div id="summary"><StockExplainer symbol={activeSymbol} /></div>
             <Suspense fallback={<div className="h-32" />}>
               <StockSummary symbol={activeSymbol} />
             </Suspense>
-            <section>
+            <section id="news">
               <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                 <h2 className="text-2xl font-bold">
                   {newsTab === "my" ? "My News" : (sub?.label ?? cat.label)}{" "}
-                  <span className="text-muted-foreground font-normal text-base">
-                    · latest stories
-                  </span>
+                  <span className="text-muted-foreground font-normal text-base">· latest stories</span>
                 </h2>
                 <div className="flex gap-1 bg-muted rounded-md p-1">
                   {(["my", "general"] as const).map((t) => (
@@ -110,9 +136,7 @@ const Index = () => {
                       onClick={() => setNewsTab(t)}
                       className={cn(
                         "px-3 py-1.5 rounded text-xs font-semibold transition-colors",
-                        newsTab === t
-                          ? "bg-background shadow-sm"
-                          : "text-muted-foreground"
+                        newsTab === t ? "bg-background shadow-sm" : "text-muted-foreground"
                       )}
                     >
                       {t === "my" ? "My News" : "General"}
@@ -143,21 +167,14 @@ const Index = () => {
         Live data via Yahoo Finance public endpoints. Prices may be delayed. Not investment advice.
       </footer>
 
-      <HomeDragSheet
-        myWatchlist={myWatchlist}
-        onPick={setActiveSymbol}
-      />
+      <HomeDragSheet myWatchlist={myWatchlist} onPick={setActiveSymbol} />
     </div>
   );
 };
 
 const HomeDragSheet = ({
-  myWatchlist,
-  onPick,
-}: {
-  myWatchlist: string[];
-  onPick: (s: string) => void;
-}) => {
+  myWatchlist, onPick,
+}: { myWatchlist: string[]; onPick: (s: string) => void }) => {
   const syms = myWatchlist.length ? myWatchlist : TRENDING.slice(0, 6);
   const { quotes } = useLiveQuotes(syms);
   const qMap = useMemo(() => Object.fromEntries(quotes.map((q) => [q.symbol, q])), [quotes]);
@@ -203,19 +220,13 @@ const SheetRow = ({
   const up = (chgPct ?? 0) >= 0;
   return (
     <li>
-      <button
-        onClick={onClick}
-        className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-muted/60 transition-colors"
-      >
+      <button onClick={onClick} className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-muted/60 transition-colors">
         <span className="font-bold text-sm tabular-nums">{sym}</span>
         <span className="flex items-center gap-3">
-          <span
-            className={cn(
-              "tabular-nums text-sm font-semibold transition-colors duration-300",
-              flash === "up" && "text-up",
-              flash === "down" && "text-down",
-            )}
-          >
+          <span className={cn(
+            "tabular-nums text-sm font-semibold transition-colors duration-300",
+            flash === "up" && "text-up", flash === "down" && "text-down",
+          )}>
             {price != null ? formatNumber(price) : "—"}
           </span>
           <span className={cn("text-xs tabular-nums font-semibold w-16 text-right", up ? "text-up" : "text-down")}>

@@ -20,20 +20,29 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
   const [err, setErr] = useState<string | null>(null);
   const [visible, setVisible] = useState(false);
   const [companyName, setCompanyName] = useState<string>(nameCache.get(symbol) ?? "");
+  const [nextEarnings, setNextEarnings] = useState<string>("");
   const ref = useRef<HTMLElement | null>(null);
 
-  // Look up the company name for a friendlier heading.
+  // Look up the company name + next earnings.
   useEffect(() => {
     const cached = nameCache.get(symbol);
-    if (cached) { setCompanyName(cached); return; }
-    setCompanyName("");
+    if (cached) setCompanyName(cached); else setCompanyName("");
+    setNextEarnings("");
     let alive = true;
     fetchQuotes([symbol]).then((qs) => {
       if (!alive) return;
-      const name = qs[0]?.longName || qs[0]?.shortName || "";
-      if (name) {
-        nameCache.set(symbol, name);
-        setCompanyName(name);
+      const q = qs[0];
+      const name = q?.longName || q?.shortName || "";
+      if (name) { nameCache.set(symbol, name); setCompanyName(name); }
+      const ts = q?.earningsTimestampStart ?? q?.earningsTimestamp;
+      if (typeof ts === "number" && ts > 0) {
+        const d = new Date(ts * 1000);
+        const diffDays = Math.round((d.getTime() - Date.now()) / 86400000);
+        const fmt = d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+        const rel = diffDays > 0 ? ` (in ${diffDays} day${diffDays === 1 ? "" : "s"})`
+          : diffDays === 0 ? " (today)"
+          : ` (${Math.abs(diffDays)} day${Math.abs(diffDays) === 1 ? "" : "s"} ago)`;
+        setNextEarnings(`${fmt}${rel}`);
       }
     }).catch(() => {});
     return () => { alive = false; };
@@ -111,6 +120,11 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
             <div className="flex items-center gap-2 mb-2 font-semibold">
               <Calendar className="w-4 h-4" /> Earnings
             </div>
+            {nextEarnings && (
+              <p className="text-xs font-bold mb-1">
+                Next report: <span className="text-primary">{nextEarnings}</span>
+              </p>
+            )}
             <p className="text-sm">{data.earnings}</p>
           </div>
           <div className="bg-muted/40 rounded-md p-3">
