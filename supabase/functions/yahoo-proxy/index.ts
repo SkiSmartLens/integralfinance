@@ -7,7 +7,6 @@ const corsHeaders = {
 const UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
-// Tiny in-memory TTL cache
 const cache = new Map<string, { exp: number; body: string }>();
 function getCache(k: string) {
   const v = cache.get(k);
@@ -25,80 +24,102 @@ async function yahooFetch(url: string) {
   });
 }
 
-// Try to fetch market cap from a few endpoints. Yahoo's quoteSummary often
-// requires a crumb/consent now, so we try the simpler v7/quote first, then
-// fall back to quoteSummary modules and finally to price * sharesOutstanding.
-async function fetchMarketCap(
-  symbol: string,
-  priceHint?: number,
-): Promise<{ marketCap?: number; sharesOutstanding?: number; trailingPE?: number; forwardPE?: number; epsTrailingTwelveMonths?: number }> {
+interface MetaExtra {
+  marketCap?: number;
+  sharesOutstanding?: number;
+  trailingPE?: number;
+  forwardPE?: number;
+  epsTrailingTwelveMonths?: number;
+  earningsTimestamp?: number;
+  earningsTimestampStart?: number;
+  earningsTimestampEnd?: number;
+  dividendYield?: number;
+}
+
+// Try several Yahoo endpoints to extract market cap, P/E, and next earnings.
+async function fetchMeta(symbol: string, priceHint?: number): Promise<MetaExtra> {
   const enc = encodeURIComponent(symbol);
   const hosts = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"];
+  const out: MetaExtra = {};
 
-  // 1) v7/finance/quote — returns marketCap + sharesOutstanding when it works.
+  const merge = (q: any) => {
+    if (!q) return;
+    if (out.marketCap == null && typeof q.marketCap === "number" && q.marketCap > 0) out.marketCap = q.marketCap;
+    if (out.sharesOutstanding == null && typeof q.sharesOutstanding === "number" && q.sharesOutstanding > 0) out.sharesOutstanding = q.sharesOutstanding;
+    if (out.trailingPE == null && typeof q.trailingPE === "number") out.trailingPE = q.trailingPE;
+    if (out.forwardPE == null && typeof q.forwardPE === "number") out.forwardPE = q.forwardPE;
+    if (out.epsTrailingTwelveMonths == null && typeof q.epsTrailingTwelveMonths === "number") out.epsTrailingTwelveMonths = q.epsTrailingTwelveMonths;
+    if (out.earningsTimestamp == null && typeof q.earningsTimestamp === "number") out.earningsTimestamp = q.earningsTimestamp;
+    if (out.earningsTimestampStart == null && typeof q.earningsTimestampStart === "number") out.earningsTimestampStart = q.earningsTimestampStart;
+    if (out.earningsTimestampEnd == null && typeof q.earningsTimestampEnd === "number") out.earningsTimestampEnd = q.earningsTimestampEnd;
+    if (out.dividendYield == null && typeof q.dividendYield === "number") out.dividendYield = q.dividendYield;
+  };
+
+  // 1) v7/finance/quote
   for (const host of hosts) {
+    if (out.marketCap && out.trailingPE && out.earningsTimestamp) break;
     try {
       const r = await yahooFetch(`https://${host}/v7/finance/quote?symbols=${enc}`);
       if (!r.ok) continue;
       const j = await r.json();
-      const q = j?.quoteResponse?.result?.[0];
-      const cap = q?.marketCap;
-      const so = q?.sharesOutstanding;
-      const pe = q?.trailingPE;
-      const fpe = q?.forwardPE;
-      const eps = q?.epsTrailingTwelveMonths;
-      if (typeof cap === "number" && Number.isFinite(cap) && cap > 0) {
-        return { marketCap: cap, sharesOutstanding: so, trailingPE: pe, forwardPE: fpe, epsTrailingTwelveMonths: eps };
-      }
-      if (typeof so === "number" && so > 0 && typeof priceHint === "number") {
-        return { marketCap: so * priceHint, sharesOutstanding: so, trailingPE: pe, forwardPE: fpe, epsTrailingTwelveMonths: eps };
-      }
-    } catch { /* try next */ }
+      merge(j?.quoteResponse?.result?.[0]);
+    } catch { /* ignore */ }
   }
 
-  // 2) quoteSummary with multiple modules.
-  for (const host of hosts) {
-    try {
-      const r = await yahooFetch(
-        `https://${host}/v10/finance/quoteSummary/${enc}?modules=price,summaryDetail,defaultKeyStatistics`,
-      );
-      if (!r.ok) continue;
-      const j = await r.json();
-      const res = j?.quoteSummary?.result?.[0];
-      const cap =
-        res?.price?.marketCap?.raw ??
-        res?.summaryDetail?.marketCap?.raw ??
-        res?.price?.marketCap;
-      const so =
-        res?.defaultKeyStatistics?.sharesOutstanding?.raw ??
-        res?.defaultKeyStatistics?.sharesOutstanding;
-      const pe =
-        res?.summaryDetail?.trailingPE?.raw ??
-        res?.summaryDetail?.trailingPE;
-      const fpe =
-        res?.summaryDetail?.forwardPE?.raw ??
-        res?.defaultKeyStatistics?.forwardPE?.raw;
-      const eps =
-        res?.defaultKeyStatistics?.trailingEps?.raw ??
-        res?.defaultKeyStatistics?.trailingEps;
-      // Compute PE from price/eps if missing
-      let computedPE = typeof pe === "number" ? pe : undefined;
-      if (computedPE == null && typeof eps === "number" && eps > 0 && typeof priceHint === "number") {
-        computedPE = priceHint / eps;
-      }
-      if (typeof cap === "number" && Number.isFinite(cap) && cap > 0) {
-        return { marketCap: cap, sharesOutstanding: so, trailingPE: computedPE, forwardPE: fpe, epsTrailingTwelveMonths: eps };
-      }
-      if (typeof so === "number" && so > 0 && typeof priceHint === "number") {
-        return { marketCap: so * priceHint, sharesOutstanding: so, trailingPE: computedPE, forwardPE: fpe, epsTrailingTwelveMonths: eps };
-      }
-    } catch { /* try next */ }
+  // 2) options endpoint (often works without crumb, returns a .quote subobject)
+  if (!out.marketCap || !out.earningsTimestamp) {
+    for (const host of hosts) {
+      try {
+        const r = await yahooFetch(`https://${host}/v7/finance/options/${enc}`);
+        if (!r.ok) continue;
+        const j = await r.json();
+        merge(j?.optionChain?.result?.[0]?.quote);
+        if (out.marketCap && out.earningsTimestamp) break;
+      } catch { /* ignore */ }
+    }
   }
 
-  return {};
+  // 3) quoteSummary modules
+  if (!out.marketCap || !out.earningsTimestamp) {
+    for (const host of hosts) {
+      try {
+        const r = await yahooFetch(
+          `https://${host}/v10/finance/quoteSummary/${enc}?modules=price,summaryDetail,defaultKeyStatistics,calendarEvents,earnings`,
+        );
+        if (!r.ok) continue;
+        const j = await r.json();
+        const res = j?.quoteSummary?.result?.[0];
+        const cap = res?.price?.marketCap?.raw ?? res?.summaryDetail?.marketCap?.raw;
+        const so = res?.defaultKeyStatistics?.sharesOutstanding?.raw;
+        const pe = res?.summaryDetail?.trailingPE?.raw;
+        const fpe = res?.summaryDetail?.forwardPE?.raw ?? res?.defaultKeyStatistics?.forwardPE?.raw;
+        const eps = res?.defaultKeyStatistics?.trailingEps?.raw;
+        const dy = res?.summaryDetail?.dividendYield?.raw;
+        const earningsDates = res?.calendarEvents?.earnings?.earningsDate;
+        const eTs = Array.isArray(earningsDates) && earningsDates[0]?.raw;
+        const eTsEnd = Array.isArray(earningsDates) && earningsDates[1]?.raw;
+        merge({
+          marketCap: cap, sharesOutstanding: so, trailingPE: pe, forwardPE: fpe,
+          epsTrailingTwelveMonths: eps, dividendYield: dy,
+          earningsTimestamp: eTs, earningsTimestampStart: eTs, earningsTimestampEnd: eTsEnd || eTs,
+        });
+        if (out.marketCap && out.earningsTimestamp) break;
+      } catch { /* ignore */ }
+    }
+  }
+
+  // Compute market cap from shares × price if still missing
+  if (!out.marketCap && out.sharesOutstanding && typeof priceHint === "number") {
+    out.marketCap = out.sharesOutstanding * priceHint;
+  }
+  // Compute P/E from price/eps if missing
+  if (out.trailingPE == null && out.epsTrailingTwelveMonths && out.epsTrailingTwelveMonths > 0 && typeof priceHint === "number") {
+    out.trailingPE = priceHint / out.epsTrailingTwelveMonths;
+  }
+
+  return out;
 }
 
-// Get a "quote-like" object derived from chart meta (works without crumb).
 async function chartMetaQuote(symbol: string): Promise<any | null> {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
     symbol,
@@ -116,8 +137,8 @@ async function chartMetaQuote(symbol: string): Promise<any | null> {
       price = m?.regularMarketPrice;
       prev = m?.chartPreviousClose ?? m?.previousClose;
     }
-    const { marketCap, trailingPE, forwardPE, epsTrailingTwelveMonths } = await fetchMarketCap(symbol, price);
-    if (!m) return { symbol, error: r.ok ? "no meta" : `HTTP ${r.status}`, marketCap, trailingPE, forwardPE, epsTrailingTwelveMonths };
+    const extra = await fetchMeta(symbol, price);
+    if (!m) return { symbol, error: r.ok ? "no meta" : `HTTP ${r.status}`, ...extra };
     const change = price != null && prev != null ? price - prev : undefined;
     const changePct =
       change != null && prev ? (change / prev) * 100 : undefined;
@@ -139,10 +160,7 @@ async function chartMetaQuote(symbol: string): Promise<any | null> {
       regularMarketVolume: m.regularMarketVolume,
       fiftyTwoWeekHigh: m.fiftyTwoWeekHigh,
       fiftyTwoWeekLow: m.fiftyTwoWeekLow,
-      marketCap,
-      trailingPE,
-      forwardPE,
-      epsTrailingTwelveMonths,
+      ...extra,
     };
   } catch (e) {
     return { symbol, error: e instanceof Error ? e.message : "err" };
@@ -161,17 +179,13 @@ Deno.serve(async (req) => {
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean);
-      if (!symbols.length) {
-        return json({ error: "symbols required" }, 400);
-      }
+      if (!symbols.length) return json({ error: "symbols required" }, 400);
       const cacheKey = "q:" + symbols.join(",");
       const cached = getCache(cacheKey);
       if (cached) return new Response(cached, jsonHeaders());
 
       const results = await Promise.all(symbols.map((s) => chartMetaQuote(s)));
-      const body = JSON.stringify({
-        quoteResponse: { result: results.filter(Boolean) },
-      });
+      const body = JSON.stringify({ quoteResponse: { result: results.filter(Boolean) } });
       setCache(cacheKey, body, 1500);
       return new Response(body, jsonHeaders());
     }

@@ -37,7 +37,12 @@ export interface Quote {
   fiftyTwoWeekHigh?: number;
   fiftyTwoWeekLow?: number;
   trailingPE?: number;
+  forwardPE?: number;
+  epsTrailingTwelveMonths?: number;
   dividendYield?: number;
+  earningsTimestamp?: number;
+  earningsTimestampStart?: number;
+  earningsTimestampEnd?: number;
   currency?: string;
   exchange?: string;
   quoteType?: string;
