@@ -120,6 +120,11 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
             <div className="flex items-center gap-2 mb-2 font-semibold">
               <Calendar className="w-4 h-4" /> Earnings
             </div>
+            {nextEarnings && (
+              <p className="text-xs font-bold mb-1">
+                Next report: <span className="text-primary">{nextEarnings}</span>
+              </p>
+            )}
             <p className="text-sm">{data.earnings}</p>
           </div>
           <div className="bg-muted/40 rounded-md p-3">
