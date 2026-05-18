@@ -36,8 +36,86 @@ interface MetaExtra {
   dividendYield?: number;
 }
 
-// Try several Yahoo endpoints to extract market cap, P/E, and next earnings.
+// Parse "4.344T" / "12.3B" / "987M" style strings into a number.
+function parseAbbrev(s: string): number | undefined {
+  if (!s) return undefined;
+  const m = s.replace(/,/g, "").trim().match(/^([0-9]*\.?[0-9]+)\s*([TBMK])?/i);
+  if (!m) return undefined;
+  const n = parseFloat(m[1]);
+  const mult = { T: 1e12, B: 1e9, M: 1e6, K: 1e3 }[(m[2] || "").toUpperCase()] ?? 1;
+  return n * mult;
+}
+
+const metaCache = new Map<string, { exp: number; data: MetaExtra }>();
+
+// Scrape the public Yahoo quote page — it embeds marketCap / PE / earnings date
+// in fin-streamer tags and label/value list items. Works without a crumb.
+async function scrapeQuotePage(symbol: string): Promise<MetaExtra> {
+  const out: MetaExtra = {};
+  try {
+    const r = await fetch(
+      `https://finance.yahoo.com/quote/${encodeURIComponent(symbol)}/`,
+      {
+        headers: {
+          "User-Agent": UA,
+          Accept: "text/html,application/xhtml+xml",
+          "Accept-Language": "en-US,en;q=0.9",
+        },
+      },
+    );
+    if (!r.ok) return out;
+    const html = await r.text();
+
+    const grab = (field: string) => {
+      // <fin-streamer data-value="4.344T" ... data-field="marketCap" ...>
+      const re = new RegExp(
+        `data-value="([^"]+)"[^>]*data-field="${field}"`,
+        "i",
+      );
+      const m = html.match(re);
+      return m?.[1];
+    };
+
+    const cap = grab("marketCap");
+    if (cap) out.marketCap = parseAbbrev(cap);
+    const pe = grab("trailingPE");
+    if (pe) out.trailingPE = parseFloat(pe);
+    const fpe = grab("forwardPE");
+    if (fpe) out.forwardPE = parseFloat(fpe);
+    const eps = grab("epsTrailingTwelveMonths") ?? grab("trailingEps");
+    if (eps) out.epsTrailingTwelveMonths = parseFloat(eps);
+
+    // Earnings Date (est.) "Jul 30, 2026" or range "Jul 28 - Aug 1, 2026"
+    const eM = html.match(
+      /Earnings Date[^"]*"[^>]*>[^<]*<\/span>\s*<span[^>]*>([^<]+?)<\/span>/i,
+    );
+    if (eM) {
+      const raw = eM[1].trim();
+      // Take last date if range like "Jul 28 - Aug 1, 2026"
+      const last = raw.split(/\s*[-–]\s*/).pop() ?? raw;
+      const t = Date.parse(last);
+      if (!isNaN(t)) {
+        out.earningsTimestamp = Math.floor(t / 1000);
+        out.earningsTimestampStart = out.earningsTimestamp;
+        out.earningsTimestampEnd = out.earningsTimestamp;
+      }
+    }
+
+    // Dividend & Yield "1.08 (0.36%)"
+    const dM = html.match(/Forward Dividend[^>]*>[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i);
+    if (dM) {
+      const pm = dM[1].match(/\(([0-9.]+)%\)/);
+      if (pm) out.dividendYield = parseFloat(pm[1]) / 100;
+    }
+  } catch { /* ignore */ }
+  return out;
+}
+
+// Try Yahoo JSON endpoints (often blocked); fall back to scraping the public quote page.
 async function fetchMeta(symbol: string, priceHint?: number): Promise<MetaExtra> {
+  const cached = metaCache.get(symbol);
+  if (cached && cached.exp > Date.now()) return cached.data;
+
   const enc = encodeURIComponent(symbol);
   const hosts = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"];
   const out: MetaExtra = {};
@@ -55,68 +133,31 @@ async function fetchMeta(symbol: string, priceHint?: number): Promise<MetaExtra>
     if (out.dividendYield == null && typeof q.dividendYield === "number") out.dividendYield = q.dividendYield;
   };
 
-  // 1) v7/finance/quote
+  // 1) options endpoint (sometimes uncrumb)
   for (const host of hosts) {
-    if (out.marketCap && out.trailingPE && out.earningsTimestamp) break;
     try {
-      const r = await yahooFetch(`https://${host}/v7/finance/quote?symbols=${enc}`);
+      const r = await yahooFetch(`https://${host}/v7/finance/options/${enc}`);
       if (!r.ok) continue;
       const j = await r.json();
-      merge(j?.quoteResponse?.result?.[0]);
+      merge(j?.optionChain?.result?.[0]?.quote);
+      if (out.marketCap && out.earningsTimestamp) break;
     } catch { /* ignore */ }
   }
 
-  // 2) options endpoint (often works without crumb, returns a .quote subobject)
-  if (!out.marketCap || !out.earningsTimestamp) {
-    for (const host of hosts) {
-      try {
-        const r = await yahooFetch(`https://${host}/v7/finance/options/${enc}`);
-        if (!r.ok) continue;
-        const j = await r.json();
-        merge(j?.optionChain?.result?.[0]?.quote);
-        if (out.marketCap && out.earningsTimestamp) break;
-      } catch { /* ignore */ }
-    }
+  // 2) HTML scrape fallback — most reliable today
+  if (!out.marketCap || !out.trailingPE || !out.earningsTimestamp) {
+    const scraped = await scrapeQuotePage(symbol);
+    merge(scraped);
   }
 
-  // 3) quoteSummary modules
-  if (!out.marketCap || !out.earningsTimestamp) {
-    for (const host of hosts) {
-      try {
-        const r = await yahooFetch(
-          `https://${host}/v10/finance/quoteSummary/${enc}?modules=price,summaryDetail,defaultKeyStatistics,calendarEvents,earnings`,
-        );
-        if (!r.ok) continue;
-        const j = await r.json();
-        const res = j?.quoteSummary?.result?.[0];
-        const cap = res?.price?.marketCap?.raw ?? res?.summaryDetail?.marketCap?.raw;
-        const so = res?.defaultKeyStatistics?.sharesOutstanding?.raw;
-        const pe = res?.summaryDetail?.trailingPE?.raw;
-        const fpe = res?.summaryDetail?.forwardPE?.raw ?? res?.defaultKeyStatistics?.forwardPE?.raw;
-        const eps = res?.defaultKeyStatistics?.trailingEps?.raw;
-        const dy = res?.summaryDetail?.dividendYield?.raw;
-        const earningsDates = res?.calendarEvents?.earnings?.earningsDate;
-        const eTs = Array.isArray(earningsDates) && earningsDates[0]?.raw;
-        const eTsEnd = Array.isArray(earningsDates) && earningsDates[1]?.raw;
-        merge({
-          marketCap: cap, sharesOutstanding: so, trailingPE: pe, forwardPE: fpe,
-          epsTrailingTwelveMonths: eps, dividendYield: dy,
-          earningsTimestamp: eTs, earningsTimestampStart: eTs, earningsTimestampEnd: eTsEnd || eTs,
-        });
-        if (out.marketCap && out.earningsTimestamp) break;
-      } catch { /* ignore */ }
-    }
-  }
-
-  // Compute market cap from shares × price if still missing
   if (!out.marketCap && out.sharesOutstanding && typeof priceHint === "number") {
     out.marketCap = out.sharesOutstanding * priceHint;
   }
-  // Compute P/E from price/eps if missing
   if (out.trailingPE == null && out.epsTrailingTwelveMonths && out.epsTrailingTwelveMonths > 0 && typeof priceHint === "number") {
     out.trailingPE = priceHint / out.epsTrailingTwelveMonths;
   }
 
+  metaCache.set(symbol, { exp: Date.now() + 5 * 60 * 1000, data: out });
   return out;
 }
 
