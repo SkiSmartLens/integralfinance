@@ -548,8 +548,16 @@ const Sim = () => {
                 </div>
                 <input value={symbol} onChange={(e) => setSymbol(e.target.value.toUpperCase())}
                   placeholder="Symbol" className="px-3 py-2 bg-muted rounded outline-none text-sm" />
-                <input type="number" min={1} value={shares} onChange={(e) => setShares(Number(e.target.value))}
-                  placeholder="Shares" className="px-3 py-2 bg-muted rounded outline-none text-sm" />
+                <div className="col-span-1 space-y-1">
+                  <Slider
+                    value={[Math.min(shares, maxShares)]}
+                    min={1} max={maxShares} step={1}
+                    onValueChange={(v) => setShares(v[0])}
+                  />
+                  <div className="text-[10px] text-muted-foreground tabular-nums text-center">
+                    {shares} sh{estCost != null ? ` · $${formatNumber(estCost)}` : ""}
+                  </div>
+                </div>
                 <button disabled={placing} className="col-span-2 py-2 rounded bg-primary text-primary-foreground font-semibold disabled:opacity-60 text-sm">
                   {placing ? "Placing…" : `${side === "buy" ? "Buy" : "Sell"} ${shares || ""} ${symbol}`}
                 </button>
