@@ -48,85 +48,51 @@ function parseAbbrev(s: string): number | undefined {
 
 const metaCache = new Map<string, { exp: number; data: MetaExtra }>();
 
-// Scrape the public Yahoo quote page — it embeds marketCap / PE / earnings date
-// in fin-streamer tags and label/value list items. Works without a crumb.
-async function scrapeQuotePage(symbol: string): Promise<MetaExtra> {
-  const out: MetaExtra = {};
+// Cached Yahoo crumb + cookie for authenticated JSON endpoints.
+let crumbCache: { crumb: string; cookie: string; exp: number } | null = null;
+async function getCrumb(): Promise<{ crumb: string; cookie: string } | null> {
+  if (crumbCache && crumbCache.exp > Date.now()) return crumbCache;
   try {
-    const r = await fetch(
-      `https://finance.yahoo.com/quote/${encodeURIComponent(symbol)}/`,
-      {
-        headers: {
-          "User-Agent": UA,
-          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-          "Accept-Language": "en-US,en;q=0.9",
-          // Bypass EU consent redirect (Yahoo otherwise sends a stub page)
-          Cookie: "EuConsent=CPo9V0APo9V0AAOACBENCfCgAP_AAH_AAAYgIxNV_H__bX9j-_5_aft0eY1P9_r37uQzDhfNk-8F3L_W_LwX52E7NF36tq4KmR4ku3LBIQNlHMHUTUmwaokVryHsak2cpzNKJ7BEknMZOydYGF9vmxtj-YKY7v_v__7v3___77_-r___bQ9V_r_AAAAAAA; A1=d=AQABBOXyP2cCEOgcWZw_iZ-PRsy_d4tgvRkFEgEBCAH7P2qxZ2eQyyMA_eMAAA&S=AQAAAhwq3qOTd9Y1F9rmJ6m2qnQ; A3=d=AQABBOXyP2cCEOgcWZw_iZ-PRsy_d4tgvRkFEgEBCAH7P2qxZ2eQyyMA_eMAAA&S=AQAAAhwq3qOTd9Y1F9rmJ6m2qnQ; GUC=AQEBCAFnP_tqsEIfXgT4; A1S=d=AQABBOXyP2cCEOgcWZw_iZ-PRsy_d4tgvRkFEgEBCAH7P2qxZ2eQyyMA_eMAAA&S=AQAAAhwq3qOTd9Y1F9rmJ6m2qnQ",
-        },
-        redirect: "follow",
-      },
-    );
-    if (!r.ok) {
-      console.warn("scrape fail", symbol, r.status, r.url);
-      return out;
-    }
-    const html = await r.text();
-    if (!/data-field="marketCap"/.test(html)) {
-      console.warn("scrape no marketCap field", symbol, "len", html.length, "url", r.url);
-    }
-
-    const grab = (field: string) => {
-      // <fin-streamer data-value="4.344T" ... data-field="marketCap" ...>
-      const re = new RegExp(
-        `data-value="([^"]+)"[^>]*data-field="${field}"`,
-        "i",
-      );
-      const m = html.match(re);
-      return m?.[1];
-    };
-
-    const cap = grab("marketCap");
-    if (cap) out.marketCap = parseAbbrev(cap);
-    const pe = grab("trailingPE");
-    if (pe) out.trailingPE = parseFloat(pe);
-    const fpe = grab("forwardPE");
-    if (fpe) out.forwardPE = parseFloat(fpe);
-    const eps = grab("epsTrailingTwelveMonths") ?? grab("trailingEps");
-    if (eps) out.epsTrailingTwelveMonths = parseFloat(eps);
-
-    // Earnings Date (est.) "Jul 30, 2026" or range "Jul 28 - Aug 1, 2026"
-    const eM = html.match(
-      /Earnings Date[^"]*"[^>]*>[^<]*<\/span>\s*<span[^>]*>([^<]+?)<\/span>/i,
-    );
-    if (eM) {
-      const raw = eM[1].trim();
-      // Take last date if range like "Jul 28 - Aug 1, 2026"
-      const last = raw.split(/\s*[-–]\s*/).pop() ?? raw;
-      const t = Date.parse(last);
-      if (!isNaN(t)) {
-        out.earningsTimestamp = Math.floor(t / 1000);
-        out.earningsTimestampStart = out.earningsTimestamp;
-        out.earningsTimestampEnd = out.earningsTimestamp;
-      }
-    }
-
-    // Dividend & Yield "1.08 (0.36%)"
-    const dM = html.match(/Forward Dividend[^>]*>[^<]*<\/span>\s*<span[^>]*>([^<]+)<\/span>/i);
-    if (dM) {
-      const pm = dM[1].match(/\(([0-9.]+)%\)/);
-      if (pm) out.dividendYield = parseFloat(pm[1]) / 100;
-    }
-  } catch { /* ignore */ }
-  return out;
+    const r1 = await fetch("https://fc.yahoo.com", {
+      headers: { "User-Agent": UA },
+      redirect: "manual",
+    });
+    const setCookie = r1.headers.get("set-cookie") || "";
+    // Take just the name=value pairs
+    const cookie = setCookie
+      .split(/,(?=[^ ]+=)/)
+      .map((c) => c.split(";")[0].trim())
+      .filter(Boolean)
+      .join("; ");
+    if (!cookie) return null;
+    const r2 = await fetch("https://query2.finance.yahoo.com/v1/test/getcrumb", {
+      headers: { "User-Agent": UA, Cookie: cookie },
+    });
+    if (!r2.ok) return null;
+    const crumb = (await r2.text()).trim();
+    if (!crumb || crumb.length > 64 || crumb.includes("<")) return null;
+    crumbCache = { crumb, cookie, exp: Date.now() + 30 * 60 * 1000 };
+    return crumbCache;
+  } catch {
+    return null;
+  }
 }
 
-// Try Yahoo JSON endpoints (often blocked); fall back to scraping the public quote page.
+// Parse "4.344T" / "12.3B" / "987M" style strings into a number.
+function parseAbbrev(s: string): number | undefined {
+  if (!s) return undefined;
+  const m = s.replace(/,/g, "").trim().match(/^([0-9]*\.?[0-9]+)\s*([TBMK])?/i);
+  if (!m) return undefined;
+  const n = parseFloat(m[1]);
+  const mult: Record<string, number> = { T: 1e12, B: 1e9, M: 1e6, K: 1e3 };
+  return n * (mult[(m[2] || "").toUpperCase()] ?? 1);
+}
+
 async function fetchMeta(symbol: string, priceHint?: number): Promise<MetaExtra> {
   const cached = metaCache.get(symbol);
   if (cached && cached.exp > Date.now()) return cached.data;
 
   const enc = encodeURIComponent(symbol);
-  const hosts = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"];
   const out: MetaExtra = {};
 
   const merge = (q: any) => {
@@ -142,23 +108,25 @@ async function fetchMeta(symbol: string, priceHint?: number): Promise<MetaExtra>
     if (out.dividendYield == null && typeof q.dividendYield === "number") out.dividendYield = q.dividendYield;
   };
 
-  // 1) options endpoint (sometimes uncrumb)
-  for (const host of hosts) {
-    try {
-      const r = await yahooFetch(`https://${host}/v7/finance/options/${enc}`);
-      if (!r.ok) continue;
-      const j = await r.json();
-      merge(j?.optionChain?.result?.[0]?.quote);
-      if (out.marketCap && out.earningsTimestamp) break;
-    } catch { /* ignore */ }
+  // Authenticated v7/finance/quote — gives marketCap, PE, earnings in one shot.
+  const auth = await getCrumb();
+  if (auth) {
+    for (const host of ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]) {
+      try {
+        const r = await fetch(
+          `https://${host}/v7/finance/quote?symbols=${enc}&crumb=${encodeURIComponent(auth.crumb)}`,
+          { headers: { "User-Agent": UA, Cookie: auth.cookie } },
+        );
+        if (r.status === 401 || r.status === 403) { crumbCache = null; break; }
+        if (!r.ok) continue;
+        const j = await r.json();
+        merge(j?.quoteResponse?.result?.[0]);
+        if (out.marketCap && out.earningsTimestamp) break;
+      } catch { /* ignore */ }
+    }
   }
 
-  // 2) HTML scrape fallback — most reliable today
-  if (!out.marketCap || !out.trailingPE || !out.earningsTimestamp) {
-    const scraped = await scrapeQuotePage(symbol);
-    merge(scraped);
-  }
-
+  // Last resort: shares × price.
   if (!out.marketCap && out.sharesOutstanding && typeof priceHint === "number") {
     out.marketCap = out.sharesOutstanding * priceHint;
   }
@@ -166,7 +134,12 @@ async function fetchMeta(symbol: string, priceHint?: number): Promise<MetaExtra>
     out.trailingPE = priceHint / out.epsTrailingTwelveMonths;
   }
 
-  metaCache.set(symbol, { exp: Date.now() + 5 * 60 * 1000, data: out });
+  if (out.marketCap || out.trailingPE || out.earningsTimestamp) {
+    metaCache.set(symbol, { exp: Date.now() + 5 * 60 * 1000, data: out });
+  } else {
+    // Cache the miss briefly so we don't hammer the upstream while it's blocked.
+    metaCache.set(symbol, { exp: Date.now() + 30 * 1000, data: out });
+  }
   return out;
 }
 
