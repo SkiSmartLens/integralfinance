@@ -36,15 +36,6 @@ interface MetaExtra {
   dividendYield?: number;
 }
 
-// Parse "4.344T" / "12.3B" / "987M" style strings into a number.
-function parseAbbrev(s: string): number | undefined {
-  if (!s) return undefined;
-  const m = s.replace(/,/g, "").trim().match(/^([0-9]*\.?[0-9]+)\s*([TBMK])?/i);
-  if (!m) return undefined;
-  const n = parseFloat(m[1]);
-  const mult = { T: 1e12, B: 1e9, M: 1e6, K: 1e3 }[(m[2] || "").toUpperCase()] ?? 1;
-  return n * mult;
-}
 
 const metaCache = new Map<string, { exp: number; data: MetaExtra }>();
 
