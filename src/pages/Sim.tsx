@@ -109,6 +109,31 @@ const Sim = () => {
     return () => { alive = false; clearInterval(t); };
   }, [positions.map((p) => p.symbol).join(",")]);
 
+  // Live price for the symbol in the order ticket — drives the shares slider max.
+  const [ticketPrice, setTicketPrice] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    const sym = symbol.trim().toUpperCase();
+    if (!sym) { setTicketPrice(undefined); return; }
+    if (prices[sym]) { setTicketPrice(prices[sym]); return; }
+    let alive = true;
+    setTicketPrice(undefined);
+    const handle = setTimeout(() => {
+      fetchQuotes([sym]).then((qs) => {
+        if (!alive) return;
+        const p = qs[0]?.regularMarketPrice;
+        if (typeof p === "number") setTicketPrice(p);
+      }).catch(() => {});
+    }, 250);
+    return () => { alive = false; clearTimeout(handle); };
+  }, [symbol, prices]);
+
+  const cashAvail = Number(activeMember?.cash ?? 0);
+  const ownedShares = Number(positions.find((p) => p.symbol === symbol.toUpperCase())?.shares ?? 0);
+  const maxShares = side === "buy"
+    ? (ticketPrice && ticketPrice > 0 ? Math.max(1, Math.floor(cashAvail / ticketPrice)) : 1000)
+    : Math.max(1, ownedShares || 1);
+  const estCost = ticketPrice ? ticketPrice * shares : undefined;
+
   const portfolioValue = positions.reduce((sum, p) => sum + (prices[p.symbol] ?? p.avg_cost) * Number(p.shares), 0);
   const dayPL = positions.reduce((sum, p) => {
     const last = prices[p.symbol] ?? Number(p.avg_cost);
