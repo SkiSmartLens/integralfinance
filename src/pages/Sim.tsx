@@ -8,6 +8,7 @@ import { useFlash } from "@/hooks/useFlash";
 import { fetchQuotes, formatNumber, formatLargeNumber } from "@/lib/yahoo";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { Slider } from "@/components/ui/slider";
 import { LogOut, Plus, Users, Search, Globe, Lock, Wrench } from "lucide-react";
 
 interface Game { id: string; name: string; starting_cash: number; commission: number; join_code: string; created_by: string; is_public?: boolean; }
@@ -107,6 +108,31 @@ const Sim = () => {
     const t = setInterval(load, 15000);
     return () => { alive = false; clearInterval(t); };
   }, [positions.map((p) => p.symbol).join(",")]);
+
+  // Live price for the symbol in the order ticket — drives the shares slider max.
+  const [ticketPrice, setTicketPrice] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    const sym = symbol.trim().toUpperCase();
+    if (!sym) { setTicketPrice(undefined); return; }
+    if (prices[sym]) { setTicketPrice(prices[sym]); return; }
+    let alive = true;
+    setTicketPrice(undefined);
+    const handle = setTimeout(() => {
+      fetchQuotes([sym]).then((qs) => {
+        if (!alive) return;
+        const p = qs[0]?.regularMarketPrice;
+        if (typeof p === "number") setTicketPrice(p);
+      }).catch(() => {});
+    }, 250);
+    return () => { alive = false; clearTimeout(handle); };
+  }, [symbol, prices]);
+
+  const cashAvail = Number(activeMember?.cash ?? 0);
+  const ownedShares = Number(positions.find((p) => p.symbol === symbol.toUpperCase())?.shares ?? 0);
+  const maxShares = side === "buy"
+    ? (ticketPrice && ticketPrice > 0 ? Math.max(1, Math.floor(cashAvail / ticketPrice)) : 1000)
+    : Math.max(1, ownedShares || 1);
+  const estCost = ticketPrice ? ticketPrice * shares : undefined;
 
   const portfolioValue = positions.reduce((sum, p) => sum + (prices[p.symbol] ?? p.avg_cost) * Number(p.shares), 0);
   const dayPL = positions.reduce((sum, p) => {
@@ -348,8 +374,38 @@ const Sim = () => {
                   </div>
                   <input value={symbol} onChange={(e) => setSymbol(e.target.value.toUpperCase())}
                     placeholder="Symbol" className="w-full px-3 py-2 bg-muted rounded outline-none" />
-                  <input type="number" min={1} value={shares} onChange={(e) => setShares(Number(e.target.value))}
-                    placeholder="Shares" className="w-full px-3 py-2 bg-muted rounded outline-none" />
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Shares</span>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="number" min={1} max={maxShares}
+                          value={shares}
+                          onChange={(e) => setShares(Math.max(1, Math.min(maxShares, Number(e.target.value) || 1)))}
+                          className="w-20 px-2 py-1 bg-muted rounded text-right tabular-nums text-sm font-semibold outline-none focus:ring-1 focus:ring-primary"
+                        />
+                        <button type="button" onClick={() => setShares(maxShares)}
+                          className="text-[10px] px-1.5 py-1 rounded bg-muted hover:bg-accent font-semibold uppercase">
+                          Max
+                        </button>
+                      </div>
+                    </div>
+                    <Slider
+                      value={[Math.min(shares, maxShares)]}
+                      min={1}
+                      max={maxShares}
+                      step={1}
+                      onValueChange={(v) => setShares(v[0])}
+                    />
+                    <div className="flex items-center justify-between text-[10px] text-muted-foreground tabular-nums">
+                      <span>1</span>
+                      <span>
+                        {ticketPrice ? `@ $${formatNumber(ticketPrice)} · ` : ""}
+                        {estCost != null ? `≈ $${formatNumber(estCost)}` : "—"}
+                      </span>
+                      <span>{maxShares}</span>
+                    </div>
+                  </div>
                   <select value={orderType} onChange={(e) => setOrderType(e.target.value as any)}
                     className="w-full px-3 py-2 bg-muted rounded outline-none">
                     <option value="market">Market</option>
@@ -492,8 +548,16 @@ const Sim = () => {
                 </div>
                 <input value={symbol} onChange={(e) => setSymbol(e.target.value.toUpperCase())}
                   placeholder="Symbol" className="px-3 py-2 bg-muted rounded outline-none text-sm" />
-                <input type="number" min={1} value={shares} onChange={(e) => setShares(Number(e.target.value))}
-                  placeholder="Shares" className="px-3 py-2 bg-muted rounded outline-none text-sm" />
+                <div className="col-span-1 space-y-1">
+                  <Slider
+                    value={[Math.min(shares, maxShares)]}
+                    min={1} max={maxShares} step={1}
+                    onValueChange={(v) => setShares(v[0])}
+                  />
+                  <div className="text-[10px] text-muted-foreground tabular-nums text-center">
+                    {shares} sh{estCost != null ? ` · $${formatNumber(estCost)}` : ""}
+                  </div>
+                </div>
                 <button disabled={placing} className="col-span-2 py-2 rounded bg-primary text-primary-foreground font-semibold disabled:opacity-60 text-sm">
                   {placing ? "Placing…" : `${side === "buy" ? "Buy" : "Sell"} ${shares || ""} ${symbol}`}
                 </button>

@@ -36,10 +36,54 @@ interface MetaExtra {
   dividendYield?: number;
 }
 
-// Try several Yahoo endpoints to extract market cap, P/E, and next earnings.
+
+const metaCache = new Map<string, { exp: number; data: MetaExtra }>();
+
+// Cached Yahoo crumb + cookie for authenticated JSON endpoints.
+let crumbCache: { crumb: string; cookie: string; exp: number } | null = null;
+async function getCrumb(): Promise<{ crumb: string; cookie: string } | null> {
+  if (crumbCache && crumbCache.exp > Date.now()) return crumbCache;
+  try {
+    const r1 = await fetch("https://fc.yahoo.com", {
+      headers: { "User-Agent": UA },
+      redirect: "manual",
+    });
+    const setCookie = r1.headers.get("set-cookie") || "";
+    // Take just the name=value pairs
+    const cookie = setCookie
+      .split(/,(?=[^ ]+=)/)
+      .map((c) => c.split(";")[0].trim())
+      .filter(Boolean)
+      .join("; ");
+    if (!cookie) return null;
+    const r2 = await fetch("https://query2.finance.yahoo.com/v1/test/getcrumb", {
+      headers: { "User-Agent": UA, Cookie: cookie },
+    });
+    if (!r2.ok) return null;
+    const crumb = (await r2.text()).trim();
+    if (!crumb || crumb.length > 64 || crumb.includes("<")) return null;
+    crumbCache = { crumb, cookie, exp: Date.now() + 30 * 60 * 1000 };
+    return crumbCache;
+  } catch {
+    return null;
+  }
+}
+
+// Parse "4.344T" / "12.3B" / "987M" style strings into a number.
+function parseAbbrev(s: string): number | undefined {
+  if (!s) return undefined;
+  const m = s.replace(/,/g, "").trim().match(/^([0-9]*\.?[0-9]+)\s*([TBMK])?/i);
+  if (!m) return undefined;
+  const n = parseFloat(m[1]);
+  const mult: Record<string, number> = { T: 1e12, B: 1e9, M: 1e6, K: 1e3 };
+  return n * (mult[(m[2] || "").toUpperCase()] ?? 1);
+}
+
 async function fetchMeta(symbol: string, priceHint?: number): Promise<MetaExtra> {
+  const cached = metaCache.get(symbol);
+  if (cached && cached.exp > Date.now()) return cached.data;
+
   const enc = encodeURIComponent(symbol);
-  const hosts = ["query1.finance.yahoo.com", "query2.finance.yahoo.com"];
   const out: MetaExtra = {};
 
   const merge = (q: any) => {
@@ -55,68 +99,38 @@ async function fetchMeta(symbol: string, priceHint?: number): Promise<MetaExtra>
     if (out.dividendYield == null && typeof q.dividendYield === "number") out.dividendYield = q.dividendYield;
   };
 
-  // 1) v7/finance/quote
-  for (const host of hosts) {
-    if (out.marketCap && out.trailingPE && out.earningsTimestamp) break;
-    try {
-      const r = await yahooFetch(`https://${host}/v7/finance/quote?symbols=${enc}`);
-      if (!r.ok) continue;
-      const j = await r.json();
-      merge(j?.quoteResponse?.result?.[0]);
-    } catch { /* ignore */ }
-  }
-
-  // 2) options endpoint (often works without crumb, returns a .quote subobject)
-  if (!out.marketCap || !out.earningsTimestamp) {
-    for (const host of hosts) {
+  // Authenticated v7/finance/quote — gives marketCap, PE, earnings in one shot.
+  const auth = await getCrumb();
+  if (auth) {
+    for (const host of ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]) {
       try {
-        const r = await yahooFetch(`https://${host}/v7/finance/options/${enc}`);
-        if (!r.ok) continue;
-        const j = await r.json();
-        merge(j?.optionChain?.result?.[0]?.quote);
-        if (out.marketCap && out.earningsTimestamp) break;
-      } catch { /* ignore */ }
-    }
-  }
-
-  // 3) quoteSummary modules
-  if (!out.marketCap || !out.earningsTimestamp) {
-    for (const host of hosts) {
-      try {
-        const r = await yahooFetch(
-          `https://${host}/v10/finance/quoteSummary/${enc}?modules=price,summaryDetail,defaultKeyStatistics,calendarEvents,earnings`,
+        const r = await fetch(
+          `https://${host}/v7/finance/quote?symbols=${enc}&crumb=${encodeURIComponent(auth.crumb)}`,
+          { headers: { "User-Agent": UA, Cookie: auth.cookie } },
         );
+        if (r.status === 401 || r.status === 403) { crumbCache = null; break; }
         if (!r.ok) continue;
         const j = await r.json();
-        const res = j?.quoteSummary?.result?.[0];
-        const cap = res?.price?.marketCap?.raw ?? res?.summaryDetail?.marketCap?.raw;
-        const so = res?.defaultKeyStatistics?.sharesOutstanding?.raw;
-        const pe = res?.summaryDetail?.trailingPE?.raw;
-        const fpe = res?.summaryDetail?.forwardPE?.raw ?? res?.defaultKeyStatistics?.forwardPE?.raw;
-        const eps = res?.defaultKeyStatistics?.trailingEps?.raw;
-        const dy = res?.summaryDetail?.dividendYield?.raw;
-        const earningsDates = res?.calendarEvents?.earnings?.earningsDate;
-        const eTs = Array.isArray(earningsDates) && earningsDates[0]?.raw;
-        const eTsEnd = Array.isArray(earningsDates) && earningsDates[1]?.raw;
-        merge({
-          marketCap: cap, sharesOutstanding: so, trailingPE: pe, forwardPE: fpe,
-          epsTrailingTwelveMonths: eps, dividendYield: dy,
-          earningsTimestamp: eTs, earningsTimestampStart: eTs, earningsTimestampEnd: eTsEnd || eTs,
-        });
+        merge(j?.quoteResponse?.result?.[0]);
         if (out.marketCap && out.earningsTimestamp) break;
       } catch { /* ignore */ }
     }
   }
 
-  // Compute market cap from shares × price if still missing
+  // Last resort: shares × price.
   if (!out.marketCap && out.sharesOutstanding && typeof priceHint === "number") {
     out.marketCap = out.sharesOutstanding * priceHint;
   }
-  // Compute P/E from price/eps if missing
   if (out.trailingPE == null && out.epsTrailingTwelveMonths && out.epsTrailingTwelveMonths > 0 && typeof priceHint === "number") {
     out.trailingPE = priceHint / out.epsTrailingTwelveMonths;
   }
 
+  if (out.marketCap || out.trailingPE || out.earningsTimestamp) {
+    metaCache.set(symbol, { exp: Date.now() + 5 * 60 * 1000, data: out });
+  } else {
+    // Cache the miss briefly so we don't hammer the upstream while it's blocked.
+    metaCache.set(symbol, { exp: Date.now() + 30 * 1000, data: out });
+  }
   return out;
 }
 
