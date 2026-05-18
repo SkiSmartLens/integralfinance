@@ -53,7 +53,7 @@ export const Header = ({ onSearch }: Props) => {
       <div className="container mx-auto px-4 py-3 flex items-center gap-4">
         <Link to="/" className="flex items-center gap-2 font-bold text-xl shrink-0">
           <TrendingUp className="text-primary" />
-          <span className="hidden sm:inline">IntegralFinance</span>
+          <span className="hidden sm:inline">Integral Stocks</span>
         </Link>
         <div ref={boxRef} className="flex-1 max-w-xl relative">
           <form
