@@ -374,8 +374,38 @@ const Sim = () => {
                   </div>
                   <input value={symbol} onChange={(e) => setSymbol(e.target.value.toUpperCase())}
                     placeholder="Symbol" className="w-full px-3 py-2 bg-muted rounded outline-none" />
-                  <input type="number" min={1} value={shares} onChange={(e) => setShares(Number(e.target.value))}
-                    placeholder="Shares" className="w-full px-3 py-2 bg-muted rounded outline-none" />
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Shares</span>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="number" min={1} max={maxShares}
+                          value={shares}
+                          onChange={(e) => setShares(Math.max(1, Math.min(maxShares, Number(e.target.value) || 1)))}
+                          className="w-20 px-2 py-1 bg-muted rounded text-right tabular-nums text-sm font-semibold outline-none focus:ring-1 focus:ring-primary"
+                        />
+                        <button type="button" onClick={() => setShares(maxShares)}
+                          className="text-[10px] px-1.5 py-1 rounded bg-muted hover:bg-accent font-semibold uppercase">
+                          Max
+                        </button>
+                      </div>
+                    </div>
+                    <Slider
+                      value={[Math.min(shares, maxShares)]}
+                      min={1}
+                      max={maxShares}
+                      step={1}
+                      onValueChange={(v) => setShares(v[0])}
+                    />
+                    <div className="flex items-center justify-between text-[10px] text-muted-foreground tabular-nums">
+                      <span>1</span>
+                      <span>
+                        {ticketPrice ? `@ $${formatNumber(ticketPrice)} · ` : ""}
+                        {estCost != null ? `≈ $${formatNumber(estCost)}` : "—"}
+                      </span>
+                      <span>{maxShares}</span>
+                    </div>
+                  </div>
                   <select value={orderType} onChange={(e) => setOrderType(e.target.value as any)}
                     className="w-full px-3 py-2 bg-muted rounded outline-none">
                     <option value="market">Market</option>
