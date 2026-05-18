@@ -58,13 +58,22 @@ async function scrapeQuotePage(symbol: string): Promise<MetaExtra> {
       {
         headers: {
           "User-Agent": UA,
-          Accept: "text/html,application/xhtml+xml",
+          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
           "Accept-Language": "en-US,en;q=0.9",
+          // Bypass EU consent redirect (Yahoo otherwise sends a stub page)
+          Cookie: "EuConsent=CPo9V0APo9V0AAOACBENCfCgAP_AAH_AAAYgIxNV_H__bX9j-_5_aft0eY1P9_r37uQzDhfNk-8F3L_W_LwX52E7NF36tq4KmR4ku3LBIQNlHMHUTUmwaokVryHsak2cpzNKJ7BEknMZOydYGF9vmxtj-YKY7v_v__7v3___77_-r___bQ9V_r_AAAAAAA; A1=d=AQABBOXyP2cCEOgcWZw_iZ-PRsy_d4tgvRkFEgEBCAH7P2qxZ2eQyyMA_eMAAA&S=AQAAAhwq3qOTd9Y1F9rmJ6m2qnQ; A3=d=AQABBOXyP2cCEOgcWZw_iZ-PRsy_d4tgvRkFEgEBCAH7P2qxZ2eQyyMA_eMAAA&S=AQAAAhwq3qOTd9Y1F9rmJ6m2qnQ; GUC=AQEBCAFnP_tqsEIfXgT4; A1S=d=AQABBOXyP2cCEOgcWZw_iZ-PRsy_d4tgvRkFEgEBCAH7P2qxZ2eQyyMA_eMAAA&S=AQAAAhwq3qOTd9Y1F9rmJ6m2qnQ",
         },
+        redirect: "follow",
       },
     );
-    if (!r.ok) return out;
+    if (!r.ok) {
+      console.warn("scrape fail", symbol, r.status, r.url);
+      return out;
+    }
     const html = await r.text();
+    if (!/data-field="marketCap"/.test(html)) {
+      console.warn("scrape no marketCap field", symbol, "len", html.length, "url", r.url);
+    }
 
     const grab = (field: string) => {
       // <fin-streamer data-value="4.344T" ... data-field="marketCap" ...>
