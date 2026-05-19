@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { LineChart, Filter, Calendar, Pencil, Check, RotateCcw, GripVertical, X, Plus } from "lucide-react";
 import { WatchlistButton } from "@/components/WatchlistButton";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, closestCenter,
 } from "@dnd-kit/core";
@@ -72,6 +72,15 @@ export const CategoryNav = ({ active, onChange, activeSub, onSubChange }: Props)
   const [showAdd, setShowAdd] = useState(false);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
+  useEffect(() => {
+    if (!editing) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { setEditing(false); setShowAdd(false); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [editing]);
+
   const onDragEnd = (e: DragEndEvent) => {
     const { active: a, over } = e;
     if (!over || a.id === over.id) return;
@@ -93,6 +102,19 @@ export const CategoryNav = ({ active, onChange, activeSub, onSubChange }: Props)
 
   return (
     <div className="border-b bg-background sticky top-0 z-30">
+      {editing && (
+        <div className="bg-primary/10 border-b border-primary/30 px-4 py-1.5 flex items-center justify-between gap-2">
+          <span className="text-[11px] font-semibold text-primary uppercase tracking-wider">
+            Editing categories — drag to reorder, × to hide
+          </span>
+          <button
+            onClick={() => { setEditing(false); setShowAdd(false); }}
+            className="flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-full bg-primary text-primary-foreground hover:opacity-90"
+          >
+            <Check className="w-3.5 h-3.5" /> Done
+          </button>
+        </div>
+      )}
       <div className="container mx-auto px-4">
         <div className="flex gap-1 overflow-x-auto no-scrollbar py-2 items-center">
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
