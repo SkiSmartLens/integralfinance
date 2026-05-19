@@ -7,7 +7,7 @@ import { StockChart } from "@/components/StockChart";
 import { Watchlist } from "@/components/Watchlist";
 import { StockExplainer } from "@/components/StockExplainer";
 import { SEO } from "@/components/SEO";
-import { DragSheet } from "@/components/DragSheet";
+import { SidePanel } from "@/components/SidePanel";
 import { WidgetBar } from "@/components/WidgetBar";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
@@ -17,7 +17,7 @@ import { formatNumber } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
 import { onAction } from "@/lib/actions";
 import { useWidgets } from "@/lib/widgets";
-import { GraduationCap, LineChart, TrendingUp, Briefcase } from "lucide-react";
+import { GraduationCap, TrendingUp, Briefcase } from "lucide-react";
 
 const StockSummary = lazy(() =>
   import("@/components/StockSummary").then((m) => ({ default: m.StockSummary }))
@@ -104,25 +104,33 @@ const Index = () => {
         onSubChange={setActiveSub}
       />
       <main className="container mx-auto px-4 py-6 space-y-8 max-w-6xl">
-        <div id="widgets">
-          <WidgetBar />
-        </div>
+        {activeCat === "news" && (
+          <>
+            <div id="widgets">
+              <WidgetBar />
+            </div>
 
-        <div className="flex items-start gap-3 bg-accent/40 border border-accent rounded-lg p-4 text-sm">
-          <GraduationCap className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-          <p className="leading-relaxed">
-            <span className="font-semibold">New?</span>{" "}
-            Pick any stock for a plain-English explainer, or tap the ✨ sparkle in the corner — Integral AI can take you anywhere and customize the dashboard for you.
-          </p>
-        </div>
+            <div className="flex items-start gap-3 bg-accent/40 border border-accent rounded-lg p-4 text-sm">
+              <GraduationCap className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+              <p className="leading-relaxed">
+                <span className="font-semibold">New?</span>{" "}
+                Pick any stock for a plain-English explainer, or tap the ✨ sparkle in the corner — Integral AI can take you anywhere and customize the dashboard for you.
+              </p>
+            </div>
+          </>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8">
           <div className="space-y-6 min-w-0">
-            <div id="chart"><StockChart symbol={activeSymbol} /></div>
-            <div id="summary"><StockExplainer symbol={activeSymbol} /></div>
-            <Suspense fallback={<div className="h-32" />}>
-              <StockSummary symbol={activeSymbol} />
-            </Suspense>
+            {activeCat === "news" && (
+              <>
+                <div id="chart"><StockChart symbol={activeSymbol} /></div>
+                <div id="summary"><StockExplainer symbol={activeSymbol} /></div>
+                <Suspense fallback={<div className="h-32" />}>
+                  <StockSummary symbol={activeSymbol} />
+                </Suspense>
+              </>
+            )}
             <section id="news">
               <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                 <h2 className="text-2xl font-bold">
@@ -151,6 +159,16 @@ const Index = () => {
                 />
               </Suspense>
             </section>
+            {activeCat !== "news" && (
+              <>
+                <div id="widgets"><WidgetBar /></div>
+                <div id="chart"><StockChart symbol={activeSymbol} /></div>
+                <div id="summary"><StockExplainer symbol={activeSymbol} /></div>
+                <Suspense fallback={<div className="h-32" />}>
+                  <StockSummary symbol={activeSymbol} />
+                </Suspense>
+              </>
+            )}
           </div>
           <aside className="space-y-6">
             <Watchlist
@@ -163,25 +181,25 @@ const Index = () => {
         </div>
       </main>
 
-      <footer className="border-t py-6 text-center text-xs text-muted-foreground mt-8 pb-[80px]">
+      <footer className="border-t py-6 text-center text-xs text-muted-foreground mt-8">
         Live data via Yahoo Finance public endpoints. Prices may be delayed. Not investment advice.
       </footer>
 
-      <HomeDragSheet myWatchlist={myWatchlist} onPick={setActiveSymbol} />
+      <HomeSidePanel myWatchlist={myWatchlist} onPick={setActiveSymbol} />
     </div>
   );
 };
 
-const HomeDragSheet = ({
+const HomeSidePanel = ({
   myWatchlist, onPick,
 }: { myWatchlist: string[]; onPick: (s: string) => void }) => {
   const syms = myWatchlist.length ? myWatchlist : TRENDING.slice(0, 6);
   const { quotes } = useLiveQuotes(syms);
   const qMap = useMemo(() => Object.fromEntries(quotes.map((q) => [q.symbol, q])), [quotes]);
   return (
-    <DragSheet title="Integral Stocks">
+    <SidePanel title="Integral Stocks">
       <div className="p-4 space-y-4">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <Link to="/watchlist" className="flex flex-col items-center gap-1 py-3 rounded-lg bg-muted hover:bg-accent transition-colors">
             <Briefcase className="w-4 h-4" />
             <span className="text-xs font-semibold">Watchlist</span>
@@ -189,10 +207,6 @@ const HomeDragSheet = ({
           <Link to="/screener" className="flex flex-col items-center gap-1 py-3 rounded-lg bg-muted hover:bg-accent transition-colors">
             <TrendingUp className="w-4 h-4" />
             <span className="text-xs font-semibold">Screener</span>
-          </Link>
-          <Link to="/sim" className="flex flex-col items-center gap-1 py-3 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity">
-            <LineChart className="w-4 h-4" />
-            <span className="text-xs font-semibold">Trade</span>
           </Link>
         </div>
         <div>
@@ -209,7 +223,7 @@ const HomeDragSheet = ({
           </ul>
         </div>
       </div>
-    </DragSheet>
+    </SidePanel>
   );
 };
 
