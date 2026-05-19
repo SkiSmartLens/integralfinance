@@ -72,6 +72,15 @@ export const CategoryNav = ({ active, onChange, activeSub, onSubChange }: Props)
   const [showAdd, setShowAdd] = useState(false);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
+  useEffect(() => {
+    if (!editing) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { setEditing(false); setShowAdd(false); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [editing]);
+
   const onDragEnd = (e: DragEndEvent) => {
     const { active: a, over } = e;
     if (!over || a.id === over.id) return;
