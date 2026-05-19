@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { LineChart, Filter, Calendar, Pencil, Check, RotateCcw, GripVertical, X, Plus } from "lucide-react";
 import { WatchlistButton } from "@/components/WatchlistButton";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, closestCenter,
 } from "@dnd-kit/core";
