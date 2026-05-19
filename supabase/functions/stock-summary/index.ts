@@ -30,52 +30,76 @@ Deno.serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-    // Pull news + quote via our own proxy
-    const [newsRes, quoteRes] = await Promise.all([
-      fetch(`${SUPABASE_URL}/functions/v1/yahoo-proxy?kind=search&q=${encodeURIComponent(sym)}`, {
-        headers: { apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "" },
-      }),
-      fetch(`${SUPABASE_URL}/functions/v1/yahoo-proxy?kind=quote&symbols=${sym}`, {
-        headers: { apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "" },
-      }),
-    ]);
-    const newsJson = await newsRes.json().catch(() => ({}));
-    const quoteJson = await quoteRes.json().catch(() => ({}));
-    const headlines: string[] = (newsJson?.news ?? [])
-      .slice(0, 12)
-      .map((n: any) => `- ${n.title} (${n.publisher})`);
-    const q = quoteJson?.quoteResponse?.result?.[0] ?? {};
+    const anon = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 
-    const beginnerPrompt = `Stock: ${q.shortName ?? sym} (${sym})
+    // 1) Get the quote first so we have the real company name.
+    const quoteRes = await fetch(
+      `${SUPABASE_URL}/functions/v1/yahoo-proxy?kind=quote&symbols=${sym}`,
+      { headers: { apikey: anon } },
+    );
+    const quoteJson = await quoteRes.json().catch(() => ({}));
+    const q = quoteJson?.quoteResponse?.result?.[0] ?? {};
+    const companyName: string = q.longName || q.shortName || sym;
+
+    // 2) Search news using the actual company name (much more relevant
+    //    than searching by ticker, especially for indices/ETFs).
+    const newsQuery = `${companyName} ${sym}`;
+    const newsRes = await fetch(
+      `${SUPABASE_URL}/functions/v1/yahoo-proxy?kind=search&q=${encodeURIComponent(newsQuery)}`,
+      { headers: { apikey: anon } },
+    );
+    const newsJson = await newsRes.json().catch(() => ({}));
+
+    // Filter headlines to ones that actually mention the ticker or a
+    // distinctive word from the company name — drops unrelated noise.
+    const nameWords = companyName
+      .replace(/[^\w\s]/g, " ")
+      .split(/\s+/)
+      .map((w) => w.trim())
+      .filter((w) => w.length >= 4 && !/^(inc|corp|corporation|company|the|and|group|holdings|ltd|plc|index|fund|etf|trust)$/i.test(w));
+    const needles = [sym.toLowerCase(), ...nameWords.map((w) => w.toLowerCase())];
+    const headlines: string[] = (newsJson?.news ?? [])
+      .filter((n: any) => {
+        const t = `${n.title ?? ""} ${n.summary ?? ""}`.toLowerCase();
+        return needles.some((n) => t.includes(n));
+      })
+      .slice(0, 10)
+      .map((n: any) => `- ${n.title} (${n.publisher})`);
+
+    const beginnerPrompt = `Stock: ${companyName} (${sym})
 Sector: ${q.sector ?? ""}  Industry: ${q.industry ?? ""}
 Price: ${q.regularMarketPrice} ${q.currency ?? ""}
 Mkt cap: ${q.marketCap}
 
-Recent headlines:
-${headlines.join("\n") || "(none)"}
+Recent headlines about ${companyName} (${sym}):
+${headlines.join("\n") || "(no recent headlines)"}
+
+ONLY discuss ${companyName} (${sym}). Do NOT mention any other company. If a headline above is not about ${companyName}, ignore it.
 
 Explain this company to a complete beginner who has never invested before.
 Return strict JSON: {"whatItDoes": string, "whyPeopleBuy": string, "whatToWatch": string}
-- whatItDoes: 1-2 plain-English sentences. Avoid jargon. Imagine explaining to a teenager.
-- whyPeopleBuy: 1-2 sentences on the bull case (growth, dividends, brand, etc.).
-- whatToWatch: 1-2 sentences on key risks or what could move the price.
+- whatItDoes: 1-2 plain-English sentences about ${companyName} specifically. Avoid jargon.
+- whyPeopleBuy: 1-2 sentences on the bull case for ${companyName}.
+- whatToWatch: 1-2 sentences on risks specific to ${companyName}.
 No disclaimers, no markdown, no jargon.`;
 
-    const analystPrompt = `Stock: ${q.shortName ?? sym} (${sym})
+    const analystPrompt = `Stock: ${companyName} (${sym})
 Price: ${q.regularMarketPrice} ${q.currency ?? ""}
 Change: ${q.regularMarketChangePercent?.toFixed?.(2)}%
 Day range: ${q.regularMarketDayLow}-${q.regularMarketDayHigh}
 52w range: ${q.fiftyTwoWeekLow}-${q.fiftyTwoWeekHigh}
 Mkt cap: ${q.marketCap}
 
-Recent headlines:
-${headlines.join("\n") || "(none)"}
+Recent headlines about ${companyName} (${sym}):
+${headlines.join("\n") || "(no recent headlines)"}
+
+CRITICAL: ONLY analyze ${companyName} (${sym}). Do NOT discuss any other ticker or company. Ignore any headline above that is not directly about ${companyName}.
 
 Return strict JSON with shape:
 {"positives":[string], "negatives":[string], "earnings": string, "outlook": string}
-- 3-5 short bullets each. Use simple language a beginner can understand — no jargon.
-- earnings: 1-2 sentences on most recent / upcoming earnings if known
-- outlook: 1 sentence neutral synthesis
+- 3-5 short bullets each, each one specifically about ${companyName}. Use simple language — no jargon.
+- earnings: 1-2 sentences on ${companyName}'s most recent / upcoming earnings if known
+- outlook: 1 sentence neutral synthesis for ${companyName}
 Be concise, no disclaimers.`;
 
     const beginnerSchema = {
