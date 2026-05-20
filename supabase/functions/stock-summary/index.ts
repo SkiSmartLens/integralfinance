@@ -89,38 +89,33 @@ Change: ${q.regularMarketChangePercent?.toFixed?.(2)}%
 Day range: ${q.regularMarketDayLow}-${q.regularMarketDayHigh}
 52w range: ${q.fiftyTwoWeekLow}-${q.fiftyTwoWeekHigh}
 Mkt cap: ${q.marketCap}
+Trailing P/E: ${q.trailingPE ?? "?"}  Forward P/E: ${q.forwardPE ?? "?"}
+EPS (ttm): ${q.epsTrailingTwelveMonths ?? "?"}  EPS fwd: ${q.epsForward ?? "?"}
+Dividend yield: ${q.trailingAnnualDividendYield ?? q.dividendYield ?? "?"}
+Avg analyst target: ${q.targetMeanPrice ?? "?"}  (low ${q.targetLowPrice ?? "?"} / high ${q.targetHighPrice ?? "?"})
+Recommendation: ${q.averageAnalystRating ?? q.recommendationKey ?? "?"}
 
 Recent headlines about ${companyName} (${sym}):
 ${headlines.join("\n") || "(no recent headlines)"}
 
 CRITICAL: ONLY analyze ${companyName} (${sym}). Do NOT discuss any other ticker or company. Ignore any headline above that is not directly about ${companyName}.
 
-Return strict JSON with shape:
-{"positives":[string], "negatives":[string], "earnings": string, "outlook": string}
-- 3-5 short bullets each, each one specifically about ${companyName}. Use simple language — no jargon.
-- earnings: 1-2 sentences on ${companyName}'s most recent / upcoming earnings if known
-- outlook: 1 sentence neutral synthesis for ${companyName}
-Be concise, no disclaimers.`;
+Produce a DETAILED, in-depth analyst-grade summary. Be specific and quantitative where possible (cite numbers, % growth, margins, multiples). Avoid generic filler. Plain English, no disclaimers.
 
-    const beginnerSchema = {
-      type: "object",
-      properties: {
-        whatItDoes: { type: "string" },
-        whyPeopleBuy: { type: "string" },
-        whatToWatch: { type: "string" },
-      },
-      required: ["whatItDoes", "whyPeopleBuy", "whatToWatch"],
-    };
-    const analystSchema = {
-      type: "object",
-      properties: {
-        positives: { type: "array", items: { type: "string" } },
-        negatives: { type: "array", items: { type: "string" } },
-        earnings: { type: "string" },
-        outlook: { type: "string" },
-      },
-      required: ["positives", "negatives", "earnings", "outlook"],
-    };
+Return strict JSON with shape:
+{
+  "positives": [string],           // 4-6 detailed bullets, each 1-2 sentences with specifics
+  "negatives": [string],           // 4-6 detailed bullets, each 1-2 sentences with specifics
+  "revenueGrowth": string,         // 2-3 sentences on historical + expected revenue growth trajectory, cite YoY % if known
+  "earningsGrowth": string,        // 2-3 sentences on EPS trend, beat/miss history, forward growth expectations
+  "margins": string,               // 2-3 sentences on gross/operating/net margin quality vs peers
+  "balanceSheet": string,          // 2-3 sentences on debt levels, cash position, leverage manageability
+  "moat": string,                  // 2-3 sentences on competitive edge: brand, scale, network effects, switching costs, IP
+  "earnings": string,              // 2-3 sentences on most recent + upcoming earnings event
+  "forecast": string,              // 3-4 sentences: 12-month price/business outlook, analyst consensus, key catalysts to watch
+  "outlook": string                // 2 sentence neutral synthesis
+}`;
+
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
