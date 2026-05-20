@@ -339,10 +339,8 @@ const Sim = () => {
                             key={p.id}
                             p={p}
                             last={prices[p.symbol] ?? Number(p.avg_cost)}
-                            onClick={() => {
-                              setSymbol(p.symbol);
-                              setSheetSignal((s) => s + 1);
-                            }}
+                            onClick={() => nav(`/sim/trade/${p.symbol}`)}
+
                           />
                         ))}
                       </tbody>
