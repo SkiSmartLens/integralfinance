@@ -23,8 +23,10 @@ Deno.serve(async (req) => {
       await req.json();
     if (!member_id || !symbol || !side || !shares || shares <= 0)
       return json({ error: "invalid input" }, 400);
+    const validSides = ["buy", "sell", "short", "cover"] as const;
+    if (!validSides.includes(side)) return json({ error: "invalid side" }, 400);
 
-    // verify membership
+    // verify membership + load game (for allow_short)
     const { data: member, error: mErr } = await userClient
       .from("game_members")
       .select("id, cash, game_id, user_id")
@@ -32,7 +34,13 @@ Deno.serve(async (req) => {
       .single();
     if (mErr || !member || member.user_id !== user.id) return json({ error: "not your portfolio" }, 403);
 
-    // get current price via yahoo-proxy
+    const { data: game } = await userClient
+      .from("games").select("allow_short").eq("id", member.game_id).single();
+    const allowShort = !!(game as any)?.allow_short;
+    if ((side === "short" || side === "cover") && !allowShort) {
+      return json({ error: "shorting is disabled for this game" }, 400);
+    }
+
     const qRes = await fetch(
       `${SUPABASE_URL}/functions/v1/yahoo-proxy?kind=quote&symbols=${encodeURIComponent(symbol)}`,
       { headers: { apikey: ANON } }
@@ -42,23 +50,24 @@ Deno.serve(async (req) => {
     const price = quote?.regularMarketPrice ?? quote?.postMarketPrice;
     if (!price) return json({ error: "no price for symbol" }, 400);
 
-    // Market state
     const isMarketOpen = quote?.marketState === "REGULAR";
     const fillPrice = order_type === "market" ? Number(price) : Number(limit_price ?? price);
     const afterHours = !isMarketOpen;
 
-    // Limit/stop: queue if not crossed
+    // For long/buy + cover, treat as "buying" direction. Limit/stop crossing is the same.
+    const buyish = side === "buy" || side === "cover";
     let willFill = order_type === "market";
     if (order_type === "limit") {
-      if (side === "buy" && price <= limit_price) willFill = true;
-      if (side === "sell" && price >= limit_price) willFill = true;
+      if (buyish && price <= limit_price) willFill = true;
+      if (!buyish && price >= limit_price) willFill = true;
     }
     if (order_type === "stop") {
-      if (side === "buy" && price >= stop_price) willFill = true;
-      if (side === "sell" && price <= stop_price) willFill = true;
+      if (buyish && price >= stop_price) willFill = true;
+      if (!buyish && price <= stop_price) willFill = true;
     }
 
-    // Insert order
+    // Persist the order using the original side so the UI shows short/cover.
+    // DB has no check constraint on side text.
     const { data: ord, error: oErr } = await userClient.from("orders").insert({
       member_id,
       symbol: symbol.toUpperCase(),
@@ -73,45 +82,49 @@ Deno.serve(async (req) => {
       filled_at: willFill ? new Date().toISOString() : null,
     }).select().single();
     if (oErr) return json({ error: oErr.message }, 400);
-
     if (!willFill) return json({ ok: true, order: ord, queued: true });
 
     const cost = fillPrice * Number(shares);
 
+    // Load any existing position (positions.shares may be negative for shorts).
+    const { data: pos } = await userClient
+      .from("positions").select("*")
+      .eq("member_id", member_id).eq("symbol", symbol.toUpperCase()).maybeSingle();
+    const cur = pos ? Number(pos.shares) : 0;
+    const curAvg = pos ? Number(pos.avg_cost) : 0;
+
     if (side === "buy") {
       if (Number(member.cash) < cost) return json({ error: "insufficient cash" }, 400);
-      // upsert position
-      const { data: pos } = await userClient
-        .from("positions")
-        .select("*")
-        .eq("member_id", member_id)
-        .eq("symbol", symbol.toUpperCase())
-        .maybeSingle();
-      if (pos) {
-        const newShares = Number(pos.shares) + Number(shares);
-        const newAvg = (Number(pos.shares) * Number(pos.avg_cost) + cost) / newShares;
-        await userClient.from("positions").update({
-          shares: newShares, avg_cost: newAvg,
-        }).eq("id", pos.id);
-      } else {
-        await userClient.from("positions").insert({
-          member_id, symbol: symbol.toUpperCase(), shares, avg_cost: fillPrice,
-        });
-      }
+      if (cur < 0) return json({ error: "you have a short position — use COVER" }, 400);
+      const newShares = cur + Number(shares);
+      const newAvg = cur > 0 ? (cur * curAvg + cost) / newShares : fillPrice;
+      if (pos) await userClient.from("positions").update({ shares: newShares, avg_cost: newAvg }).eq("id", pos.id);
+      else await userClient.from("positions").insert({ member_id, symbol: symbol.toUpperCase(), shares, avg_cost: fillPrice });
       await userClient.from("game_members").update({ cash: Number(member.cash) - cost }).eq("id", member_id);
-    } else {
-      // sell
-      const { data: pos } = await userClient
-        .from("positions").select("*")
-        .eq("member_id", member_id).eq("symbol", symbol.toUpperCase()).maybeSingle();
-      if (!pos || Number(pos.shares) < Number(shares)) return json({ error: "insufficient shares" }, 400);
-      const newShares = Number(pos.shares) - Number(shares);
-      if (newShares === 0) {
-        await userClient.from("positions").delete().eq("id", pos.id);
-      } else {
-        await userClient.from("positions").update({ shares: newShares }).eq("id", pos.id);
-      }
+    } else if (side === "sell") {
+      if (cur <= 0 || cur < Number(shares)) return json({ error: "insufficient shares" }, 400);
+      const newShares = cur - Number(shares);
+      if (newShares === 0) await userClient.from("positions").delete().eq("id", pos!.id);
+      else await userClient.from("positions").update({ shares: newShares }).eq("id", pos!.id);
       await userClient.from("game_members").update({ cash: Number(member.cash) + cost }).eq("id", member_id);
+    } else if (side === "short") {
+      if (cur > 0) return json({ error: "you have a long position — SELL first" }, 400);
+      const newShares = cur - Number(shares); // more negative
+      const absOld = Math.abs(cur);
+      const absNew = Math.abs(newShares);
+      const newAvg = absOld > 0 ? (absOld * curAvg + Number(shares) * fillPrice) / absNew : fillPrice;
+      if (pos) await userClient.from("positions").update({ shares: newShares, avg_cost: newAvg }).eq("id", pos.id);
+      else await userClient.from("positions").insert({ member_id, symbol: symbol.toUpperCase(), shares: -Number(shares), avg_cost: fillPrice });
+      // Short proceeds credited to cash (simplified — no margin tracking).
+      await userClient.from("game_members").update({ cash: Number(member.cash) + cost }).eq("id", member_id);
+    } else if (side === "cover") {
+      if (cur >= 0) return json({ error: "no short position to cover" }, 400);
+      if (Math.abs(cur) < Number(shares)) return json({ error: "cover size exceeds short" }, 400);
+      if (Number(member.cash) < cost) return json({ error: "insufficient cash to cover" }, 400);
+      const newShares = cur + Number(shares); // toward zero
+      if (newShares === 0) await userClient.from("positions").delete().eq("id", pos!.id);
+      else await userClient.from("positions").update({ shares: newShares }).eq("id", pos!.id);
+      await userClient.from("game_members").update({ cash: Number(member.cash) - cost }).eq("id", member_id);
     }
 
     await userClient.from("transactions").insert({
@@ -132,3 +145,4 @@ function json(o: unknown, status = 200) {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
+
