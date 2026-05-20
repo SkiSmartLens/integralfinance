@@ -10,9 +10,11 @@ import { AIChat } from "@/components/AIChat";
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 const Auth = lazy(() => import("./pages/Auth.tsx"));
 const Sim = lazy(() => import("./pages/Sim.tsx"));
+const Trade = lazy(() => import("./pages/Trade.tsx"));
 const Screener = lazy(() => import("./pages/Screener.tsx"));
 const Calendar = lazy(() => import("./pages/Calendar.tsx"));
 const Watchlist = lazy(() => import("./pages/Watchlist.tsx"));
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
