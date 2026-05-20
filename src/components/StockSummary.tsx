@@ -1,14 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchQuotes } from "@/lib/yahoo";
-import { Sparkles, TrendingUp, TrendingDown, Calendar, Eye } from "lucide-react";
+import { Sparkles, TrendingUp, TrendingDown, Calendar, Eye, BarChart3, DollarSign, Percent, Landmark, Shield, LineChart } from "lucide-react";
 
 interface Summary {
   positives: string[];
   negatives: string[];
+  revenueGrowth?: string;
+  earningsGrowth?: string;
+  margins?: string;
+  balanceSheet?: string;
+  moat?: string;
   earnings: string;
+  forecast?: string;
   outlook: string;
 }
+
 
 // Cache AI summaries by symbol so re-selecting is instant.
 const summaryCache = new Map<string, Summary>();
@@ -116,6 +123,36 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
               {data.negatives?.map((p, i) => <li key={i}>{p}</li>)}
             </ul>
           </div>
+          {data.revenueGrowth && (
+            <div className="bg-muted/40 rounded-md p-3">
+              <div className="flex items-center gap-2 mb-2 font-semibold"><BarChart3 className="w-4 h-4 text-primary" /> Revenue growth</div>
+              <p className="text-sm">{data.revenueGrowth}</p>
+            </div>
+          )}
+          {data.earningsGrowth && (
+            <div className="bg-muted/40 rounded-md p-3">
+              <div className="flex items-center gap-2 mb-2 font-semibold"><DollarSign className="w-4 h-4 text-primary" /> Earnings growth</div>
+              <p className="text-sm">{data.earningsGrowth}</p>
+            </div>
+          )}
+          {data.margins && (
+            <div className="bg-muted/40 rounded-md p-3">
+              <div className="flex items-center gap-2 mb-2 font-semibold"><Percent className="w-4 h-4 text-primary" /> Profit margins</div>
+              <p className="text-sm">{data.margins}</p>
+            </div>
+          )}
+          {data.balanceSheet && (
+            <div className="bg-muted/40 rounded-md p-3">
+              <div className="flex items-center gap-2 mb-2 font-semibold"><Landmark className="w-4 h-4 text-primary" /> Balance sheet & debt</div>
+              <p className="text-sm">{data.balanceSheet}</p>
+            </div>
+          )}
+          {data.moat && (
+            <div className="bg-muted/40 rounded-md p-3 md:col-span-2">
+              <div className="flex items-center gap-2 mb-2 font-semibold"><Shield className="w-4 h-4 text-primary" /> Competitive edge / moat</div>
+              <p className="text-sm">{data.moat}</p>
+            </div>
+          )}
           <div className="bg-muted/40 rounded-md p-3">
             <div className="flex items-center gap-2 mb-2 font-semibold">
               <Calendar className="w-4 h-4" /> Earnings
@@ -127,12 +164,19 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
             )}
             <p className="text-sm">{data.earnings}</p>
           </div>
-          <div className="bg-muted/40 rounded-md p-3">
+          {data.forecast && (
+            <div className="bg-muted/40 rounded-md p-3">
+              <div className="flex items-center gap-2 mb-2 font-semibold"><LineChart className="w-4 h-4 text-primary" /> 12-month forecast</div>
+              <p className="text-sm">{data.forecast}</p>
+            </div>
+          )}
+          <div className="bg-muted/40 rounded-md p-3 md:col-span-2">
             <div className="flex items-center gap-2 mb-2 font-semibold">
               <Eye className="w-4 h-4" /> Outlook
             </div>
             <p className="text-sm">{data.outlook}</p>
           </div>
+
         </div>
       )}
       <p className="text-[10px] text-muted-foreground mt-3">
