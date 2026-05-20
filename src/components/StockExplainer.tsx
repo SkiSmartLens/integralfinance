@@ -105,9 +105,6 @@ export const StockExplainer = ({ symbol }: { symbol: string }) => {
         />
       </div>
 
-      <p className="text-[10px] text-muted-foreground mt-4">
-        Educational only — not financial advice. Always do your own research before investing.
-      </p>
     </section>
   );
 };
