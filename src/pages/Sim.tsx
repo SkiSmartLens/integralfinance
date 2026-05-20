@@ -248,7 +248,7 @@ const Sim = () => {
         path="/sim"
       />
       <h1 className="sr-only">Trading Simulator</h1>
-      <Header onSearch={(s) => setSymbol(s)} />
+      <Header onSearch={(s) => nav(`/sim/trade/${s.toUpperCase()}`)} />
       <div className="border-b bg-gradient-to-r from-card via-card to-muted/30 backdrop-blur">
         <div className="container mx-auto px-4 py-3 flex flex-wrap items-center gap-3 justify-between">
           <div className="flex items-center gap-2 flex-wrap">
@@ -339,10 +339,8 @@ const Sim = () => {
                             key={p.id}
                             p={p}
                             last={prices[p.symbol] ?? Number(p.avg_cost)}
-                            onClick={() => {
-                              setSymbol(p.symbol);
-                              setSheetSignal((s) => s + 1);
-                            }}
+                            onClick={() => nav(`/sim/trade/${p.symbol}`)}
+
                           />
                         ))}
                       </tbody>

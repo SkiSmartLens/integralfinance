@@ -179,9 +179,6 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
 
         </div>
       )}
-      <p className="text-[10px] text-muted-foreground mt-3">
-        AI-generated synthesis of public news and quote data. Not financial advice.
-      </p>
     </section>
   );
 };

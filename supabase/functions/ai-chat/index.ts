@@ -56,7 +56,7 @@ Routing examples:
 
 Rules:
 - ALWAYS suggest at least one follow-up action in your chat reply.
-- Keep prose short (2-4 short sentences max). Use markdown sparingly. Never give personalized investment advice.
+- Keep prose short (2-4 short sentences max). Use markdown sparingly.
 - If the user just asks a general question (no action requested), omit the ACTIONS block.`;
 
 Deno.serve(async (req) => {

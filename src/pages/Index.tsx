@@ -182,8 +182,9 @@ const Index = () => {
       </main>
 
       <footer className="border-t py-6 text-center text-xs text-muted-foreground mt-8">
-        Live data via Yahoo Finance public endpoints. Prices may be delayed. Not investment advice.
+        Live data via Yahoo Finance public endpoints. Prices may be delayed.
       </footer>
+
 
     </div>
   );
