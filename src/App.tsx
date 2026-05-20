@@ -38,6 +38,8 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/sim" element={<Sim />} />
+            <Route path="/sim/trade/:symbol" element={<Trade />} />
+
             <Route path="/screener" element={<Screener />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/watchlist" element={<Watchlist />} />
