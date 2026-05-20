@@ -185,9 +185,6 @@ const Index = () => {
         Live data via Yahoo Finance public endpoints. Prices may be delayed. Not investment advice.
       </footer>
 
-      {activeCat === "news" && (
-        <HomeSidePanel myWatchlist={myWatchlist} onPick={setActiveSymbol} />
-      )}
     </div>
   );
 };
