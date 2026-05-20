@@ -116,6 +116,33 @@ Return strict JSON with shape:
   "outlook": string                // 2 sentence neutral synthesis
 }`;
 
+    const beginnerSchema = {
+      type: "object",
+      properties: {
+        whatItDoes: { type: "string" },
+        whyPeopleBuy: { type: "string" },
+        whatToWatch: { type: "string" },
+      },
+      required: ["whatItDoes", "whyPeopleBuy", "whatToWatch"],
+    };
+    const analystSchema = {
+      type: "object",
+      properties: {
+        positives: { type: "array", items: { type: "string" } },
+        negatives: { type: "array", items: { type: "string" } },
+        revenueGrowth: { type: "string" },
+        earningsGrowth: { type: "string" },
+        margins: { type: "string" },
+        balanceSheet: { type: "string" },
+        moat: { type: "string" },
+        earnings: { type: "string" },
+        forecast: { type: "string" },
+        outlook: { type: "string" },
+      },
+      required: ["positives", "negatives", "revenueGrowth", "earningsGrowth", "margins", "balanceSheet", "moat", "earnings", "forecast", "outlook"],
+    };
+
+
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
