@@ -1,8 +1,10 @@
 import { CATEGORIES } from "@/lib/categories";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
-import { LineChart, Filter, Calendar, Pencil, Check, RotateCcw, GripVertical, X, Plus } from "lucide-react";
-import { WatchlistButton } from "@/components/WatchlistButton";
+import { LineChart, Filter, Calendar, Pencil, Check, RotateCcw, GripVertical, X, Plus, User, Briefcase, ChevronDown } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { useState, useEffect } from "react";
 import {
   DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, closestCenter,
@@ -170,30 +172,37 @@ export const CategoryNav = ({ active, onChange, activeSub, onSubChange }: Props)
           </div>
 
           {!editing && (
-            <>
-              <WatchlistButton />
-              <Link
-                to="/calendar"
-                className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap bg-muted hover:bg-muted/70"
-              >
-                <Calendar className="w-4 h-4" />
-                Calendar
-              </Link>
-              <Link
-                to="/screener"
-                className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap bg-muted hover:bg-muted/70"
-              >
-                <Filter className="w-4 h-4" />
-                Screener
-              </Link>
-              <Link
-                to="/sim"
-                className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap bg-primary text-primary-foreground hover:opacity-90"
-              >
-                <LineChart className="w-4 h-4" />
-                Simulator
-              </Link>
-            </>
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap bg-primary text-primary-foreground hover:opacity-90 outline-none">
+                <User className="w-4 h-4" />
+                For You
+                <ChevronDown className="w-3.5 h-3.5 opacity-80" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">My tools</DropdownMenuLabel>
+                <DropdownMenuItem asChild>
+                  <Link to="/watchlist" className="flex items-center gap-2 cursor-pointer">
+                    <Briefcase className="w-4 h-4" /> Watchlist
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/calendar" className="flex items-center gap-2 cursor-pointer">
+                    <Calendar className="w-4 h-4" /> Calendar
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/screener" className="flex items-center gap-2 cursor-pointer">
+                    <Filter className="w-4 h-4" /> Screener
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/sim" className="flex items-center gap-2 cursor-pointer font-semibold text-primary">
+                    <LineChart className="w-4 h-4" /> Simulator
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
 
