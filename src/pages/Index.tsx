@@ -122,15 +122,14 @@ const Index = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8">
           <div className="space-y-6 min-w-0">
-            {activeCat === "news" && (
-              <>
-                <div id="chart"><StockChart symbol={activeSymbol} /></div>
-                <div id="summary"><StockExplainer symbol={activeSymbol} /></div>
-                <Suspense fallback={<div className="h-32" />}>
-                  <StockSummary symbol={activeSymbol} />
-                </Suspense>
-              </>
+            {activeCat !== "news" && (
+              <div id="widgets"><WidgetBar /></div>
             )}
+            <div id="chart"><StockChart symbol={activeSymbol} /></div>
+            <div id="summary"><StockExplainer symbol={activeSymbol} /></div>
+            <Suspense fallback={<div className="h-32" />}>
+              <StockSummary symbol={activeSymbol} />
+            </Suspense>
             <section id="news">
               <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                 <h2 className="text-2xl font-bold">
@@ -159,16 +158,6 @@ const Index = () => {
                 />
               </Suspense>
             </section>
-            {activeCat !== "news" && (
-              <>
-                <div id="widgets"><WidgetBar /></div>
-                <div id="chart"><StockChart symbol={activeSymbol} /></div>
-                <div id="summary"><StockExplainer symbol={activeSymbol} /></div>
-                <Suspense fallback={<div className="h-32" />}>
-                  <StockSummary symbol={activeSymbol} />
-                </Suspense>
-              </>
-            )}
           </div>
           <aside className="space-y-6">
             <Watchlist
