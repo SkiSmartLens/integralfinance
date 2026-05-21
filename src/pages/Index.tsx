@@ -105,25 +105,19 @@ const Index = () => {
       />
       <main className="container mx-auto px-4 py-6 space-y-8 max-w-6xl">
         {activeCat === "news" && (
-          <>
-            <div id="widgets">
-              <WidgetBar />
-            </div>
-
-            <div className="flex items-start gap-3 bg-accent/40 border border-accent rounded-lg p-4 text-sm">
-              <GraduationCap className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-              <p className="leading-relaxed">
-                <span className="font-semibold">New?</span>{" "}
-                Pick any stock for a plain-English explainer, or tap the ✨ sparkle in the corner — Integral AI can take you anywhere and customize the dashboard for you.
-              </p>
-            </div>
-          </>
+          <div className="flex items-start gap-3 bg-accent/40 border border-accent rounded-lg p-4 text-sm">
+            <GraduationCap className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+            <p className="leading-relaxed">
+              <span className="font-semibold">New?</span>{" "}
+              Pick any stock for a plain-English explainer, or tap the ✨ sparkle in the corner — Integral AI can take you anywhere and customize the dashboard for you.
+            </p>
+          </div>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8">
           <div className="space-y-6 min-w-0">
             {activeCat !== "news" && (
-              <div id="widgets"><WidgetBar /></div>
+              <div id="chart-top" />
             )}
             <div id="chart"><StockChart symbol={activeSymbol} /></div>
             <div id="summary"><StockExplainer symbol={activeSymbol} /></div>
