@@ -57,6 +57,8 @@ const WatchlistPage = () => {
       <Ticker />
 
       <main className="container mx-auto px-4 py-8 max-w-6xl space-y-6">
+        <WidgetBar />
+
         <div className="flex items-center gap-3">
           <Star className="w-6 h-6 text-primary" />
           <h1 className="text-2xl font-bold">My Watchlist</h1>
