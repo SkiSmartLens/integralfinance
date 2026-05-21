@@ -5,6 +5,7 @@ import { Ticker } from "@/components/Ticker";
 import { StockChart } from "@/components/StockChart";
 import { StockExplainer } from "@/components/StockExplainer";
 import { SEO } from "@/components/SEO";
+import { WidgetBar } from "@/components/WidgetBar";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { fetchSearchQuotes, formatNumber, SearchQuote } from "@/lib/yahoo";
