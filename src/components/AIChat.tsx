@@ -79,6 +79,17 @@ export const AIChat = () => {
   }, []);
 
   useEffect(() => {
+    const onOpen = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { prompt?: string } | undefined;
+      setOpen(true);
+      if (detail?.prompt) setTimeout(() => send(detail.prompt!), 50);
+    };
+    window.addEventListener("integral-ai-open", onOpen);
+    return () => window.removeEventListener("integral-ai-open", onOpen);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, open]);
 

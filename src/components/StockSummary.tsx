@@ -97,11 +97,26 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
     return () => { alive = false; };
   }, [symbol, visible]);
 
+  const askIntegral = (question?: string) => {
+    const who = companyName ? `${companyName} (${symbol})` : symbol;
+    const prompt = question ?? `Tell me everything important about ${who}: predicted revenue, earnings growth, margins, balance sheet, competitive moat, valuation and 12-month outlook.`;
+    window.dispatchEvent(new CustomEvent("integral-ai-open", { detail: { prompt } }));
+  };
+
   return (
     <section ref={ref} className="bg-card border rounded-lg p-4 md:p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <Sparkles className="w-5 h-5 text-primary" />
-        <h3 className="text-lg font-bold">AI Insights · {companyName || symbol}</h3>
+      <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-5 h-5 text-primary" />
+          <h3 className="text-lg font-bold">AI Insights · {companyName || symbol}</h3>
+        </div>
+        <button
+          onClick={() => askIntegral()}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity"
+          title={`Ask Integral AI about ${companyName || symbol}`}
+        >
+          <Sparkles className="w-3.5 h-3.5" /> Ask Integral AI
+        </button>
       </div>
       {loading && <div className="text-sm text-muted-foreground py-4">Analyzing latest signals…</div>}
       {err && <div className="text-sm text-down py-2">{err}</div>}
