@@ -117,7 +117,7 @@ const Index = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8">
           <div className="space-y-6 min-w-0">
             {activeCat !== "news" && (
-              <div id="widgets"><WidgetBar /></div>
+              <div id="chart-top" />
             )}
             <div id="chart"><StockChart symbol={activeSymbol} /></div>
             <div id="summary"><StockExplainer symbol={activeSymbol} /></div>
