@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index.tsx";
 import { AIChat } from "@/components/AIChat";
+import { DevMenu } from "@/components/DevMenu";
 
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 const Auth = lazy(() => import("./pages/Auth.tsx"));
@@ -48,6 +49,7 @@ const App = () => (
           </Routes>
         </Suspense>
         <AIChat />
+        <DevMenu />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
