@@ -346,11 +346,40 @@ export const StockChart = ({ symbol }: Props) => {
                 )}
               </span>
             )}
+            {(() => {
+              const pillMap = {
+                open: { dot: "bg-success animate-pulse", text: "Live · market open" },
+                pre: { dot: "bg-warning", text: "Pre-market · showing previous session" },
+                post: { dot: "bg-warning animate-pulse", text: "After-hours" },
+                closed: { dot: "bg-muted-foreground", text: "Market closed · showing previous session" },
+              } as const;
+              const p = pillMap[marketStatus];
+              return (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full border bg-muted/40">
+                  <span className={cn("inline-block w-2 h-2 rounded-full", p.dot)} />
+                  {p.text}
+                </span>
+              );
+            })()}
           </div>
-          <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-            <span className="inline-block w-2 h-2 rounded-full bg-success animate-pulse" />
-            Live · auto-updating
-          </div>
+          {/* Day range bar — shows where current price sits between day's low & high */}
+          {quote?.regularMarketDayLow != null && quote?.regularMarketDayHigh != null && lastPrice != null && quote.regularMarketDayHigh > quote.regularMarketDayLow && (
+            <div className="mt-3 max-w-xs">
+              <div className="flex justify-between text-[10px] text-muted-foreground tabular-nums">
+                <span>L {formatNumber(quote.regularMarketDayLow)}</span>
+                <span className="font-semibold">Day range</span>
+                <span>H {formatNumber(quote.regularMarketDayHigh)}</span>
+              </div>
+              <div className="relative h-1.5 mt-1 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="absolute top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-primary shadow ring-2 ring-background"
+                  style={{
+                    left: `calc(${Math.max(0, Math.min(100, ((lastPrice - quote.regularMarketDayLow) / (quote.regularMarketDayHigh - quote.regularMarketDayLow)) * 100))}% - 5px)`,
+                  }}
+                />
+              </div>
+            </div>
+          )}
         </div>
         <div className="flex flex-col items-end gap-2">
           <div className="flex flex-wrap gap-1 justify-end">
