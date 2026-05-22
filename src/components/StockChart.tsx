@@ -160,7 +160,12 @@ export const StockChart = ({ symbol }: Props) => {
           p.low! <= Math.min(p.open!, p.close!, p.high!)
       );
     }
-    // For 1D mountain: pad with empty future slots from now → market close
+    // Prev-session mode: slice the 5d feed to the most recent calendar day.
+    if (showPrevSession && pts.length) {
+      const lastDay = new Date(pts.at(-1)!.t).toDateString();
+      return pts.filter((p) => new Date(p.t).toDateString() === lastDay);
+    }
+    // For 1D mountain (live): pad with empty future slots from now → market close
     // so the chart starts mostly empty and slowly fills up over the day.
     if (is1D) {
       const sessionEnd = (data?.meta?.currentTradingPeriod?.regular?.end as number | undefined);
@@ -169,7 +174,6 @@ export const StockChart = ({ symbol }: Props) => {
       const lastT = pts.at(-1)?.t;
       const startMs = sessionStart ? sessionStart * 1000 : (pts[0]?.t ?? Date.now());
       const endMs = sessionEnd ? sessionEnd * 1000 : (lastT ?? Date.now()) + 6.5 * 60 * 60 * 1000;
-      // Optionally backfill leading empty slots so axis starts at the open.
       const head: ChartPoint[] = [];
       if (pts.length === 0 || (pts[0]?.t ?? endMs) > startMs) {
         const firstReal = pts[0]?.t ?? endMs;
@@ -185,7 +189,7 @@ export const StockChart = ({ symbol }: Props) => {
       return [...head, ...pts, ...tail];
     }
     return pts;
-  }, [data, chartType, is1D]);
+  }, [data, chartType, is1D, showPrevSession]);
 
   const withSMA = chartData;
 
