@@ -135,11 +135,23 @@ export const StockChart = ({ symbol }: Props) => {
 
   // For non-1D ranges, derive change from the chart's first vs last point
   const firstPrice = data?.points[0]?.price;
-  const lastPrice = data?.points.at(-1)?.price ?? quote?.regularMarketPrice;
+  const rawLast = data?.points.at(-1)?.price;
+  // In prev-session mode, only the sliced day counts.
+  const sessionPts = showPrevSession && data?.points.length
+    ? (() => {
+        const lastDay = new Date(data.points.at(-1)!.t).toDateString();
+        return data.points.filter((p) => new Date(p.t).toDateString() === lastDay);
+      })()
+    : null;
+  const lastPrice = showPrevSession
+    ? (sessionPts?.at(-1)?.price ?? rawLast)
+    : (rawLast ?? quote?.regularMarketPrice);
 
-  const prevClose = is1D
-    ? (data?.previousClose ?? quote?.regularMarketPreviousClose)
-    : firstPrice;
+  const prevClose = showPrevSession
+    ? sessionPts?.[0]?.price
+    : is1D
+      ? (data?.previousClose ?? quote?.regularMarketPreviousClose)
+      : firstPrice;
 
   const displayChange = lastPrice != null && prevClose != null ? lastPrice - prevClose : null;
   const displayChangePct = displayChange != null && prevClose != null && prevClose !== 0
