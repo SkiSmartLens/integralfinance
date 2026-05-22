@@ -349,8 +349,8 @@ export const StockChart = ({ symbol }: Props) => {
             {(() => {
               const pillMap = {
                 open: { dot: "bg-success animate-pulse", text: "Live · market open" },
-                pre: { dot: "bg-warning", text: "Pre-market · showing previous session" },
-                post: { dot: "bg-warning animate-pulse", text: "After-hours" },
+                pre: { dot: "bg-primary", text: "Pre-market · showing previous session" },
+                post: { dot: "bg-primary animate-pulse", text: "After-hours" },
                 closed: { dot: "bg-muted-foreground", text: "Market closed · showing previous session" },
               } as const;
               const p = pillMap[marketStatus];
