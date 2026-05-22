@@ -12,6 +12,7 @@ interface Explainer {
 }
 
 const cache = new Map<string, Explainer>();
+const CACHE_VER = "v2";
 
 /** Plain-English "What is this stock?" card aimed at first-time investors. */
 export const StockExplainer = ({ symbol }: { symbol: string }) => {
