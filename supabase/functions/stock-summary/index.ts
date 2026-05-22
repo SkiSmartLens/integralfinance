@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
     }
     const sym = symbol.toUpperCase();
     const isBeginner = mode === "beginner";
-    const key = `sum:${isBeginner ? "b:" : ""}${sym}`;
+    const key = `sum:v2:${isBeginner ? "b:" : ""}${sym}`;
     const hit = cache.get(key);
     if (hit && hit.exp > Date.now()) {
       return new Response(hit.body, {
