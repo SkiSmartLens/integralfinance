@@ -96,13 +96,40 @@ const usePriceFlash = (value: number | null | undefined) => {
   return dir;
 };
 
+// Returns market status in US/Eastern. Treats US equities session 9:30-16:00 ET, weekdays.
+const useMarketStatus = () => {
+  const [status, setStatus] = useState<"open" | "pre" | "post" | "closed">("closed");
+  useEffect(() => {
+    const compute = () => {
+      const et = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
+      const day = et.getDay();
+      const mins = et.getHours() * 60 + et.getMinutes();
+      if (day === 0 || day === 6) return setStatus("closed");
+      if (mins < 4 * 60) return setStatus("closed");
+      if (mins < 9 * 60 + 30) return setStatus("pre");
+      if (mins < 16 * 60) return setStatus("open");
+      if (mins < 20 * 60) return setStatus("post");
+      return setStatus("closed");
+    };
+    compute();
+    const t = setInterval(compute, 30000);
+    return () => clearInterval(t);
+  }, []);
+  return status;
+};
+
 export const StockChart = ({ symbol }: Props) => {
   const [rangeIdx, setRangeIdx] = useState(0);
   const [chartType, setChartType] = useState<ChartType>("mountain");
   const [intradayIdx, setIntradayIdx] = useState(0);
+  const marketStatus = useMarketStatus();
   const r = chartType === "candle" ? INTRADAY[intradayIdx] : RANGES[rangeIdx];
   const is1D = chartType === "mountain" && rangeIdx === 0;
-  const { data, loading } = useLiveChart(symbol, r.range, r.interval, 3000, is1D);
+  // Before regular session (pre-open / weekend), fetch 5d and slice to last session.
+  const showPrevSession = is1D && (marketStatus === "pre" || marketStatus === "closed");
+  const fetchRange = showPrevSession ? "5d" : r.range;
+  const fetchInterval = showPrevSession ? "5m" : r.interval;
+  const { data, loading } = useLiveChart(symbol, fetchRange, fetchInterval, 3000, is1D && !showPrevSession);
   const { quotes } = useLiveQuotes([symbol], 2000);
   const quote = quotes[0];
 
