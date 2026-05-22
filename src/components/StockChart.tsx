@@ -96,23 +96,62 @@ const usePriceFlash = (value: number | null | undefined) => {
   return dir;
 };
 
+// Returns market status in US/Eastern. Treats US equities session 9:30-16:00 ET, weekdays.
+const useMarketStatus = () => {
+  const [status, setStatus] = useState<"open" | "pre" | "post" | "closed">("closed");
+  useEffect(() => {
+    const compute = () => {
+      const et = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
+      const day = et.getDay();
+      const mins = et.getHours() * 60 + et.getMinutes();
+      if (day === 0 || day === 6) return setStatus("closed");
+      if (mins < 4 * 60) return setStatus("closed");
+      if (mins < 9 * 60 + 30) return setStatus("pre");
+      if (mins < 16 * 60) return setStatus("open");
+      if (mins < 20 * 60) return setStatus("post");
+      return setStatus("closed");
+    };
+    compute();
+    const t = setInterval(compute, 30000);
+    return () => clearInterval(t);
+  }, []);
+  return status;
+};
+
 export const StockChart = ({ symbol }: Props) => {
   const [rangeIdx, setRangeIdx] = useState(0);
   const [chartType, setChartType] = useState<ChartType>("mountain");
   const [intradayIdx, setIntradayIdx] = useState(0);
+  const marketStatus = useMarketStatus();
   const r = chartType === "candle" ? INTRADAY[intradayIdx] : RANGES[rangeIdx];
   const is1D = chartType === "mountain" && rangeIdx === 0;
-  const { data, loading } = useLiveChart(symbol, r.range, r.interval, 3000, is1D);
+  // Before regular session (pre-open / weekend), fetch 5d and slice to last session.
+  const showPrevSession = is1D && (marketStatus === "pre" || marketStatus === "closed");
+  const fetchRange = showPrevSession ? "5d" : r.range;
+  const fetchInterval = showPrevSession ? "5m" : r.interval;
+  const { data, loading } = useLiveChart(symbol, fetchRange, fetchInterval, 3000, is1D && !showPrevSession);
   const { quotes } = useLiveQuotes([symbol], 2000);
   const quote = quotes[0];
 
   // For non-1D ranges, derive change from the chart's first vs last point
   const firstPrice = data?.points[0]?.price;
-  const lastPrice = data?.points.at(-1)?.price ?? quote?.regularMarketPrice;
+  const rawLast = data?.points.at(-1)?.price;
+  // In prev-session mode, only the sliced day counts.
+  const sessionPts = showPrevSession && data?.points.length
+    ? (() => {
+        const lastDay = new Date(data.points.at(-1)!.t).toDateString();
+        return data.points.filter((p) => new Date(p.t).toDateString() === lastDay);
+      })()
+    : null;
+  const lastPrice = showPrevSession
+    ? (sessionPts?.at(-1)?.price ?? rawLast)
+    : (rawLast ?? quote?.regularMarketPrice);
 
-  const prevClose = is1D
-    ? (data?.previousClose ?? quote?.regularMarketPreviousClose)
-    : firstPrice;
+  const prevClose = showPrevSession
+    ? sessionPts?.[0]?.price
+    : is1D
+      ? (data?.previousClose ?? quote?.regularMarketPreviousClose)
+      : firstPrice;
 
   const displayChange = lastPrice != null && prevClose != null ? lastPrice - prevClose : null;
   const displayChangePct = displayChange != null && prevClose != null && prevClose !== 0
@@ -133,7 +172,12 @@ export const StockChart = ({ symbol }: Props) => {
           p.low! <= Math.min(p.open!, p.close!, p.high!)
       );
     }
-    // For 1D mountain: pad with empty future slots from now → market close
+    // Prev-session mode: slice the 5d feed to the most recent calendar day.
+    if (showPrevSession && pts.length) {
+      const lastDay = new Date(pts.at(-1)!.t).toDateString();
+      return pts.filter((p) => new Date(p.t).toDateString() === lastDay);
+    }
+    // For 1D mountain (live): pad with empty future slots from now → market close
     // so the chart starts mostly empty and slowly fills up over the day.
     if (is1D) {
       const sessionEnd = (data?.meta?.currentTradingPeriod?.regular?.end as number | undefined);
@@ -142,7 +186,6 @@ export const StockChart = ({ symbol }: Props) => {
       const lastT = pts.at(-1)?.t;
       const startMs = sessionStart ? sessionStart * 1000 : (pts[0]?.t ?? Date.now());
       const endMs = sessionEnd ? sessionEnd * 1000 : (lastT ?? Date.now()) + 6.5 * 60 * 60 * 1000;
-      // Optionally backfill leading empty slots so axis starts at the open.
       const head: ChartPoint[] = [];
       if (pts.length === 0 || (pts[0]?.t ?? endMs) > startMs) {
         const firstReal = pts[0]?.t ?? endMs;
@@ -158,7 +201,7 @@ export const StockChart = ({ symbol }: Props) => {
       return [...head, ...pts, ...tail];
     }
     return pts;
-  }, [data, chartType, is1D]);
+  }, [data, chartType, is1D, showPrevSession]);
 
   const withSMA = chartData;
 
@@ -303,11 +346,40 @@ export const StockChart = ({ symbol }: Props) => {
                 )}
               </span>
             )}
+            {(() => {
+              const pillMap = {
+                open: { dot: "bg-success animate-pulse", text: "Live · market open" },
+                pre: { dot: "bg-primary", text: "Pre-market · showing previous session" },
+                post: { dot: "bg-primary animate-pulse", text: "After-hours" },
+                closed: { dot: "bg-muted-foreground", text: "Market closed · showing previous session" },
+              } as const;
+              const p = pillMap[marketStatus];
+              return (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full border bg-muted/40">
+                  <span className={cn("inline-block w-2 h-2 rounded-full", p.dot)} />
+                  {p.text}
+                </span>
+              );
+            })()}
           </div>
-          <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-            <span className="inline-block w-2 h-2 rounded-full bg-success animate-pulse" />
-            Live · auto-updating
-          </div>
+          {/* Day range bar — shows where current price sits between day's low & high */}
+          {quote?.regularMarketDayLow != null && quote?.regularMarketDayHigh != null && lastPrice != null && quote.regularMarketDayHigh > quote.regularMarketDayLow && (
+            <div className="mt-3 max-w-xs">
+              <div className="flex justify-between text-[10px] text-muted-foreground tabular-nums">
+                <span>L {formatNumber(quote.regularMarketDayLow)}</span>
+                <span className="font-semibold">Day range</span>
+                <span>H {formatNumber(quote.regularMarketDayHigh)}</span>
+              </div>
+              <div className="relative h-1.5 mt-1 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="absolute top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-primary shadow ring-2 ring-background"
+                  style={{
+                    left: `calc(${Math.max(0, Math.min(100, ((lastPrice - quote.regularMarketDayLow) / (quote.regularMarketDayHigh - quote.regularMarketDayLow)) * 100))}% - 5px)`,
+                  }}
+                />
+              </div>
+            </div>
+          )}
         </div>
         <div className="flex flex-col items-end gap-2">
           <div className="flex flex-wrap gap-1 justify-end">
