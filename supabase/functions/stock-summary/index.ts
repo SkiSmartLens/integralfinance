@@ -74,13 +74,13 @@ Mkt cap: ${q.marketCap}
 Recent headlines about ${companyName} (${sym}):
 ${headlines.join("\n") || "(no recent headlines)"}
 
-ONLY discuss ${companyName} (${sym}). Do NOT mention any other company. If a headline above is not about ${companyName}, ignore it.
+ONLY discuss ${companyName} (${sym}). Do NOT name ANY other company, ticker, or specific holding — not even as an example, not even if this is an index, ETF, or fund. Describe holdings only in generic categories (e.g. "large US tech companies", "energy producers"). If a headline above is not about ${companyName}, ignore it.
 
-Explain this company to a complete beginner who has never invested before.
+Explain ${companyName} to a complete beginner who has never invested before.
 Return strict JSON: {"whatItDoes": string, "whyPeopleBuy": string, "whatToWatch": string}
-- whatItDoes: 1-2 plain-English sentences about ${companyName} specifically. Avoid jargon.
-- whyPeopleBuy: 1-2 sentences on the bull case for ${companyName}.
-- whatToWatch: 1-2 sentences on risks specific to ${companyName}.
+- whatItDoes: 1-2 plain-English sentences about ${companyName} specifically. Avoid jargon. No other company names.
+- whyPeopleBuy: 1-2 sentences on the bull case for ${companyName}. No other company names.
+- whatToWatch: 1-2 sentences on risks specific to ${companyName}. No other company names.
 No disclaimers, no markdown, no jargon.`;
 
     const analystPrompt = `Stock: ${companyName} (${sym})
