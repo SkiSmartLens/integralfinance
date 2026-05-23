@@ -12,9 +12,13 @@ Deno.serve(async (req) => {
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const userClient = createClient(SUPABASE_URL, ANON, {
       global: { headers: { Authorization: auth } },
     });
+    // Service-role client used ONLY for mutating game_members.cash, which is
+    // locked down by a trigger to block client-side writes.
+    const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE);
     const { data: userRes } = await userClient.auth.getUser();
     const user = userRes.user;
     if (!user) return json({ error: "unauthorized" }, 401);
@@ -100,13 +104,13 @@ Deno.serve(async (req) => {
       const newAvg = cur > 0 ? (cur * curAvg + cost) / newShares : fillPrice;
       if (pos) await userClient.from("positions").update({ shares: newShares, avg_cost: newAvg }).eq("id", pos.id);
       else await userClient.from("positions").insert({ member_id, symbol: symbol.toUpperCase(), shares, avg_cost: fillPrice });
-      await userClient.from("game_members").update({ cash: Number(member.cash) - cost }).eq("id", member_id);
+      await adminClient.from("game_members").update({ cash: Number(member.cash) - cost }).eq("id", member_id);
     } else if (side === "sell") {
       if (cur <= 0 || cur < Number(shares)) return json({ error: "insufficient shares" }, 400);
       const newShares = cur - Number(shares);
       if (newShares === 0) await userClient.from("positions").delete().eq("id", pos!.id);
       else await userClient.from("positions").update({ shares: newShares }).eq("id", pos!.id);
-      await userClient.from("game_members").update({ cash: Number(member.cash) + cost }).eq("id", member_id);
+      await adminClient.from("game_members").update({ cash: Number(member.cash) + cost }).eq("id", member_id);
     } else if (side === "short") {
       if (cur > 0) return json({ error: "you have a long position — SELL first" }, 400);
       const newShares = cur - Number(shares); // more negative
@@ -116,7 +120,7 @@ Deno.serve(async (req) => {
       if (pos) await userClient.from("positions").update({ shares: newShares, avg_cost: newAvg }).eq("id", pos.id);
       else await userClient.from("positions").insert({ member_id, symbol: symbol.toUpperCase(), shares: -Number(shares), avg_cost: fillPrice });
       // Short proceeds credited to cash (simplified — no margin tracking).
-      await userClient.from("game_members").update({ cash: Number(member.cash) + cost }).eq("id", member_id);
+      await adminClient.from("game_members").update({ cash: Number(member.cash) + cost }).eq("id", member_id);
     } else if (side === "cover") {
       if (cur >= 0) return json({ error: "no short position to cover" }, 400);
       if (Math.abs(cur) < Number(shares)) return json({ error: "cover size exceeds short" }, 400);
@@ -124,7 +128,7 @@ Deno.serve(async (req) => {
       const newShares = cur + Number(shares); // toward zero
       if (newShares === 0) await userClient.from("positions").delete().eq("id", pos!.id);
       else await userClient.from("positions").update({ shares: newShares }).eq("id", pos!.id);
-      await userClient.from("game_members").update({ cash: Number(member.cash) - cost }).eq("id", member_id);
+      await adminClient.from("game_members").update({ cash: Number(member.cash) - cost }).eq("id", member_id);
     }
 
     await userClient.from("transactions").insert({

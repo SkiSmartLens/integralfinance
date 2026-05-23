@@ -151,10 +151,28 @@ async function resolveCandidates(text: string, contextSymbol?: string): Promise<
   return Array.from(found).slice(0, 4);
 }
 
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const SB_URL = Deno.env.get("SUPABASE_URL")!;
+    const SB_ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const userClient = createClient(SB_URL, SB_ANON, { global: { headers: { Authorization: authHeader } } });
+    const { data: { user } } = await userClient.auth.getUser();
+    if (!user) {
+      return new Response(JSON.stringify({ error: "unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { messages = [], context } = (await req.json()) as { messages: Msg[]; context?: any };
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
