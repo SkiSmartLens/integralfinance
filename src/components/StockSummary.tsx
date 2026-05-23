@@ -26,6 +26,7 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [visible, setVisible] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [companyName, setCompanyName] = useState<string>(nameCache.get(symbol) ?? "");
   const [nextEarnings, setNextEarnings] = useState<string>("");
   const ref = useRef<HTMLElement | null>(null);
