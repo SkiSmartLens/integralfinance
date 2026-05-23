@@ -185,6 +185,13 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
+    // Require at minimum a valid apikey header (anon key) to prevent open-proxy abuse.
+    const ANON = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+    const provided = req.headers.get("apikey") ?? (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
+    if (!provided || provided !== ANON) {
+      return json({ error: "unauthorized" }, 401);
+    }
+
     const url = new URL(req.url);
     const kind = url.searchParams.get("kind") ?? "quote";
 
