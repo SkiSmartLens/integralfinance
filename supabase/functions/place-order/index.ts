@@ -104,13 +104,13 @@ Deno.serve(async (req) => {
       const newAvg = cur > 0 ? (cur * curAvg + cost) / newShares : fillPrice;
       if (pos) await userClient.from("positions").update({ shares: newShares, avg_cost: newAvg }).eq("id", pos.id);
       else await userClient.from("positions").insert({ member_id, symbol: symbol.toUpperCase(), shares, avg_cost: fillPrice });
-      await userClient.from("game_members").update({ cash: Number(member.cash) - cost }).eq("id", member_id);
+      await adminClient.from("game_members").update({ cash: Number(member.cash) - cost }).eq("id", member_id);
     } else if (side === "sell") {
       if (cur <= 0 || cur < Number(shares)) return json({ error: "insufficient shares" }, 400);
       const newShares = cur - Number(shares);
       if (newShares === 0) await userClient.from("positions").delete().eq("id", pos!.id);
       else await userClient.from("positions").update({ shares: newShares }).eq("id", pos!.id);
-      await userClient.from("game_members").update({ cash: Number(member.cash) + cost }).eq("id", member_id);
+      await adminClient.from("game_members").update({ cash: Number(member.cash) + cost }).eq("id", member_id);
     } else if (side === "short") {
       if (cur > 0) return json({ error: "you have a long position — SELL first" }, 400);
       const newShares = cur - Number(shares); // more negative
@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
       if (pos) await userClient.from("positions").update({ shares: newShares, avg_cost: newAvg }).eq("id", pos.id);
       else await userClient.from("positions").insert({ member_id, symbol: symbol.toUpperCase(), shares: -Number(shares), avg_cost: fillPrice });
       // Short proceeds credited to cash (simplified — no margin tracking).
-      await userClient.from("game_members").update({ cash: Number(member.cash) + cost }).eq("id", member_id);
+      await adminClient.from("game_members").update({ cash: Number(member.cash) + cost }).eq("id", member_id);
     } else if (side === "cover") {
       if (cur >= 0) return json({ error: "no short position to cover" }, 400);
       if (Math.abs(cur) < Number(shares)) return json({ error: "cover size exceeds short" }, 400);
@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
       const newShares = cur + Number(shares); // toward zero
       if (newShares === 0) await userClient.from("positions").delete().eq("id", pos!.id);
       else await userClient.from("positions").update({ shares: newShares }).eq("id", pos!.id);
-      await userClient.from("game_members").update({ cash: Number(member.cash) - cost }).eq("id", member_id);
+      await adminClient.from("game_members").update({ cash: Number(member.cash) - cost }).eq("id", member_id);
     }
 
     await userClient.from("transactions").insert({
