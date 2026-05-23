@@ -12,9 +12,13 @@ Deno.serve(async (req) => {
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const userClient = createClient(SUPABASE_URL, ANON, {
       global: { headers: { Authorization: auth } },
     });
+    // Service-role client used ONLY for mutating game_members.cash, which is
+    // locked down by a trigger to block client-side writes.
+    const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE);
     const { data: userRes } = await userClient.auth.getUser();
     const user = userRes.user;
     if (!user) return json({ error: "unauthorized" }, 401);
