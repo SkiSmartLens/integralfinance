@@ -19,4 +19,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://integralstocks.lovable.app/sitemap.xml
+Sitemap: https://integralstocks.com/sitemap.xml

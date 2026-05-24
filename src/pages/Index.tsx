@@ -8,6 +8,7 @@ import { Watchlist } from "@/components/Watchlist";
 import { StockExplainer } from "@/components/StockExplainer";
 import { SEO } from "@/components/SEO";
 import { SidePanel } from "@/components/SidePanel";
+import { SiteFooter } from "@/components/SiteFooter";
 import { WidgetBar } from "@/components/WidgetBar";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
@@ -18,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { onAction } from "@/lib/actions";
 import { useWidgets } from "@/lib/widgets";
 import { GraduationCap, TrendingUp, Briefcase } from "lucide-react";
+import heroImage from "@/assets/stocks-hero.jpg";
 
 const StockSummary = lazy(() =>
   import("@/components/StockSummary").then((m) => ({ default: m.StockSummary }))
@@ -83,18 +85,18 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <SEO
-        title="Integral Stocks — Live Markets, News & Trading Sim"
-        description="Real-time stock quotes, interactive charts, financial news, sector heatmaps, an economic calendar, and a multiplayer paper-trading simulator."
+        title="IntegralStocks — Beginner Stock Prices, News & AI Insights"
+        description="Beginner-friendly stock dashboard: live stock prices, plain-English news, AI insights that explain why stocks move, and a free paper-trading simulator."
         path="/"
         jsonLd={{
           "@context": "https://schema.org",
           "@type": "WebPage",
-          name: "Integral Stocks",
-          description: "Real-time markets dashboard with live quotes, news and trading simulator.",
-          url: "https://integralstocks.lovable.app/",
+          name: "IntegralStocks",
+          description: "Beginner-friendly stock dashboard with live prices, news, and AI insights that explain why stocks move.",
+          url: "https://integralstocks.com/",
         }}
       />
-      <h1 className="sr-only">Integral Stocks — Real-time market dashboard</h1>
+      <h1 className="sr-only">IntegralStocks — Beginner-friendly stock prices, news, and AI insights</h1>
       <Header onSearch={(s) => setActiveSymbol(s)} />
       <Ticker />
       <CategoryNav
@@ -162,13 +164,86 @@ const Index = () => {
             />
           </aside>
         </div>
+        <section aria-labelledby="about-heading" className="border-t pt-10 mt-6 prose prose-neutral dark:prose-invert max-w-none">
+          <div className="grid md:grid-cols-[1fr_360px] gap-8 items-start">
+            <div>
+              <h2 id="about-heading">What is IntegralStocks?</h2>
+              <p>
+                <strong>IntegralStocks</strong> is a free, beginner-friendly stock market dashboard.
+                It brings live <Link to="/stocks">stock prices</Link>, the day's
+                <Link to="/news"> market news</Link>, and short, plain-English AI insights into a
+                single place so anyone — not just Wall Street pros — can understand what's happening
+                in the market and why.
+              </p>
+              <p>
+                We built IntegralStocks for people who are new to investing. The traditional finance
+                world is full of jargon, paywalled research, and noisy charts. If you've ever opened
+                a brokerage app, watched a stock drop 5%, and thought "why did that just happen?",
+                this site is for you. Every ticker on IntegralStocks comes with a plain-English
+                explainer of what the company does and an AI-generated summary of the news driving
+                today's move.
+              </p>
+
+              <h2>Who it's for</h2>
+              <p>
+                IntegralStocks is built for beginner investors, students learning about markets,
+                and casual readers who want a clearer picture of the financial news cycle. You don't
+                need an account to browse — just open the homepage and start exploring stocks like
+                Apple (AAPL), Tesla (TSLA), Nvidia (NVDA), Microsoft (MSFT), the S&amp;P 500, or
+                Bitcoin. If you want to save favorites, you can create a free account and build a
+                personal <Link to="/watchlist">watchlist</Link>.
+              </p>
+
+              <h2>How it works</h2>
+              <p>
+                The dashboard pulls live quotes and charts from public market data feeds and
+                refreshes them throughout the trading day. When you select a stock, IntegralStocks:
+              </p>
+              <ol>
+                <li>Shows an interactive <Link to="/stocks">price chart</Link> with intraday, daily, and long-term views.</li>
+                <li>Generates a short AI explanation of what the company does in everyday language.</li>
+                <li>Pulls the latest <Link to="/news">news stories</Link> related to that ticker and summarizes the most market-moving ones.</li>
+                <li>Surfaces key numbers — market cap, P/E ratio, day range, 52-week range — with tooltips that explain each term.</li>
+              </ol>
+              <p>
+                Want to practice investing without risking real money? Open the free
+                <Link to="/simulator"> paper trading simulator</Link>. You get a virtual portfolio,
+                live prices, and an order book — perfect for learning how buying and selling actually
+                works before you put real dollars on the line.
+              </p>
+
+              <h2>Features at a glance</h2>
+              <ul>
+                <li><strong>Live stock prices</strong> for U.S. equities, ETFs, indexes, and major crypto.</li>
+                <li><strong>AI insights</strong> that explain stock moves in plain English.</li>
+                <li><strong>Curated <Link to="/news">market news</Link></strong> tied to the tickers you care about.</li>
+                <li><strong>Sector heatmaps</strong> so you can see at a glance what's hot or cold.</li>
+                <li><strong>An <Link to="/calendar">economic calendar</Link></strong> tracking earnings, CPI, FOMC, and jobs reports.</li>
+                <li><strong>A <Link to="/screener">stock screener</Link></strong> to find tickers by sector, market cap, or performance.</li>
+                <li><strong>A free <Link to="/simulator">paper trading simulator</Link></strong> for risk-free practice.</li>
+              </ul>
+
+              <p>
+                Have questions? Read the <Link to="/faq">FAQ</Link>, learn more on the
+                <Link to="/about"> About page</Link>, or <Link to="/contact">get in touch</Link>.
+                For information on where our data comes from, see our
+                <Link to="/data-sources"> data sources</Link> page and the
+                <Link to="/disclaimer"> disclaimer</Link>.
+              </p>
+            </div>
+            <img
+              src={heroImage}
+              alt="Beginner stock market chart showing a rising green candlestick price trend on a modern dashboard"
+              width={1280}
+              height={640}
+              loading="lazy"
+              className="rounded-lg border w-full h-auto"
+            />
+          </div>
+        </section>
       </main>
 
-      <footer className="border-t py-6 text-center text-xs text-muted-foreground mt-8">
-        Live data via Yahoo Finance public endpoints. Prices may be delayed.
-      </footer>
-
-
+      <SiteFooter />
     </div>
   );
 };
