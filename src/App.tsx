@@ -15,6 +15,11 @@ const Trade = lazy(() => import("./pages/Trade.tsx"));
 const Screener = lazy(() => import("./pages/Screener.tsx"));
 const Calendar = lazy(() => import("./pages/Calendar.tsx"));
 const Watchlist = lazy(() => import("./pages/Watchlist.tsx"));
+const About = lazy(() => import("./pages/About.tsx"));
+const Contact = lazy(() => import("./pages/Contact.tsx"));
+const Disclaimer = lazy(() => import("./pages/Disclaimer.tsx"));
+const DataSources = lazy(() => import("./pages/DataSources.tsx"));
+const FAQ = lazy(() => import("./pages/FAQ.tsx"));
 
 
 const queryClient = new QueryClient({
@@ -37,13 +42,20 @@ const App = () => (
         <Suspense fallback={null}>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/stocks" element={<Index />} />
+            <Route path="/news" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/sim" element={<Sim />} />
+            <Route path="/simulator" element={<Sim />} />
             <Route path="/sim/trade/:symbol" element={<Trade />} />
-
             <Route path="/screener" element={<Screener />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/watchlist" element={<Watchlist />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/disclaimer" element={<Disclaimer />} />
+            <Route path="/data-sources" element={<DataSources />} />
+            <Route path="/faq" element={<FAQ />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
