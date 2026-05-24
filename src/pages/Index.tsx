@@ -8,6 +8,7 @@ import { Watchlist } from "@/components/Watchlist";
 import { StockExplainer } from "@/components/StockExplainer";
 import { SEO } from "@/components/SEO";
 import { SidePanel } from "@/components/SidePanel";
+import { SiteFooter } from "@/components/SiteFooter";
 import { WidgetBar } from "@/components/WidgetBar";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
@@ -18,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { onAction } from "@/lib/actions";
 import { useWidgets } from "@/lib/widgets";
 import { GraduationCap, TrendingUp, Briefcase } from "lucide-react";
+import heroImage from "@/assets/stocks-hero.jpg";
 
 const StockSummary = lazy(() =>
   import("@/components/StockSummary").then((m) => ({ default: m.StockSummary }))
