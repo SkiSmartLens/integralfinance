@@ -5,28 +5,10 @@ const corsHeaders = {
 
 const cache = new Map<string, { exp: number; body: string }>();
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    const SB_URL_AUTH = Deno.env.get("SUPABASE_URL")!;
-    const SB_ANON_AUTH = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const userClient = createClient(SB_URL_AUTH, SB_ANON_AUTH, { global: { headers: { Authorization: authHeader } } });
-    const { data: { user } } = await userClient.auth.getUser();
-    if (!user) {
-      return new Response(JSON.stringify({ error: "unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const { symbol, mode } = await req.json();
     if (!symbol || typeof symbol !== "string") {
       return new Response(JSON.stringify({ error: "symbol required" }), {

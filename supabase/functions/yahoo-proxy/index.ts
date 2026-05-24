@@ -185,20 +185,6 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    // Require a valid project apikey header (anon or publishable) to prevent open-proxy abuse.
-    const allowed = new Set(
-      [
-        Deno.env.get("SUPABASE_ANON_KEY"),
-        Deno.env.get("SUPABASE_PUBLISHABLE_KEY"),
-        ...(Deno.env.get("SUPABASE_PUBLISHABLE_KEYS") ?? "").split(",").map((s) => s.trim()),
-        ...(Deno.env.get("SUPABASE_SECRET_KEYS") ?? "").split(",").map((s) => s.trim()),
-      ].filter((v): v is string => !!v && v.length > 0),
-    );
-    const provided = req.headers.get("apikey") ?? (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
-    if (!provided || !allowed.has(provided)) {
-      return json({ error: "unauthorized" }, 401);
-    }
-
     const url = new URL(req.url);
     const kind = url.searchParams.get("kind") ?? "quote";
 
