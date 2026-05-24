@@ -244,6 +244,7 @@ const Index = () => {
       </main>
 
       <SiteFooter />
+    </div>
   );
 };
 
