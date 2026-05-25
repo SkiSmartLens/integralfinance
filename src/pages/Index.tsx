@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Ticker } from "@/components/Ticker";
 import { CategoryNav } from "@/components/CategoryNav";
@@ -29,6 +29,8 @@ const NewsList = lazy(() =>
 );
 
 const Index = () => {
+  const location = useLocation();
+  const isNewsRoute = location.pathname === "/news";
   const [activeCat, setActiveCat] = useState("news");
   const [activeSub, setActiveSub] = useState<string | undefined>(undefined);
   const [activeSymbol, setActiveSymbol] = useState("AAPL");
@@ -118,14 +120,16 @@ const Index = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8">
           <div className="space-y-6 min-w-0">
-            {activeCat !== "news" && (
+            {!isNewsRoute && activeCat !== "news" && (
               <div id="chart-top" />
             )}
-            <div id="chart"><StockChart symbol={activeSymbol} /></div>
-            <div id="summary"><StockExplainer symbol={activeSymbol} /></div>
-            <Suspense fallback={<div className="h-32" />}>
-              <StockSummary symbol={activeSymbol} />
-            </Suspense>
+            {!isNewsRoute && <div id="chart"><StockChart symbol={activeSymbol} /></div>}
+            {!isNewsRoute && <div id="summary"><StockExplainer symbol={activeSymbol} /></div>}
+            {!isNewsRoute && (
+              <Suspense fallback={<div className="h-32" />}>
+                <StockSummary symbol={activeSymbol} />
+              </Suspense>
+            )}
             <section id="news">
               <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                 <h2 className="text-2xl font-bold">
@@ -170,8 +174,8 @@ const Index = () => {
               <h2 id="about-heading">What is IntegralStocks?</h2>
               <p>
                 <strong>IntegralStocks</strong> is a free, beginner-friendly stock market dashboard.
-                It brings live <Link to="/stocks">stock prices</Link>, the day's
-                <Link to="/news"> market news</Link>, and short, plain-English AI insights into a
+                It brings live <Link to="/stocks">stock prices</Link>, the day's{" "}
+                <Link to="/news">market news</Link>, and short, plain-English AI insights into a
                 single place so anyone — not just Wall Street pros — can understand what's happening
                 in the market and why.
               </p>
