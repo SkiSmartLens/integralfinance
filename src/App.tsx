@@ -20,6 +20,7 @@ const Contact = lazy(() => import("./pages/Contact.tsx"));
 const Disclaimer = lazy(() => import("./pages/Disclaimer.tsx"));
 const DataSources = lazy(() => import("./pages/DataSources.tsx"));
 const FAQ = lazy(() => import("./pages/FAQ.tsx"));
+const LearnPatterns = lazy(() => import("./pages/LearnPatterns.tsx"));
 
 
 const queryClient = new QueryClient({
@@ -56,6 +57,7 @@ const App = () => (
             <Route path="/disclaimer" element={<Disclaimer />} />
             <Route path="/data-sources" element={<DataSources />} />
             <Route path="/faq" element={<FAQ />} />
+            <Route path="/learn/patterns" element={<LearnPatterns />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

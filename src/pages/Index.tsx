@@ -168,6 +168,7 @@ const Index = () => {
             />
           </aside>
         </div>
+        {activeCat === "news" && !isNewsRoute && (
         <section aria-labelledby="about-heading" className="border-t pt-10 mt-6 prose prose-neutral dark:prose-invert max-w-none">
           <div className="grid md:grid-cols-[1fr_360px] gap-8 items-start">
             <div>
@@ -245,6 +246,7 @@ const Index = () => {
             />
           </div>
         </section>
+        )}
       </main>
 
       <SiteFooter />

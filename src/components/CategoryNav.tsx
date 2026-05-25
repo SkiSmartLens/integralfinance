@@ -1,9 +1,10 @@
 import { CATEGORIES } from "@/lib/categories";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
-import { LineChart, Filter, Calendar, Pencil, Check, RotateCcw, GripVertical, X, Plus, User, Briefcase, ChevronDown } from "lucide-react";
+import { LineChart, Filter, Calendar, Pencil, Check, RotateCcw, GripVertical, X, Plus, User, Briefcase, ChevronDown, GraduationCap, TrendingUp } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
+  DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
 import { useState, useEffect } from "react";
 import {
@@ -195,6 +196,30 @@ export const CategoryNav = ({ active, onChange, activeSub, onSubChange }: Props)
                     <Filter className="w-4 h-4" /> Screener
                   </Link>
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Learn</DropdownMenuLabel>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="flex items-center gap-2 cursor-pointer">
+                    <GraduationCap className="w-4 h-4" /> Learn
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuPortal>
+                    <DropdownMenuSubContent className="w-48">
+                      <DropdownMenuItem asChild>
+                        <Link to="/learn/patterns" className="flex items-center gap-2 cursor-pointer">
+                          <TrendingUp className="w-4 h-4" /> Patterns
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem disabled className="flex items-center gap-2 opacity-60">
+                        <LineChart className="w-4 h-4" /> Indicators
+                        <span className="ml-auto text-[9px] uppercase tracking-wider">Soon</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem disabled className="flex items-center gap-2 opacity-60">
+                        <Briefcase className="w-4 h-4" /> Basics
+                        <span className="ml-auto text-[9px] uppercase tracking-wider">Soon</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuPortal>
+                </DropdownMenuSub>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link to="/sim" className="flex items-center gap-2 cursor-pointer font-semibold text-primary">
