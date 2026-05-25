@@ -170,8 +170,8 @@ const Index = () => {
               <h2 id="about-heading">What is IntegralStocks?</h2>
               <p>
                 <strong>IntegralStocks</strong> is a free, beginner-friendly stock market dashboard.
-                It brings live <Link to="/stocks">stock prices</Link>, the day's
-                <Link to="/news"> market news</Link>, and short, plain-English AI insights into a
+                It brings live <Link to="/stocks">stock prices</Link>, the day's{" "}
+                <Link to="/news">market news</Link>, and short, plain-English AI insights into a
                 single place so anyone — not just Wall Street pros — can understand what's happening
                 in the market and why.
               </p>
