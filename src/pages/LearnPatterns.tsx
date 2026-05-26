@@ -424,7 +424,7 @@ export default function LearnPatterns() {
     <div className="min-h-screen bg-background">
       <SEO
         title="Learn Stock Chart Patterns — Duolingo-style Lessons"
-        description="Master 15 must-know stock chart patterns — head & shoulders, double tops, cup & handle, flags and triangles — with bite-sized lessons and quick quizzes."
+        description="Master 16 must-know stock chart patterns — head & shoulders, double tops, cup & handle, flags and triangles — with bite-sized lessons and quick quizzes."
         path="/learn/patterns"
         jsonLd={{
           "@context": "https://schema.org",
@@ -476,7 +476,7 @@ export default function LearnPatterns() {
               Learn stock chart patterns
             </h1>
             <p className="text-muted-foreground mt-2 mb-6">
-              Bite-sized, Duolingo-style lessons. Tap through 15 must-know patterns, then test yourself with a quick quiz.
+              Bite-sized, Duolingo-style lessons. Tap through 16 must-know patterns, then test yourself with a quick quiz.
             </p>
 
             <div className="grid sm:grid-cols-2 gap-3 mb-8">
@@ -485,7 +485,7 @@ export default function LearnPatterns() {
                 className="text-left p-5 rounded-2xl bg-card border-2 border-b-4 border-primary/60 hover:translate-y-[-2px] hover:border-primary transition-all"
               >
                 <div className="text-xs uppercase tracking-wider text-primary font-bold mb-1">Start here</div>
-                <div className="text-lg font-bold mb-1">Learn all 15 patterns</div>
+                <div className="text-lg font-bold mb-1">Learn all 16 patterns</div>
                 <div className="text-sm text-muted-foreground">~3 minutes · earn 90 XP</div>
               </button>
               <button
