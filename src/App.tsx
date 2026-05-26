@@ -59,6 +59,7 @@ const App = () => (
             <Route path="/data-sources" element={<DataSources />} />
             <Route path="/faq" element={<FAQ />} />
             <Route path="/learn/patterns" element={<LearnPatterns />} />
+            <Route path="/learn/basics" element={<LearnBasics />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
