@@ -11,6 +11,6 @@
   <url><loc>https://integralstocks.com/simulator</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
   <url><loc>https://integralstocks.com/screener</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
   <url><loc>https://integralstocks.com/calendar</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://integralstocks.com/watchlist</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
-  <url><loc>https://integralstocks.com/auth</loc><changefreq>monthly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://integralstocks.com/learn/basics</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://integralstocks.com/learn/patterns</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
 </urlset>

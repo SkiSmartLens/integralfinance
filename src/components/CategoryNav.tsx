@@ -213,9 +213,10 @@ export const CategoryNav = ({ active, onChange, activeSub, onSubChange }: Props)
                         <LineChart className="w-4 h-4" /> Indicators
                         <span className="ml-auto text-[9px] uppercase tracking-wider">Soon</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem disabled className="flex items-center gap-2 opacity-60">
-                        <Briefcase className="w-4 h-4" /> Basics
-                        <span className="ml-auto text-[9px] uppercase tracking-wider">Soon</span>
+                      <DropdownMenuItem asChild>
+                        <Link to="/learn/basics" className="flex items-center gap-2 cursor-pointer">
+                          <Briefcase className="w-4 h-4" /> Basics
+                        </Link>
                       </DropdownMenuItem>
                     </DropdownMenuSubContent>
                   </DropdownMenuPortal>
