@@ -21,6 +21,7 @@ const Disclaimer = lazy(() => import("./pages/Disclaimer.tsx"));
 const DataSources = lazy(() => import("./pages/DataSources.tsx"));
 const FAQ = lazy(() => import("./pages/FAQ.tsx"));
 const LearnPatterns = lazy(() => import("./pages/LearnPatterns.tsx"));
+const LearnBasics = lazy(() => import("./pages/LearnBasics.tsx"));
 
 
 const queryClient = new QueryClient({
