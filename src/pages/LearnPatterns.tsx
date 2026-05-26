@@ -143,6 +143,93 @@ const PATTERNS: Pattern[] = [
     ],
     levels: [0.7],
   },
+  {
+    id: "symmetrical-triangle",
+    name: "Symmetrical Triangle",
+    bias: "neutral",
+    blurb:
+      "Lower highs and higher lows squeeze price into a point. Direction is unclear until the breakout — trade the break, not the wedge.",
+    points: [
+      [0, 0.1], [0.1, 0.85], [0.2, 0.2], [0.3, 0.75],
+      [0.4, 0.3], [0.5, 0.65], [0.6, 0.4], [0.7, 0.55],
+      [0.8, 0.45], [0.9, 0.5], [1, 0.15],
+    ],
+  },
+  {
+    id: "rising-wedge",
+    name: "Rising Wedge",
+    bias: "bearish",
+    blurb:
+      "Higher highs and higher lows, but the slope flattens as momentum fades. Often resolves with a sharp break lower.",
+    points: [
+      [0, 0.85], [0.1, 0.6], [0.2, 0.75], [0.3, 0.5],
+      [0.4, 0.65], [0.5, 0.42], [0.6, 0.55], [0.7, 0.36],
+      [0.8, 0.48], [0.9, 0.32], [1, 0.7],
+    ],
+  },
+  {
+    id: "falling-wedge",
+    name: "Falling Wedge",
+    bias: "bullish",
+    blurb:
+      "Lower highs and lower lows, but the slope flattens — sellers are losing steam. A break above the upper line is the bullish trigger.",
+    points: [
+      [0, 0.15], [0.1, 0.4], [0.2, 0.25], [0.3, 0.5],
+      [0.4, 0.35], [0.5, 0.58], [0.6, 0.45], [0.7, 0.64],
+      [0.8, 0.52], [0.9, 0.68], [1, 0.3],
+    ],
+  },
+  {
+    id: "rounding-bottom",
+    name: "Rounding Bottom",
+    bias: "bullish",
+    blurb:
+      "A long, smooth 'saucer' shape as sellers exhaust and buyers slowly take over. Patient base-building — often precedes a sustained uptrend.",
+    points: [
+      [0, 0.2], [0.1, 0.4], [0.2, 0.6], [0.3, 0.78],
+      [0.4, 0.85], [0.5, 0.85], [0.6, 0.78], [0.7, 0.62],
+      [0.8, 0.45], [0.9, 0.28], [1, 0.1],
+    ],
+  },
+  {
+    id: "triple-top",
+    name: "Triple Top",
+    bias: "bearish",
+    blurb:
+      "Three failed pushes at the same resistance. Sellers defend it harder each time — a break of the support line confirms a reversal lower.",
+    points: [
+      [0, 0.85], [0.1, 0.5], [0.18, 0.2], [0.28, 0.45],
+      [0.38, 0.55], [0.48, 0.2], [0.58, 0.5], [0.68, 0.55],
+      [0.78, 0.2], [0.88, 0.55], [1, 0.85],
+    ],
+    levels: [0.55],
+  },
+  {
+    id: "triple-bottom",
+    name: "Triple Bottom",
+    bias: "bullish",
+    blurb:
+      "Three failed pushes at the same support. Buyers defend it harder each time — a break of the resistance line confirms a reversal higher.",
+    points: [
+      [0, 0.15], [0.1, 0.5], [0.18, 0.8], [0.28, 0.55],
+      [0.38, 0.45], [0.48, 0.8], [0.58, 0.5], [0.68, 0.45],
+      [0.78, 0.8], [0.88, 0.45], [1, 0.15],
+    ],
+    levels: [0.45],
+  },
+  {
+    id: "pennant",
+    name: "Pennant",
+    bias: "neutral",
+    blurb:
+      "A sharp move followed by a tiny symmetrical squeeze — like a flag, but with converging lines. Continuation in the direction of the pole is most common.",
+    points: [
+      [0, 0.9], [0.08, 0.7], [0.16, 0.5], [0.24, 0.3],
+      [0.32, 0.2], [0.4, 0.45], [0.48, 0.3], [0.56, 0.42],
+      [0.64, 0.33], [0.72, 0.4], [0.8, 0.36], [0.88, 0.38],
+      [1, 0.1],
+    ],
+  },
 ];
 
 /* ------------------------------- SVG chart -------------------------------- */
