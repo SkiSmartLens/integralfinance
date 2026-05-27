@@ -22,6 +22,7 @@ const DataSources = lazy(() => import("./pages/DataSources.tsx"));
 const FAQ = lazy(() => import("./pages/FAQ.tsx"));
 const LearnPatterns = lazy(() => import("./pages/LearnPatterns.tsx"));
 const LearnBasics = lazy(() => import("./pages/LearnBasics.tsx"));
+const LearnIndicators = lazy(() => import("./pages/LearnIndicators.tsx"));
 
 
 const queryClient = new QueryClient({
@@ -60,6 +61,7 @@ const App = () => (
             <Route path="/faq" element={<FAQ />} />
             <Route path="/learn/patterns" element={<LearnPatterns />} />
             <Route path="/learn/basics" element={<LearnBasics />} />
+            <Route path="/learn/indicators" element={<LearnIndicators />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

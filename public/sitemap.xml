@@ -12,5 +12,6 @@
   <url><loc>https://integralstocks.com/screener</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
   <url><loc>https://integralstocks.com/calendar</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
   <url><loc>https://integralstocks.com/learn/basics</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://integralstocks.com/learn/indicators</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://integralstocks.com/learn/patterns</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
 </urlset>
