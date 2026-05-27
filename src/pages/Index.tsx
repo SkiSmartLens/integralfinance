@@ -33,7 +33,7 @@ const Index = () => {
   const isNewsRoute = location.pathname === "/news";
   const [activeCat, setActiveCat] = useState("news");
   const [activeSub, setActiveSub] = useState<string | undefined>(undefined);
-  const [activeSymbol, setActiveSymbol] = useState("AAPL");
+  const [activeSymbol, setActiveSymbol] = useState("^GSPC");
   const [newsTab, setNewsTab] = useState<"my" | "general">("general");
   const { symbols: myWatchlist, add: addWatch, remove: removeWatch } = useWatchlist();
   const { add: addWidget, remove: removeWidget, reorder: reorderWidgets, reset: resetWidgets } = useWidgets();

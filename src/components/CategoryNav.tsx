@@ -209,9 +209,10 @@ export const CategoryNav = ({ active, onChange, activeSub, onSubChange }: Props)
                           <TrendingUp className="w-4 h-4" /> Patterns
                         </Link>
                       </DropdownMenuItem>
-                      <DropdownMenuItem disabled className="flex items-center gap-2 opacity-60">
-                        <LineChart className="w-4 h-4" /> Indicators
-                        <span className="ml-auto text-[9px] uppercase tracking-wider">Soon</span>
+                      <DropdownMenuItem asChild>
+                        <Link to="/learn/indicators" className="flex items-center gap-2 cursor-pointer">
+                          <LineChart className="w-4 h-4" /> Indicators
+                        </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
                         <Link to="/learn/basics" className="flex items-center gap-2 cursor-pointer">
