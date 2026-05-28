@@ -121,6 +121,72 @@ export const CategoryNav = ({ active, onChange, activeSub, onSubChange }: Props)
       )}
       <div className="container mx-auto px-4">
         <div className="flex gap-1 overflow-x-auto no-scrollbar py-2 items-center">
+          {!editing && (
+            <div
+              className="shrink-0 mr-2"
+              onMouseEnter={() => setForYouOpen(true)}
+              onMouseLeave={() => setForYouOpen(false)}
+            >
+              <DropdownMenu open={forYouOpen} onOpenChange={setForYouOpen}>
+                <DropdownMenuTrigger className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap bg-primary text-primary-foreground hover:opacity-90 outline-none">
+                  <User className="w-4 h-4" />
+                  For You
+                  <ChevronDown className="w-3.5 h-3.5 opacity-80" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-52" onCloseAutoFocus={(e) => e.preventDefault()}>
+                  <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">My tools</DropdownMenuLabel>
+                  <DropdownMenuItem asChild>
+                    <Link to="/watchlist" className="flex items-center gap-2 cursor-pointer">
+                      <Briefcase className="w-4 h-4" /> Watchlist
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/calendar" className="flex items-center gap-2 cursor-pointer">
+                      <Calendar className="w-4 h-4" /> Calendar
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/screener" className="flex items-center gap-2 cursor-pointer">
+                      <Filter className="w-4 h-4" /> Screener
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Learn</DropdownMenuLabel>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="flex items-center gap-2 cursor-pointer">
+                      <GraduationCap className="w-4 h-4" /> Learn
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuPortal>
+                      <DropdownMenuSubContent className="w-48">
+                        <DropdownMenuItem asChild>
+                          <Link to="/learn/patterns" className="flex items-center gap-2 cursor-pointer">
+                            <TrendingUp className="w-4 h-4" /> Patterns
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link to="/learn/indicators" className="flex items-center gap-2 cursor-pointer">
+                            <LineChart className="w-4 h-4" /> Indicators
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link to="/learn/basics" className="flex items-center gap-2 cursor-pointer">
+                            <Briefcase className="w-4 h-4" /> Basics
+                          </Link>
+                        </DropdownMenuItem>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuPortal>
+                  </DropdownMenuSub>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/sim" className="flex items-center gap-2 cursor-pointer font-semibold text-primary">
+                      <LineChart className="w-4 h-4" /> Simulator
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
+
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
             <SortableContext items={visible} strategy={horizontalListSortingStrategy}>
               <div className="flex gap-1 items-center">
@@ -174,72 +240,6 @@ export const CategoryNav = ({ active, onChange, activeSub, onSubChange }: Props)
           </div>
 
         </div>
-
-          {!editing && (
-            <div
-              className="ml-auto pl-2"
-              onMouseEnter={() => setForYouOpen(true)}
-              onMouseLeave={() => setForYouOpen(false)}
-            >
-              <DropdownMenu open={forYouOpen} onOpenChange={setForYouOpen}>
-                <DropdownMenuTrigger className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap bg-primary text-primary-foreground hover:opacity-90 outline-none">
-                  <User className="w-4 h-4" />
-                  For You
-                  <ChevronDown className="w-3.5 h-3.5 opacity-80" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-52" onCloseAutoFocus={(e) => e.preventDefault()}>
-                  <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">My tools</DropdownMenuLabel>
-                  <DropdownMenuItem asChild>
-                    <Link to="/watchlist" className="flex items-center gap-2 cursor-pointer">
-                      <Briefcase className="w-4 h-4" /> Watchlist
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/calendar" className="flex items-center gap-2 cursor-pointer">
-                      <Calendar className="w-4 h-4" /> Calendar
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/screener" className="flex items-center gap-2 cursor-pointer">
-                      <Filter className="w-4 h-4" /> Screener
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Learn</DropdownMenuLabel>
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger className="flex items-center gap-2 cursor-pointer">
-                      <GraduationCap className="w-4 h-4" /> Learn
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuPortal>
-                      <DropdownMenuSubContent className="w-48">
-                        <DropdownMenuItem asChild>
-                          <Link to="/learn/patterns" className="flex items-center gap-2 cursor-pointer">
-                            <TrendingUp className="w-4 h-4" /> Patterns
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link to="/learn/indicators" className="flex items-center gap-2 cursor-pointer">
-                            <LineChart className="w-4 h-4" /> Indicators
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link to="/learn/basics" className="flex items-center gap-2 cursor-pointer">
-                            <Briefcase className="w-4 h-4" /> Basics
-                          </Link>
-                        </DropdownMenuItem>
-                      </DropdownMenuSubContent>
-                    </DropdownMenuPortal>
-                  </DropdownMenuSub>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to="/sim" className="flex items-center gap-2 cursor-pointer font-semibold text-primary">
-                      <LineChart className="w-4 h-4" /> Simulator
-                    </Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          )}
 
         {editing && showAdd && hiddenDefs.length > 0 && (
           <div className="pb-2 flex flex-wrap gap-1.5">
