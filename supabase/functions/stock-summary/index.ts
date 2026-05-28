@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
     }
     const sym = symbol.toUpperCase();
     const isBeginner = mode === "beginner";
-    const key = `sum:v2:${isBeginner ? "b:" : ""}${sym}`;
+    const key = `sum:v3:${isBeginner ? "b:" : ""}${sym}`;
     const hit = cache.get(key);
     if (hit && hit.exp > Date.now()) {
       return new Response(hit.body, {
@@ -195,6 +195,14 @@ Return strict JSON with shape:
     const args = data?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
     let parsed: any = {};
     try { parsed = JSON.parse(args ?? "{}"); } catch { parsed = {}; }
+    if (!isBeginner) {
+      const fallback = `No specific data available for ${companyName}. This may apply more to individual operating companies than to indices, ETFs, or funds.`;
+      for (const f of ["revenueGrowth", "earningsGrowth", "margins", "balanceSheet", "moat", "earnings", "forecast", "outlook"]) {
+        if (!parsed[f] || typeof parsed[f] !== "string" || !parsed[f].trim()) parsed[f] = fallback;
+      }
+      if (!Array.isArray(parsed.positives) || !parsed.positives.length) parsed.positives = ["Analysis unavailable right now."];
+      if (!Array.isArray(parsed.negatives) || !parsed.negatives.length) parsed.negatives = ["Analysis unavailable right now."];
+    }
     const body = JSON.stringify(parsed);
     cache.set(key, { body, exp: Date.now() + 1000 * 60 * 30 });
     return new Response(body, {
