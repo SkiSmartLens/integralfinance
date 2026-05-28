@@ -73,6 +73,7 @@ export const CategoryNav = ({ active, onChange, activeSub, onSubChange }: Props)
   const { order, hidden, visible, setOrder, show, hide, reset } = useNavOrder();
   const [editing, setEditing] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
+  const [forYouOpen, setForYouOpen] = useState(false);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
   useEffect(() => {
