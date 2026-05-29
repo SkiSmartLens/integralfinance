@@ -206,7 +206,9 @@ export const CategoryNav = ({ active, onChange, activeSub, onSubChange }: Props)
                   );
                 })}
               </div>
+            </SortableContext>
           </DndContext>
+
 
           {!editing && (
             <div
