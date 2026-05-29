@@ -196,9 +196,3 @@ const CollapsibleRow = ({
     </div>
   );
 };
-
-        </div>
-      )}
-    </section>
-  );
-};
