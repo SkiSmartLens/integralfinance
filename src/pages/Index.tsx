@@ -4,7 +4,6 @@ import { Header } from "@/components/Header";
 import { Ticker } from "@/components/Ticker";
 import { CategoryNav } from "@/components/CategoryNav";
 import { StockChart } from "@/components/StockChart";
-import { Watchlist } from "@/components/Watchlist";
 import { StockExplainer } from "@/components/StockExplainer";
 import { SEO } from "@/components/SEO";
 import { SidePanel } from "@/components/SidePanel";
