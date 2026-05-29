@@ -1,8 +1,11 @@
+import { Link } from "react-router-dom";
 import { useLiveNews } from "@/hooks/useLiveNews";
 import { NewsItem } from "@/lib/yahoo";
 
 interface Props {
   query: string;
+}
+
 }
 
 function timeAgo(ts: number) {
