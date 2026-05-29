@@ -6,7 +6,7 @@ interface Props {
   query: string;
 }
 
-}
+
 
 function timeAgo(ts: number) {
   const s = Math.floor(Date.now() / 1000 - ts);
