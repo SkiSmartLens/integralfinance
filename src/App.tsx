@@ -23,6 +23,7 @@ const FAQ = lazy(() => import("./pages/FAQ.tsx"));
 const LearnPatterns = lazy(() => import("./pages/LearnPatterns.tsx"));
 const LearnBasics = lazy(() => import("./pages/LearnBasics.tsx"));
 const LearnIndicators = lazy(() => import("./pages/LearnIndicators.tsx"));
+const StockTicker = lazy(() => import("./pages/StockTicker.tsx"));
 
 
 const queryClient = new QueryClient({
@@ -46,6 +47,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/stocks" element={<Index />} />
+            <Route path="/stocks/:ticker" element={<StockTicker />} />
             <Route path="/news" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/sim" element={<Sim />} />

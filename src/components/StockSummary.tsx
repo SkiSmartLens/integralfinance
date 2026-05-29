@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchQuotes } from "@/lib/yahoo";
-import { Sparkles, TrendingUp, TrendingDown, Calendar, Eye, BarChart3, DollarSign, Percent, Landmark, Shield, LineChart } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Sparkles, TrendingUp, TrendingDown, Calendar, Eye, BarChart3, DollarSign, Percent, Landmark, Shield, LineChart, ChevronDown } from "lucide-react";
+
 
 interface Summary {
   positives: string[];
@@ -118,82 +120,79 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
           <Sparkles className="w-3.5 h-3.5" /> Ask Integral AI
         </button>
       </div>
-      {loading && <div className="text-sm text-muted-foreground py-4">Analyzing latest signals…</div>}
-      {err && <div className="text-sm text-down py-2">{err}</div>}
       {data && (
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="bg-muted/40 rounded-md p-3">
-            <div className="flex items-center gap-2 mb-2 font-semibold text-up">
-              <TrendingUp className="w-4 h-4" /> Positives
-            </div>
+        <div className="space-y-2">
+          <CollapsibleRow icon={<TrendingUp className="w-4 h-4 text-up" />} title="Positives" defaultOpen>
             <ul className="text-sm space-y-1.5 list-disc pl-5">
               {data.positives?.map((p, i) => <li key={i}>{p}</li>)}
             </ul>
-          </div>
-          <div className="bg-muted/40 rounded-md p-3">
-            <div className="flex items-center gap-2 mb-2 font-semibold text-down">
-              <TrendingDown className="w-4 h-4" /> Risks
-            </div>
+          </CollapsibleRow>
+          <CollapsibleRow icon={<TrendingDown className="w-4 h-4 text-down" />} title="Risks">
             <ul className="text-sm space-y-1.5 list-disc pl-5">
               {data.negatives?.map((p, i) => <li key={i}>{p}</li>)}
             </ul>
-          </div>
+          </CollapsibleRow>
           {data.revenueGrowth && (
-            <div className="bg-muted/40 rounded-md p-3">
-              <div className="flex items-center gap-2 mb-2 font-semibold"><BarChart3 className="w-4 h-4 text-primary" /> Revenue growth</div>
+            <CollapsibleRow icon={<BarChart3 className="w-4 h-4 text-primary" />} title="Revenue growth">
               <p className="text-sm">{data.revenueGrowth}</p>
-            </div>
+            </CollapsibleRow>
           )}
           {data.earningsGrowth && (
-            <div className="bg-muted/40 rounded-md p-3">
-              <div className="flex items-center gap-2 mb-2 font-semibold"><DollarSign className="w-4 h-4 text-primary" /> Earnings growth</div>
+            <CollapsibleRow icon={<DollarSign className="w-4 h-4 text-primary" />} title="Earnings growth">
               <p className="text-sm">{data.earningsGrowth}</p>
-            </div>
+            </CollapsibleRow>
           )}
           {data.margins && (
-            <div className="bg-muted/40 rounded-md p-3">
-              <div className="flex items-center gap-2 mb-2 font-semibold"><Percent className="w-4 h-4 text-primary" /> Profit margins</div>
+            <CollapsibleRow icon={<Percent className="w-4 h-4 text-primary" />} title="Profit margins">
               <p className="text-sm">{data.margins}</p>
-            </div>
+            </CollapsibleRow>
           )}
           {data.balanceSheet && (
-            <div className="bg-muted/40 rounded-md p-3">
-              <div className="flex items-center gap-2 mb-2 font-semibold"><Landmark className="w-4 h-4 text-primary" /> Balance sheet & debt</div>
+            <CollapsibleRow icon={<Landmark className="w-4 h-4 text-primary" />} title="Balance sheet & debt">
               <p className="text-sm">{data.balanceSheet}</p>
-            </div>
+            </CollapsibleRow>
           )}
           {data.moat && (
-            <div className="bg-muted/40 rounded-md p-3 md:col-span-2">
-              <div className="flex items-center gap-2 mb-2 font-semibold"><Shield className="w-4 h-4 text-primary" /> Competitive edge / moat</div>
+            <CollapsibleRow icon={<Shield className="w-4 h-4 text-primary" />} title="Competitive edge / moat">
               <p className="text-sm">{data.moat}</p>
-            </div>
+            </CollapsibleRow>
           )}
-          <div className="bg-muted/40 rounded-md p-3">
-            <div className="flex items-center gap-2 mb-2 font-semibold">
-              <Calendar className="w-4 h-4" /> Earnings
-            </div>
+          <CollapsibleRow icon={<Calendar className="w-4 h-4 text-primary" />} title="Earnings">
             {nextEarnings && (
               <p className="text-xs font-bold mb-1">
                 Next report: <span className="text-primary">{nextEarnings}</span>
               </p>
             )}
             <p className="text-sm">{data.earnings}</p>
-          </div>
+          </CollapsibleRow>
           {data.forecast && (
-            <div className="bg-muted/40 rounded-md p-3">
-              <div className="flex items-center gap-2 mb-2 font-semibold"><LineChart className="w-4 h-4 text-primary" /> 12-month forecast</div>
+            <CollapsibleRow icon={<LineChart className="w-4 h-4 text-primary" />} title="12-month forecast">
               <p className="text-sm">{data.forecast}</p>
-            </div>
+            </CollapsibleRow>
           )}
-          <div className="bg-muted/40 rounded-md p-3 md:col-span-2">
-            <div className="flex items-center gap-2 mb-2 font-semibold">
-              <Eye className="w-4 h-4" /> Outlook
-            </div>
+          <CollapsibleRow icon={<Eye className="w-4 h-4 text-primary" />} title="Outlook">
             <p className="text-sm">{data.outlook}</p>
-          </div>
-
+          </CollapsibleRow>
         </div>
       )}
     </section>
+  );
+};
+
+const CollapsibleRow = ({
+  icon, title, children, defaultOpen = false,
+}: { icon: React.ReactNode; title: string; children: React.ReactNode; defaultOpen?: boolean }) => {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="bg-muted/40 rounded-md overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between gap-2 p-3 text-left font-semibold"
+      >
+        <span className="flex items-center gap-2">{icon} {title}</span>
+        <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", open && "rotate-180")} />
+      </button>
+      {open && <div className="px-3 pb-3 -mt-1">{children}</div>}
+    </div>
   );
 };

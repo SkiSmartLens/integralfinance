@@ -1,9 +1,12 @@
 import { useLiveNews } from "@/hooks/useLiveNews";
 import { NewsItem } from "@/lib/yahoo";
 
+
 interface Props {
   query: string;
 }
+
+
 
 function timeAgo(ts: number) {
   const s = Math.floor(Date.now() / 1000 - ts);

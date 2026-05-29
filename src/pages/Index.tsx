@@ -4,7 +4,6 @@ import { Header } from "@/components/Header";
 import { Ticker } from "@/components/Ticker";
 import { CategoryNav } from "@/components/CategoryNav";
 import { StockChart } from "@/components/StockChart";
-import { Watchlist } from "@/components/Watchlist";
 import { StockExplainer } from "@/components/StockExplainer";
 import { SEO } from "@/components/SEO";
 import { SidePanel } from "@/components/SidePanel";
@@ -107,7 +106,8 @@ const Index = () => {
         activeSub={activeSub}
         onSubChange={setActiveSub}
       />
-      <main className="container mx-auto px-4 py-6 space-y-8 max-w-6xl">
+      <main className="px-4 sm:px-6 py-6 space-y-8 max-w-5xl">
+
         {activeCat === "news" && (
           <div className="flex items-start gap-3 bg-accent/40 border border-accent rounded-lg p-4 text-sm">
             <GraduationCap className="w-5 h-5 text-primary shrink-0 mt-0.5" />
@@ -118,56 +118,47 @@ const Index = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8">
-          <div className="space-y-6 min-w-0">
-            {!isNewsRoute && activeCat !== "news" && (
-              <div id="chart-top" />
-            )}
-            {!isNewsRoute && <div id="chart"><StockChart symbol={activeSymbol} /></div>}
-            {!isNewsRoute && <div id="summary"><StockExplainer symbol={activeSymbol} /></div>}
-            {!isNewsRoute && (
-              <Suspense fallback={<div className="h-32" />}>
-                <StockSummary symbol={activeSymbol} />
-              </Suspense>
-            )}
-            <section id="news">
-              <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-                <h2 className="text-2xl font-bold">
-                  {newsTab === "my" ? "My News" : (sub?.label ?? cat.label)}{" "}
-                  <span className="text-muted-foreground font-normal text-base">· latest stories</span>
-                </h2>
-                <div className="flex gap-1 bg-muted rounded-md p-1">
-                  {(["my", "general"] as const).map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setNewsTab(t)}
-                      className={cn(
-                        "px-3 py-1.5 rounded text-xs font-semibold transition-colors",
-                        newsTab === t ? "bg-background shadow-sm" : "text-muted-foreground"
-                      )}
-                    >
-                      {t === "my" ? "My News" : "General"}
-                    </button>
-                  ))}
-                </div>
+        <div className="space-y-6 min-w-0">
+          {!isNewsRoute && activeCat !== "news" && (
+            <div id="chart-top" />
+          )}
+          {!isNewsRoute && <div id="chart"><StockChart symbol={activeSymbol} /></div>}
+          {!isNewsRoute && <div id="summary"><StockExplainer symbol={activeSymbol} /></div>}
+          {!isNewsRoute && (
+            <Suspense fallback={<div className="h-32" />}>
+              <StockSummary symbol={activeSymbol} />
+            </Suspense>
+          )}
+          <section id="news">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+              <h2 className="text-2xl font-bold">
+                {newsTab === "my" ? "My News" : (sub?.label ?? cat.label)}{" "}
+                <span className="text-muted-foreground font-normal text-base">· latest stories</span>
+              </h2>
+              <div className="flex gap-1 bg-muted rounded-md p-1">
+                {(["my", "general"] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setNewsTab(t)}
+                    className={cn(
+                      "px-3 py-1.5 rounded text-xs font-semibold transition-colors",
+                      newsTab === t ? "bg-background shadow-sm" : "text-muted-foreground"
+                    )}
+                  >
+                    {t === "my" ? "My News" : "General"}
+                  </button>
+                ))}
               </div>
-              <Suspense fallback={<div className="text-muted-foreground py-8 text-center">Loading stories…</div>}>
-                <NewsList
-                  key={newsTab + ":" + (newsTab === "my" ? myNewsQuery : newsQuery)}
-                  query={newsTab === "my" ? myNewsQuery : newsQuery}
-                />
-              </Suspense>
-            </section>
-          </div>
-          <aside className="space-y-6">
-            <Watchlist
-              symbols={watchSymbols}
-              active={activeSymbol}
-              onSelect={setActiveSymbol}
-              title={sub?.label ?? (cat.label === "News" ? "Popular Stocks" : cat.label)}
-            />
-          </aside>
+            </div>
+            <Suspense fallback={<div className="text-muted-foreground py-8 text-center">Loading stories…</div>}>
+              <NewsList
+                key={newsTab + ":" + (newsTab === "my" ? myNewsQuery : newsQuery)}
+                query={newsTab === "my" ? myNewsQuery : newsQuery}
+              />
+            </Suspense>
+          </section>
         </div>
+
         {activeCat === "news" && !isNewsRoute && (
         <section aria-labelledby="about-heading" className="border-t pt-10 mt-6 prose prose-neutral dark:prose-invert max-w-none">
           <div className="grid md:grid-cols-[1fr_360px] gap-8 items-start">

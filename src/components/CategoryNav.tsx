@@ -74,6 +74,8 @@ export const CategoryNav = ({ active, onChange, activeSub, onSubChange }: Props)
   const [editing, setEditing] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [forYouOpen, setForYouOpen] = useState(false);
+  const [learnOpen, setLearnOpen] = useState(false);
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
   useEffect(() => {
@@ -208,6 +210,42 @@ export const CategoryNav = ({ active, onChange, activeSub, onSubChange }: Props)
               </div>
             </SortableContext>
           </DndContext>
+
+
+          {!editing && (
+            <div
+              className="shrink-0 ml-1"
+              onMouseEnter={() => setLearnOpen(true)}
+              onMouseLeave={() => setLearnOpen(false)}
+            >
+              <DropdownMenu open={learnOpen} onOpenChange={setLearnOpen}>
+                <DropdownMenuTrigger className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap bg-muted text-foreground hover:bg-accent outline-none">
+                  <GraduationCap className="w-4 h-4" />
+                  Learn
+                  <ChevronDown className="w-3.5 h-3.5 opacity-80" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48" onCloseAutoFocus={(e) => e.preventDefault()}>
+                  <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Learn</DropdownMenuLabel>
+                  <DropdownMenuItem asChild>
+                    <Link to="/learn/patterns" className="flex items-center gap-2 cursor-pointer">
+                      <TrendingUp className="w-4 h-4" /> Patterns
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/learn/indicators" className="flex items-center gap-2 cursor-pointer">
+                      <LineChart className="w-4 h-4" /> Indicators
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/learn/basics" className="flex items-center gap-2 cursor-pointer">
+                      <Briefcase className="w-4 h-4" /> Basics
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
+
 
           <div className="flex items-center gap-1 ml-1">
             {editing && hiddenDefs.length > 0 && (
