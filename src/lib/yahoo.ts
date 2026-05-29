@@ -163,8 +163,11 @@ export interface NewsItem {
 
 export async function fetchNews(query = "stock market"): Promise<NewsItem[]> {
   const data = await callProxy({ kind: "search", q: query });
-  return data?.news ?? [];
+  const items: NewsItem[] = data?.news ?? [];
+  // Newest articles first.
+  return [...items].sort((a, b) => (b.providerPublishTime ?? 0) - (a.providerPublishTime ?? 0));
 }
+
 
 export interface SearchQuote {
   symbol: string;
