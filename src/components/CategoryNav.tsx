@@ -200,15 +200,49 @@ export const CategoryNav = ({ active, onChange, activeSub, onSubChange }: Props)
                   const c = CATEGORIES.find((x) => x.id === id);
                   if (!c) return null;
                   return (
-                    <SortableChip
-                      key={c.id}
-                      id={c.id}
-                      label={c.label}
-                      active={active === c.id}
-                      editing={editing}
-                      onClick={() => onChange(c.id)}
-                      onRemove={() => hide(c.id)}
-                    />
+                    <div key={c.id} className="flex items-center gap-1">
+                      <SortableChip
+                        id={c.id}
+                        label={c.label}
+                        active={active === c.id}
+                        editing={editing}
+                        onClick={() => onChange(c.id)}
+                        onRemove={() => hide(c.id)}
+                      />
+                      {!editing && c.id === "news" && (
+                        <div
+                          className="shrink-0"
+                          onMouseEnter={() => setLearnOpen(true)}
+                          onMouseLeave={() => setLearnOpen(false)}
+                        >
+                          <DropdownMenu open={learnOpen} onOpenChange={setLearnOpen}>
+                            <DropdownMenuTrigger className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap bg-muted text-foreground hover:bg-accent outline-none">
+                              <GraduationCap className="w-4 h-4" />
+                              Learn
+                              <ChevronDown className="w-3.5 h-3.5 opacity-80" />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-48" onCloseAutoFocus={(e) => e.preventDefault()}>
+                              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Learn</DropdownMenuLabel>
+                              <DropdownMenuItem asChild>
+                                <Link to="/learn/patterns" className="flex items-center gap-2 cursor-pointer">
+                                  <TrendingUp className="w-4 h-4" /> Patterns
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to="/learn/indicators" className="flex items-center gap-2 cursor-pointer">
+                                  <LineChart className="w-4 h-4" /> Indicators
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to="/learn/basics" className="flex items-center gap-2 cursor-pointer">
+                                  <Briefcase className="w-4 h-4" /> Basics
+                                </Link>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
               </div>
