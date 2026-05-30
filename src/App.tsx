@@ -5,7 +5,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index.tsx";
-import { AIChat } from "@/components/AIChat";
 import { DevMenu } from "@/components/DevMenu";
 
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
@@ -68,7 +67,6 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
-        <AIChat />
         <DevMenu />
       </BrowserRouter>
     </TooltipProvider>
