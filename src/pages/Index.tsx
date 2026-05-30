@@ -106,7 +106,7 @@ const Index = () => {
         activeSub={activeSub}
         onSubChange={setActiveSub}
       />
-      <main className="px-4 sm:px-6 py-6 space-y-8 max-w-5xl">
+      <main className="px-4 sm:px-6 py-6 space-y-8 max-w-7xl">
 
         {activeCat === "news" && (
           <div className="flex items-start gap-3 bg-accent/40 border border-accent rounded-lg p-4 text-sm">
@@ -122,12 +122,16 @@ const Index = () => {
           {!isNewsRoute && activeCat !== "news" && (
             <div id="chart-top" />
           )}
-          {!isNewsRoute && <div id="chart"><StockChart symbol={activeSymbol} /></div>}
-          {!isNewsRoute && <div id="summary"><StockExplainer symbol={activeSymbol} /></div>}
           {!isNewsRoute && (
-            <Suspense fallback={<div className="h-32" />}>
-              <StockSummary symbol={activeSymbol} />
-            </Suspense>
+            <div className="grid lg:grid-cols-[minmax(0,400px)_1fr] gap-6 items-start">
+              <div className="space-y-6 order-2 lg:order-1">
+                <Suspense fallback={<div className="h-32" />}>
+                  <StockSummary symbol={activeSymbol} />
+                </Suspense>
+                <div id="summary"><StockExplainer symbol={activeSymbol} /></div>
+              </div>
+              <div id="chart" className="order-1 lg:order-2"><StockChart symbol={activeSymbol} /></div>
+            </div>
           )}
           <section id="news">
             <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
@@ -160,71 +164,28 @@ const Index = () => {
         </div>
 
         {activeCat === "news" && !isNewsRoute && (
-        <section aria-labelledby="about-heading" className="border-t pt-10 mt-6 prose prose-neutral dark:prose-invert max-w-none">
-          <div className="grid md:grid-cols-[1fr_360px] gap-8 items-start">
-            <div>
-              <h2 id="about-heading">What is IntegralStocks?</h2>
-              <p>
-                <strong>IntegralStocks</strong> is a free, beginner-friendly stock market dashboard.
-                It brings live <Link to="/stocks">stock prices</Link>, the day's{" "}
-                <Link to="/news">market news</Link>, and short, plain-English AI insights into a
-                single place so anyone — not just Wall Street pros — can understand what's happening
-                in the market and why.
+        <section aria-labelledby="about-heading" className="border-t pt-6 mt-6">
+          <div className="grid md:grid-cols-[1fr_240px] gap-6 items-start">
+            <div className="prose prose-sm prose-neutral dark:prose-invert max-w-none">
+              <h2 id="about-heading" className="!mb-2 !mt-0">What is IntegralStocks?</h2>
+              <p className="!my-2">
+                <strong>IntegralStocks</strong> is a free, beginner-friendly dashboard that brings live{" "}
+                <Link to="/stocks">stock prices</Link>, the day's <Link to="/news">market news</Link>, and
+                short, plain-English AI insights into one place — so anyone can understand what's moving the
+                market and why. Every ticker comes with an explainer of what the company does and an AI
+                summary of the news driving today's move.
               </p>
-              <p>
-                We built IntegralStocks for people who are new to investing. The traditional finance
-                world is full of jargon, paywalled research, and noisy charts. If you've ever opened
-                a brokerage app, watched a stock drop 5%, and thought "why did that just happen?",
-                this site is for you. Every ticker on IntegralStocks comes with a plain-English
-                explainer of what the company does and an AI-generated summary of the news driving
-                today's move.
+              <p className="!my-2 text-sm text-muted-foreground">
+                Live prices · AI insights that explain moves · curated{" "}
+                <Link to="/news">news</Link> · sector heatmaps · an{" "}
+                <Link to="/calendar">economic calendar</Link> · a{" "}
+                <Link to="/screener">screener</Link> · and a free{" "}
+                <Link to="/sim">paper trading simulator</Link>.
               </p>
-
-              <h2>Who it's for</h2>
-              <p>
-                IntegralStocks is built for beginner investors, students learning about markets,
-                and casual readers who want a clearer picture of the financial news cycle. You don't
-                need an account to browse — just open the homepage and start exploring stocks like
-                Apple (AAPL), Tesla (TSLA), Nvidia (NVDA), Microsoft (MSFT), the S&amp;P 500, or
-                Bitcoin. If you want to save favorites, you can create a free account and build a
-                personal <Link to="/watchlist">watchlist</Link>.
-              </p>
-
-              <h2>How it works</h2>
-              <p>
-                The dashboard pulls live quotes and charts from public market data feeds and
-                refreshes them throughout the trading day. When you select a stock, IntegralStocks:
-              </p>
-              <ol>
-                <li>Shows an interactive <Link to="/stocks">price chart</Link> with intraday, daily, and long-term views.</li>
-                <li>Generates a short AI explanation of what the company does in everyday language.</li>
-                <li>Pulls the latest <Link to="/news">news stories</Link> related to that ticker and summarizes the most market-moving ones.</li>
-                <li>Surfaces key numbers — market cap, P/E ratio, day range, 52-week range — with tooltips that explain each term.</li>
-              </ol>
-              <p>
-                Want to practice investing without risking real money? Open the free
-                <Link to="/simulator"> paper trading simulator</Link>. You get a virtual portfolio,
-                live prices, and an order book — perfect for learning how buying and selling actually
-                works before you put real dollars on the line.
-              </p>
-
-              <h2>Features at a glance</h2>
-              <ul>
-                <li><strong>Live stock prices</strong> for U.S. equities, ETFs, indexes, and major crypto.</li>
-                <li><strong>AI insights</strong> that explain stock moves in plain English.</li>
-                <li><strong>Curated <Link to="/news">market news</Link></strong> tied to the tickers you care about.</li>
-                <li><strong>Sector heatmaps</strong> so you can see at a glance what's hot or cold.</li>
-                <li><strong>An <Link to="/calendar">economic calendar</Link></strong> tracking earnings, CPI, FOMC, and jobs reports.</li>
-                <li><strong>A <Link to="/screener">stock screener</Link></strong> to find tickers by sector, market cap, or performance.</li>
-                <li><strong>A free <Link to="/simulator">paper trading simulator</Link></strong> for risk-free practice.</li>
-              </ul>
-
-              <p>
-                Have questions? Read the <Link to="/faq">FAQ</Link>, learn more on the
-                <Link to="/about"> About page</Link>, or <Link to="/contact">get in touch</Link>.
-                For information on where our data comes from, see our
-                <Link to="/data-sources"> data sources</Link> page and the
-                <Link to="/disclaimer"> disclaimer</Link>.
+              <p className="!my-2 text-sm text-muted-foreground">
+                <Link to="/faq">FAQ</Link> · <Link to="/about">About</Link> ·{" "}
+                <Link to="/contact">Contact</Link> · <Link to="/data-sources">Data sources</Link> ·{" "}
+                <Link to="/disclaimer">Disclaimer</Link>
               </p>
             </div>
             <img

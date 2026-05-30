@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
     }
     const sym = symbol.toUpperCase();
     const isBeginner = mode === "beginner";
-    const key = `sum:v3:${isBeginner ? "b:" : ""}${sym}`;
+    const key = `sum:v4:${isBeginner ? "b:" : ""}${sym}`;
     const hit = cache.get(key);
     if (hit && hit.exp > Date.now()) {
       return new Response(hit.body, {
@@ -104,6 +104,7 @@ Produce a DETAILED, in-depth analyst-grade summary. Be specific and quantitative
 
 Return strict JSON with shape:
 {
+  "whyMoved": string,              // 2-4 sentences explaining specifically WHY ${companyName} (${sym}) moved ${q.regularMarketChangePercent?.toFixed?.(2)}% today. Tie the move to the recent headlines above (earnings, guidance, news, analyst calls, sector moves). If the move is large (e.g. a big jump or drop), explain the likely catalyst in plain English a beginner can understand. If there are no clear catalysts, say the move is likely broad market or sector driven.
   "positives": [string],           // 4-6 detailed bullets, each 1-2 sentences with specifics
   "negatives": [string],           // 4-6 detailed bullets, each 1-2 sentences with specifics
   "revenueGrowth": string,         // 2-3 sentences on historical + expected revenue growth trajectory, cite YoY % if known
@@ -128,6 +129,7 @@ Return strict JSON with shape:
     const analystSchema = {
       type: "object",
       properties: {
+        whyMoved: { type: "string" },
         positives: { type: "array", items: { type: "string" } },
         negatives: { type: "array", items: { type: "string" } },
         revenueGrowth: { type: "string" },
@@ -139,7 +141,7 @@ Return strict JSON with shape:
         forecast: { type: "string" },
         outlook: { type: "string" },
       },
-      required: ["positives", "negatives", "revenueGrowth", "earningsGrowth", "margins", "balanceSheet", "moat", "earnings", "forecast", "outlook"],
+      required: ["whyMoved", "positives", "negatives", "revenueGrowth", "earningsGrowth", "margins", "balanceSheet", "moat", "earnings", "forecast", "outlook"],
     };
 
 
@@ -197,7 +199,7 @@ Return strict JSON with shape:
     try { parsed = JSON.parse(args ?? "{}"); } catch { parsed = {}; }
     if (!isBeginner) {
       const fallback = `No specific data available for ${companyName}. This may apply more to individual operating companies than to indices, ETFs, or funds.`;
-      for (const f of ["revenueGrowth", "earningsGrowth", "margins", "balanceSheet", "moat", "earnings", "forecast", "outlook"]) {
+      for (const f of ["whyMoved", "revenueGrowth", "earningsGrowth", "margins", "balanceSheet", "moat", "earnings", "forecast", "outlook"]) {
         if (!parsed[f] || typeof parsed[f] !== "string" || !parsed[f].trim()) parsed[f] = fallback;
       }
       if (!Array.isArray(parsed.positives) || !parsed.positives.length) parsed.positives = ["Analysis unavailable right now."];
