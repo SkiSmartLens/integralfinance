@@ -106,7 +106,7 @@ const Index = () => {
         activeSub={activeSub}
         onSubChange={setActiveSub}
       />
-      <main className="px-4 sm:px-6 py-6 space-y-8 max-w-5xl">
+      <main className="px-4 sm:px-6 py-6 space-y-8 max-w-7xl">
 
         {activeCat === "news" && (
           <div className="flex items-start gap-3 bg-accent/40 border border-accent rounded-lg p-4 text-sm">
@@ -122,12 +122,16 @@ const Index = () => {
           {!isNewsRoute && activeCat !== "news" && (
             <div id="chart-top" />
           )}
-          {!isNewsRoute && <div id="chart"><StockChart symbol={activeSymbol} /></div>}
-          {!isNewsRoute && <div id="summary"><StockExplainer symbol={activeSymbol} /></div>}
           {!isNewsRoute && (
-            <Suspense fallback={<div className="h-32" />}>
-              <StockSummary symbol={activeSymbol} />
-            </Suspense>
+            <div className="grid lg:grid-cols-[minmax(0,400px)_1fr] gap-6 items-start">
+              <div className="space-y-6 order-2 lg:order-1">
+                <Suspense fallback={<div className="h-32" />}>
+                  <StockSummary symbol={activeSymbol} />
+                </Suspense>
+                <div id="summary"><StockExplainer symbol={activeSymbol} /></div>
+              </div>
+              <div id="chart" className="order-1 lg:order-2"><StockChart symbol={activeSymbol} /></div>
+            </div>
           )}
           <section id="news">
             <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
