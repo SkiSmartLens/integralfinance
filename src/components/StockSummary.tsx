@@ -88,10 +88,20 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
     setLoading(true);
     supabase.functions
       .invoke("stock-summary", { body: { symbol } })
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
         if (!alive) return;
-        if (error) setErr(error.message);
-        else {
+        if (error) {
+          let msg = error.message;
+          // Read the real error body (e.g. 402 credits exhausted) when available.
+          const res = (error as any)?.context as Response | undefined;
+          if (res && typeof res.json === "function") {
+            try {
+              const body = await res.json();
+              if (body?.error) msg = body.error;
+            } catch { /* ignore */ }
+          }
+          setErr(msg);
+        } else {
           summaryCache.set(symbol, data as Summary);
           setData(data as Summary);
         }
@@ -121,6 +131,18 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
           <Sparkles className="w-3.5 h-3.5" /> Ask Integral AI
         </button>
       </div>
+      {loading && !data && (
+        <div className="text-sm text-muted-foreground py-2">Generating AI insights…</div>
+      )}
+      {err && !data && (
+        <div className="text-sm bg-muted/40 rounded-md p-3 text-muted-foreground">
+          {/credit/i.test(err)
+            ? "AI insights are temporarily unavailable — the AI usage limit has been reached. Please try again later."
+            : /rate limit/i.test(err)
+            ? "Too many requests right now. Please try again in a moment."
+            : "AI insights couldn’t be loaded right now. Please try again later."}
+        </div>
+      )}
       {data && (
         <div className="space-y-2">
           {data.whyMoved && (
