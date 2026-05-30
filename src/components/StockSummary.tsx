@@ -121,6 +121,18 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
           <Sparkles className="w-3.5 h-3.5" /> Ask Integral AI
         </button>
       </div>
+      {loading && !data && (
+        <div className="text-sm text-muted-foreground py-2">Generating AI insights…</div>
+      )}
+      {err && !data && (
+        <div className="text-sm bg-muted/40 rounded-md p-3 text-muted-foreground">
+          {/credit/i.test(err)
+            ? "AI insights are temporarily unavailable — the AI usage limit has been reached. Please try again later."
+            : /rate limit/i.test(err)
+            ? "Too many requests right now. Please try again in a moment."
+            : "AI insights couldn’t be loaded right now. Please try again later."}
+        </div>
+      )}
       {data && (
         <div className="space-y-2">
           {data.whyMoved && (
