@@ -88,10 +88,20 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
     setLoading(true);
     supabase.functions
       .invoke("stock-summary", { body: { symbol } })
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
         if (!alive) return;
-        if (error) setErr(error.message);
-        else {
+        if (error) {
+          let msg = error.message;
+          // Read the real error body (e.g. 402 credits exhausted) when available.
+          const res = (error as any)?.context as Response | undefined;
+          if (res && typeof res.json === "function") {
+            try {
+              const body = await res.json();
+              if (body?.error) msg = body.error;
+            } catch { /* ignore */ }
+          }
+          setErr(msg);
+        } else {
           summaryCache.set(symbol, data as Summary);
           setData(data as Summary);
         }
