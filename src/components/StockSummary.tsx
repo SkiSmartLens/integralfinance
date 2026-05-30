@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchQuotes } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
-import { Sparkles, TrendingUp, TrendingDown, Calendar, Eye, BarChart3, DollarSign, Percent, Landmark, Shield, LineChart, ChevronDown } from "lucide-react";
+import { Sparkles, TrendingUp, TrendingDown, Calendar, Eye, BarChart3, DollarSign, Percent, Landmark, Shield, LineChart, ChevronDown, Zap } from "lucide-react";
 
 
 interface Summary {
+  whyMoved?: string;
   positives: string[];
   negatives: string[];
   revenueGrowth?: string;
@@ -122,6 +123,11 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
       </div>
       {data && (
         <div className="space-y-2">
+          {data.whyMoved && (
+            <CollapsibleRow icon={<Zap className="w-4 h-4 text-primary" />} title="Why did this stock move today?" defaultOpen>
+              <p className="text-sm leading-relaxed">{data.whyMoved}</p>
+            </CollapsibleRow>
+          )}
           <CollapsibleRow icon={<TrendingUp className="w-4 h-4 text-up" />} title="Positives" defaultOpen>
             <ul className="text-sm space-y-1.5 list-disc pl-5">
               {data.positives?.map((p, i) => <li key={i}>{p}</li>)}
