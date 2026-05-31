@@ -113,7 +113,48 @@ export const Header = ({ onSearch }: Props) => {
             </div>
           )}
         </div>
+        <nav className="hidden md:flex items-center gap-1 shrink-0">
+          {NAV_LINKS.map((l) => (
+            <NavLink
+              key={l.to}
+              to={l.to}
+              className={({ isActive }) =>
+                cn(
+                  "px-3.5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-colors",
+                  l.highlight
+                    ? "bg-primary text-primary-foreground hover:opacity-90"
+                    : isActive
+                      ? "bg-accent text-accent-foreground"
+                      : "text-foreground hover:bg-muted"
+                )
+              }
+            >
+              {l.highlight && <Sparkles className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />}
+              {l.label}
+            </NavLink>
+          ))}
+        </nav>
       </div>
+      <nav className="md:hidden border-t flex items-stretch overflow-x-auto no-scrollbar">
+        {NAV_LINKS.map((l) => (
+          <NavLink
+            key={l.to}
+            to={l.to}
+            className={({ isActive }) =>
+              cn(
+                "flex-1 text-center px-4 py-2.5 text-sm font-bold whitespace-nowrap transition-colors",
+                l.highlight
+                  ? "text-primary"
+                  : isActive
+                    ? "text-foreground bg-muted"
+                    : "text-muted-foreground"
+              )
+            }
+          >
+            {l.label}
+          </NavLink>
+        ))}
+      </nav>
     </header>
   );
 };
