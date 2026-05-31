@@ -167,6 +167,14 @@ const Index = () => {
           </section>
         </div>
 
+        {isHome && (
+          <>
+            <SimulatorCallout />
+            <SocialProof />
+          </>
+        )}
+
+
         {activeCat === "news" && !isNewsRoute && (
         <section aria-labelledby="about-heading" className="border-t pt-6 mt-6">
           <div className="grid md:grid-cols-[1fr_240px] gap-6 items-start">
