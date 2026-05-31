@@ -8,6 +8,7 @@ import { StockExplainer } from "@/components/StockExplainer";
 import { SEO } from "@/components/SEO";
 import { SidePanel } from "@/components/SidePanel";
 import { SiteFooter } from "@/components/SiteFooter";
+import { HomeHero, SimulatorCallout, SocialProof } from "@/components/HomeSections";
 import { WidgetBar } from "@/components/WidgetBar";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
@@ -30,6 +31,7 @@ const NewsList = lazy(() =>
 const Index = () => {
   const location = useLocation();
   const isNewsRoute = location.pathname === "/news";
+  const isHome = location.pathname === "/";
   const [activeCat, setActiveCat] = useState("news");
   const [activeSub, setActiveSub] = useState<string | undefined>(undefined);
   const [activeSymbol, setActiveSymbol] = useState("^GSPC");
@@ -106,7 +108,9 @@ const Index = () => {
         activeSub={activeSub}
         onSubChange={setActiveSub}
       />
-      <main className="px-4 sm:px-6 py-6 space-y-8 max-w-7xl">
+      <main className="px-4 sm:px-6 py-6 space-y-8 max-w-7xl mx-auto">
+
+        {isHome && <HomeHero />}
 
         {activeCat === "news" && (
           <div className="flex items-start gap-3 bg-accent/40 border border-accent rounded-lg p-4 text-sm">
@@ -162,6 +166,14 @@ const Index = () => {
             </Suspense>
           </section>
         </div>
+
+        {isHome && (
+          <>
+            <SimulatorCallout />
+            <SocialProof />
+          </>
+        )}
+
 
         {activeCat === "news" && !isNewsRoute && (
         <section aria-labelledby="about-heading" className="border-t pt-6 mt-6">

@@ -22,6 +22,7 @@ export const SiteFooter = () => (
       <div>
         <h3 className="font-semibold mb-2">Learn & Play</h3>
         <ul className="space-y-1 text-muted-foreground">
+          <li><Link to="/start" className="hover:text-foreground">Start Here</Link></li>
           <li><Link to="/simulator" className="hover:text-foreground">Trading Simulator</Link></li>
           <li><Link to="/faq" className="hover:text-foreground">FAQ</Link></li>
           <li><Link to="/about" className="hover:text-foreground">About</Link></li>

@@ -156,8 +156,8 @@ Deno.serve(async (req) => {
 
   try {
     const { messages = [], context } = (await req.json()) as { messages: Msg[]; context?: any };
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
+    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
+    if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY missing");
 
     // Use the last user turn to extract relevant tickers
     const lastUser = [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
@@ -173,11 +173,11 @@ Deno.serve(async (req) => {
 
     const system: Msg = { role: "system", content: SYSTEM + (ctxLine ? `\n\n${ctxLine}` : "") + liveBlock };
 
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "llama-3.3-70b-versatile",
         messages: [system, ...messages],
         stream: true,
       }),
