@@ -1,8 +1,15 @@
-import { Search, TrendingUp } from "lucide-react";
+import { Search, TrendingUp, Sparkles } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { fetchSearchQuotes, SearchQuote } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
+
+const NAV_LINKS = [
+  { to: "/stocks", label: "Stocks" },
+  { to: "/news", label: "News" },
+  { to: "/simulator", label: "Simulator" },
+  { to: "/start", label: "Start Here", highlight: true },
+];
 
 interface Props {
   onSearch?: (sym: string) => void;
