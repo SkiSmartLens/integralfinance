@@ -8,6 +8,7 @@ import { StockExplainer } from "@/components/StockExplainer";
 import { SEO } from "@/components/SEO";
 import { SidePanel } from "@/components/SidePanel";
 import { SiteFooter } from "@/components/SiteFooter";
+import { HomeHero, SimulatorCallout, SocialProof } from "@/components/HomeSections";
 import { WidgetBar } from "@/components/WidgetBar";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
@@ -30,6 +31,7 @@ const NewsList = lazy(() =>
 const Index = () => {
   const location = useLocation();
   const isNewsRoute = location.pathname === "/news";
+  const isHome = location.pathname === "/";
   const [activeCat, setActiveCat] = useState("news");
   const [activeSub, setActiveSub] = useState<string | undefined>(undefined);
   const [activeSymbol, setActiveSymbol] = useState("^GSPC");
