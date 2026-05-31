@@ -108,7 +108,9 @@ const Index = () => {
         activeSub={activeSub}
         onSubChange={setActiveSub}
       />
-      <main className="px-4 sm:px-6 py-6 space-y-8 max-w-7xl">
+      <main className="px-4 sm:px-6 py-6 space-y-8 max-w-7xl mx-auto">
+
+        {isHome && <HomeHero />}
 
         {activeCat === "news" && (
           <div className="flex items-start gap-3 bg-accent/40 border border-accent rounded-lg p-4 text-sm">
