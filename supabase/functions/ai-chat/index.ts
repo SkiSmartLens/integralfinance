@@ -173,15 +173,21 @@ Deno.serve(async (req) => {
 
     const system: Msg = { role: "system", content: SYSTEM + (ctxLine ? `\n\n${ctxLine}` : "") + liveBlock };
 
-    const aiRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages: [system, ...messages],
-        stream: true,
-      }),
-    });
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+
+    const callProvider = (url: string, apiKey: string, model: string) =>
+      fetch(url, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ model, messages: [system, ...messages], stream: true }),
+      });
+
+    let aiRes = await callProvider("https://api.groq.com/openai/v1/chat/completions", GROQ_API_KEY, "llama-3.3-70b-versatile");
+
+    if ((aiRes.status === 429 || aiRes.status === 402 || aiRes.status >= 500) && LOVABLE_API_KEY) {
+      console.warn("groq unavailable", aiRes.status, "— falling back to Lovable AI");
+      aiRes = await callProvider("https://ai.gateway.lovable.dev/v1/chat/completions", LOVABLE_API_KEY, "google/gemini-2.5-flash");
+    }
 
     if (aiRes.status === 429) {
       return new Response(JSON.stringify({ error: "Rate limit, try again shortly." }), {
