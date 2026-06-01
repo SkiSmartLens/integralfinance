@@ -51,12 +51,21 @@ export const IntroSplash = ({ onEnter }: Props) => {
         <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-[1.1] max-w-2xl mx-auto">
           Build your investing brain before you turn 18
         </h1>
-        <button
-          onClick={enter}
-          className="mt-10 inline-flex items-center justify-center gap-2 px-9 py-4 rounded-full bg-primary text-primary-foreground font-extrabold text-lg shadow-lg shadow-primary/30 hover:opacity-90 hover:scale-105 transition-all"
-        >
-          Enter Site <ArrowRight className="w-5 h-5" />
-        </button>
+        <div className="mt-10 flex flex-col items-center gap-3">
+          <button
+            onClick={enter}
+            className="inline-flex items-center justify-center gap-2 px-9 py-4 rounded-full bg-primary text-primary-foreground font-extrabold text-lg shadow-lg shadow-primary/30 hover:opacity-90 hover:scale-105 transition-all"
+          >
+            Enter Site <ArrowRight className="w-5 h-5" />
+          </button>
+          <Link
+            to="/stocks"
+            onClick={() => { try { sessionStorage.setItem(STORAGE_KEY, "1"); } catch { /* ignore */ } }}
+            className="text-sm font-bold text-muted-foreground underline underline-offset-4 hover:text-primary transition-colors"
+          >
+            Skip to full dashboard →
+          </Link>
+        </div>
       </div>
     </div>
   );
