@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { ArrowRight, TrendingUp } from "lucide-react";
 
 const STORAGE_KEY = "integral-intro-seen";
