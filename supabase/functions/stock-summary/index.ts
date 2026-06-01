@@ -173,7 +173,9 @@ Return strict JSON with shape:
     });
 
     if (aiRes.status === 429) {
-      return new Response(JSON.stringify({ error: "Rate limit, try again shortly." }), {
+      const t = await aiRes.text();
+      console.error("groq 429", t);
+      return new Response(JSON.stringify({ error: "Rate limit, try again shortly.", detail: t }), {
         status: 429,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
