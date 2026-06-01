@@ -42,12 +42,20 @@ export const HomeHeader = () => (
           )
         )}
       </nav>
-      <Link
-        to="/start"
-        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-extrabold hover:opacity-90 transition-opacity shrink-0"
-      >
-        <Sparkles className="w-3.5 h-3.5" /> Start Here
-      </Link>
+      <div className="flex items-center gap-2 shrink-0">
+        <Link
+          to="/stocks"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-primary text-primary text-sm font-bold hover:bg-accent transition-colors"
+        >
+          Skip to dashboard <ArrowRight className="w-3.5 h-3.5" />
+        </Link>
+        <Link
+          to="/start"
+          className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-extrabold hover:opacity-90 transition-opacity"
+        >
+          <Sparkles className="w-3.5 h-3.5" /> Start Here
+        </Link>
+      </div>
     </div>
   </header>
 );
