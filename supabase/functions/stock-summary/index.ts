@@ -146,33 +146,42 @@ Return strict JSON with shape:
 
 
 
-    const aiRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${GROQ_API_KEY}`,
-        "Content-Type": "application/json",
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+
+    const messages = [
+      { role: "system", content: isBeginner
+          ? "You explain stocks to first-time investors in friendly plain English. Output only valid JSON."
+          : "You are a concise equity research analyst writing for beginners. Output only valid JSON." },
+      { role: "user", content: isBeginner ? beginnerPrompt : analystPrompt },
+    ];
+    const tools = [{
+      type: "function",
+      function: {
+        name: "stock_summary",
+        description: "Return structured summary",
+        parameters: isBeginner ? beginnerSchema : analystSchema,
       },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages: [
-          { role: "system", content: isBeginner
-              ? "You explain stocks to first-time investors in friendly plain English. Output only valid JSON."
-              : "You are a concise equity research analyst writing for beginners. Output only valid JSON." },
-          { role: "user", content: isBeginner ? beginnerPrompt : analystPrompt },
-        ],
-        tools: [{
-          type: "function",
-          function: {
-            name: "stock_summary",
-            description: "Return structured summary",
-            parameters: isBeginner ? beginnerSchema : analystSchema,
-          },
-        }],
-        tool_choice: { type: "function", function: { name: "stock_summary" } },
-      }),
-    });
+    }];
+    const tool_choice = { type: "function", function: { name: "stock_summary" } };
+
+    const callProvider = (url: string, apiKey: string, model: string) =>
+      fetch(url, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ model, messages, tools, tool_choice }),
+      });
+
+    // Primary: Groq. Fallback: Lovable AI gateway when Groq is rate-limited/over quota.
+    let aiRes = await callProvider("https://api.groq.com/openai/v1/chat/completions", GROQ_API_KEY, "llama-3.3-70b-versatile");
+
+    if ((aiRes.status === 429 || aiRes.status === 402 || aiRes.status >= 500) && LOVABLE_API_KEY) {
+      console.warn("groq unavailable", aiRes.status, "— falling back to Lovable AI");
+      aiRes = await callProvider("https://ai.gateway.lovable.dev/v1/chat/completions", LOVABLE_API_KEY, "google/gemini-2.5-flash");
+    }
 
     if (aiRes.status === 429) {
+      const t = await aiRes.text();
+      console.error("ai 429", t);
       return new Response(JSON.stringify({ error: "Rate limit, try again shortly." }), {
         status: 429,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
