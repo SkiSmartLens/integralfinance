@@ -1,5 +1,5 @@
 import { Link, NavLink } from "react-router-dom";
-import { TrendingUp, Sparkles } from "lucide-react";
+import { TrendingUp, Sparkles, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
