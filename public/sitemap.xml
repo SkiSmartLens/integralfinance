@@ -1,59 +1,59 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://sitemaps.org">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://integralstocks.com</loc>
+    <loc>https://integralstocks.com/</loc>
     <lastmod>2026-05-28</lastmod>
   </url>
   <url>
-    <loc>https://integralstocks.comabout</loc>
+    <loc>https://integralstocks.com/about</loc>
     <lastmod>2026-05-28</lastmod>
   </url>
   <url>
-    <loc>https://integralstocks.comcontact</loc>
+    <loc>https://integralstocks.com/contact</loc>
     <lastmod>2026-05-28</lastmod>
   </url>
   <url>
-    <loc>https://integralstocks.comdisclaimer</loc>
+    <loc>https://integralstocks.com/disclaimer</loc>
     <lastmod>2026-05-28</lastmod>
   </url>
   <url>
-    <loc>https://integralstocks.comdata-sources</loc>
+    <loc>https://integralstocks.com/data-sources</loc>
     <lastmod>2026-05-28</lastmod>
   </url>
   <url>
-    <loc>https://integralstocks.comfaq</loc>
+    <loc>https://integralstocks.com/faq</loc>
     <lastmod>2026-05-28</lastmod>
   </url>
   <url>
-    <loc>https://integralstocks.comnews</loc>
+    <loc>https://integralstocks.com/news</loc>
     <lastmod>2026-05-28</lastmod>
   </url>
   <url>
-    <loc>https://integralstocks.comstocks</loc>
+    <loc>https://integralstocks.com/stocks</loc>
     <lastmod>2026-05-28</lastmod>
   </url>
   <url>
-    <loc>https://integralstocks.comsimulator</loc>
+    <loc>https://integralstocks.com/simulator</loc>
     <lastmod>2026-05-28</lastmod>
   </url>
   <url>
-    <loc>https://integralstocks.comscreener</loc>
+    <loc>https://integralstocks.com/screener</loc>
     <lastmod>2026-05-28</lastmod>
   </url>
   <url>
-    <loc>https://integralstocks.comcalendar</loc>
+    <loc>https://integralstocks.com/calendar</loc>
     <lastmod>2026-05-28</lastmod>
   </url>
   <url>
-    <loc>https://integralstocks.comlearn/basics</loc>
+    <loc>https://integralstocks.com/learn/basics</loc>
     <lastmod>2026-05-28</lastmod>
   </url>
   <url>
-    <loc>https://integralstocks.comlearn/indicators</loc>
+    <loc>https://integralstocks.com/learn/indicators</loc>
     <lastmod>2026-05-28</lastmod>
   </url>
   <url>
-    <loc>https://integralstocks.comlearn/patterns</loc>
+    <loc>https://integralstocks.com/learn/patterns</loc>
     <lastmod>2026-05-28</lastmod>
   </url>
 </urlset>
