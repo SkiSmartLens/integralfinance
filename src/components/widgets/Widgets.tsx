@@ -56,10 +56,10 @@ function ScreenerList({ scrId }: { scrId: string }) {
         <PickRow
           key={q.symbol}
           sym={q.symbol}
+          symbol={q.symbol}
           name={q.shortName ?? q.longName}
           price={q.regularMarketPrice}
           pct={q.regularMarketChangePercent}
-          onClick={() => dispatchAction({ type: "selectSymbol", symbol: q.symbol })}
         />
       ))}
     </ul>
