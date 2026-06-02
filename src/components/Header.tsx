@@ -1,8 +1,9 @@
-import { Search, TrendingUp, Sparkles } from "lucide-react";
+import { Search, Sparkles } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { fetchSearchQuotes, SearchQuote } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
+import logo from "@/assets/logo.png";
 
 const NAV_LINKS = [
   { to: "/stocks", label: "Stocks" },
@@ -26,13 +27,18 @@ export const Header = ({ onSearch }: Props) => {
   // Debounced autocomplete
   useEffect(() => {
     const term = q.trim();
-    if (!term) { setResults([]); return; }
+    if (!term) {
+      setResults([]);
+      return;
+    }
     const handle = setTimeout(async () => {
       try {
         const r = await fetchSearchQuotes(term, 8);
         setResults(r.filter((x) => x.symbol));
         setHighlight(0);
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }, 180);
     return () => clearTimeout(handle);
   }, [q]);
@@ -59,7 +65,7 @@ export const Header = ({ onSearch }: Props) => {
     <header className="bg-card border-b">
       <div className="container mx-auto px-4 py-3 flex items-center gap-4">
         <Link to="/" className="flex items-center gap-2 font-bold text-xl shrink-0">
-          <TrendingUp className="text-primary" />
+          <img src={logo} alt="IntegralStocks" className="h-10 w-auto" />
           <span className="hidden sm:inline">Integral Stocks</span>
         </Link>
         <div ref={boxRef} className="flex-1 max-w-xl relative">
@@ -75,13 +81,20 @@ export const Header = ({ onSearch }: Props) => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               value={q}
-              onChange={(e) => { setQ(e.target.value); setOpen(true); }}
+              onChange={(e) => {
+                setQ(e.target.value);
+                setOpen(true);
+              }}
               onFocus={() => setOpen(true)}
               onKeyDown={(e) => {
                 if (!open || !results.length) return;
-                if (e.key === "ArrowDown") { e.preventDefault(); setHighlight((h) => Math.min(h + 1, results.length - 1)); }
-                else if (e.key === "ArrowUp") { e.preventDefault(); setHighlight((h) => Math.max(h - 1, 0)); }
-                else if (e.key === "Escape") setOpen(false);
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setHighlight((h) => Math.min(h + 1, results.length - 1));
+                } else if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setHighlight((h) => Math.max(h - 1, 0));
+                } else if (e.key === "Escape") setOpen(false);
               }}
               placeholder="Search symbols or companies (Apple, AAPL, BTC)…"
               className="w-full pl-9 pr-4 py-2 bg-muted border border-transparent focus:border-primary focus:bg-background rounded-md text-sm outline-none transition-all"
@@ -92,11 +105,14 @@ export const Header = ({ onSearch }: Props) => {
               {results.map((r, i) => (
                 <button
                   key={`${r.symbol}-${i}`}
-                  onMouseDown={(e) => { e.preventDefault(); pick(r.symbol); }}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    pick(r.symbol);
+                  }}
                   onMouseEnter={() => setHighlight(i)}
                   className={cn(
                     "w-full text-left px-3 py-2 flex items-center justify-between gap-3 text-sm",
-                    i === highlight ? "bg-accent" : "hover:bg-accent/60"
+                    i === highlight ? "bg-accent" : "hover:bg-accent/60",
                   )}
                 >
                   <div className="min-w-0">
@@ -105,9 +121,7 @@ export const Header = ({ onSearch }: Props) => {
                       {r.longname || r.shortname || r.typeDisp || ""}
                     </div>
                   </div>
-                  <span className="text-[10px] text-muted-foreground shrink-0">
-                    {r.exchDisp || r.quoteType || ""}
-                  </span>
+                  <span className="text-[10px] text-muted-foreground shrink-0">{r.exchDisp || r.quoteType || ""}</span>
                 </button>
               ))}
             </div>
@@ -125,7 +139,7 @@ export const Header = ({ onSearch }: Props) => {
                     ? "bg-primary text-primary-foreground hover:opacity-90"
                     : isActive
                       ? "bg-accent text-accent-foreground"
-                      : "text-foreground hover:bg-muted"
+                      : "text-foreground hover:bg-muted",
                 )
               }
             >
@@ -143,11 +157,7 @@ export const Header = ({ onSearch }: Props) => {
             className={({ isActive }) =>
               cn(
                 "flex-1 text-center px-4 py-2.5 text-sm font-bold whitespace-nowrap transition-colors",
-                l.highlight
-                  ? "text-primary"
-                  : isActive
-                    ? "text-foreground bg-muted"
-                    : "text-muted-foreground"
+                l.highlight ? "text-primary" : isActive ? "text-foreground bg-muted" : "text-muted-foreground",
               )
             }
           >
