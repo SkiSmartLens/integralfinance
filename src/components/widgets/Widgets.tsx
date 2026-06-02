@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { fetchScreener, formatNumber, ScreenerQuote } from "@/lib/yahoo";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { INDEX_TICKERS, SECTORS, TRENDING } from "@/lib/categories";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { cn } from "@/lib/utils";
-import { dispatchAction } from "@/lib/actions";
 
 const LABELS: Record<string, string> = {
   "^GSPC": "S&P 500", "^DJI": "Dow 30", "^IXIC": "Nasdaq", "^RUT": "Russell 2K",
@@ -12,13 +12,13 @@ const LABELS: Record<string, string> = {
   "ETH-USD": "ETH", "EURUSD=X": "EUR/USD", "^FTSE": "FTSE", "^N225": "Nikkei",
 };
 
-function PickRow({ sym, name, price, pct, onClick }: {
-  sym: string; name?: string; price?: number; pct?: number; onClick: () => void;
+function PickRow({ sym, symbol, name, price, pct }: {
+  sym: string; symbol: string; name?: string; price?: number; pct?: number;
 }) {
   const up = (pct ?? 0) >= 0;
   return (
-    <button
-      onClick={onClick}
+    <Link
+      to={`/stocks/${symbol.toLowerCase()}`}
       className="w-full flex items-center justify-between gap-2 px-3 py-2 hover:bg-muted/60 transition-colors text-left"
     >
       <span className="min-w-0">
@@ -31,7 +31,7 @@ function PickRow({ sym, name, price, pct, onClick }: {
           {pct != null ? `${up ? "+" : ""}${pct.toFixed(2)}%` : "—"}
         </span>
       </span>
-    </button>
+    </Link>
   );
 }
 
@@ -56,10 +56,10 @@ function ScreenerList({ scrId }: { scrId: string }) {
         <PickRow
           key={q.symbol}
           sym={q.symbol}
+          symbol={q.symbol}
           name={q.shortName ?? q.longName}
           price={q.regularMarketPrice}
           pct={q.regularMarketChangePercent}
-          onClick={() => dispatchAction({ type: "selectSymbol", symbol: q.symbol })}
         />
       ))}
     </ul>
@@ -77,9 +77,9 @@ function QuoteList({ symbols, labelMap }: { symbols: string[]; labelMap?: Record
           <PickRow
             key={s}
             sym={labelMap?.[s] ?? s}
+            symbol={s}
             price={q?.regularMarketPrice}
             pct={q?.regularMarketChangePercent}
-            onClick={() => dispatchAction({ type: "selectSymbol", symbol: s })}
           />
         );
       })}
@@ -104,9 +104,9 @@ export function SectorsWidget() {
         const a = pct == null ? 0.15 : Math.max(0.18, Math.min(0.95, Math.abs(pct) / 3));
         const hue = (pct ?? 0) >= 0 ? "var(--chart-up)" : "var(--chart-down)";
         return (
-          <button
+          <Link
             key={s.symbol}
-            onClick={() => dispatchAction({ type: "selectSymbol", symbol: s.symbol })}
+            to={`/stocks/${s.symbol.toLowerCase()}`}
             style={{ background: `hsl(${hue} / ${a})` }}
             className="rounded p-2 text-left hover:scale-[1.02] transition-transform"
           >
@@ -115,7 +115,7 @@ export function SectorsWidget() {
             <div className="text-xs font-bold tabular-nums mt-0.5">
               {pct == null ? "—" : `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`}
             </div>
-          </button>
+          </Link>
         );
       })}
     </div>

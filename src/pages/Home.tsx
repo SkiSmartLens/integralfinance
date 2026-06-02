@@ -7,13 +7,31 @@ import {
   Clock,
   Search,
   ShieldAlert,
+  Share2,
 } from "lucide-react";
+import { toast } from "sonner";
 import { HomeHeader } from "@/components/HomeHeader";
 import { SEO } from "@/components/SEO";
 import { SiteFooter } from "@/components/SiteFooter";
 import { IntroSplash, hasSeenIntro } from "@/components/IntroSplash";
 import { GLOSSARY } from "@/components/Glossary";
 import { cn } from "@/lib/utils";
+
+const SITE_URL = "https://integralstocks.com";
+
+async function shareLesson(title: string, to: string) {
+  const url = `${SITE_URL}${to}`;
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: `Integral Stocks · ${title}`, url });
+      return;
+    }
+    await navigator.clipboard.writeText(url);
+    toast.success("Lesson link copied!");
+  } catch {
+    /* user cancelled share */
+  }
+}
 
 const LESSONS = [
   { n: 1, title: "What is a stock, really?", read: "4 min", to: "/learn/basics" },
@@ -115,7 +133,7 @@ const HomeContent = () => {
               const inner = (
                 <div
                   className={cn(
-                    "flex items-center gap-4 rounded-2xl border p-4 transition-colors",
+                    "flex items-center gap-4 rounded-2xl border p-4 transition-colors flex-1",
                     l.locked ? "opacity-50 bg-muted/40" : "bg-card hover:border-primary"
                   )}
                 >
@@ -141,8 +159,17 @@ const HomeContent = () => {
                 </div>
               );
               return (
-                <li key={l.n}>
-                  {l.locked ? inner : <Link to={l.to}>{inner}</Link>}
+                <li key={l.n} className="flex items-stretch gap-2">
+                  {l.locked ? inner : <Link to={l.to} className="flex flex-1">{inner}</Link>}
+                  <button
+                    type="button"
+                    onClick={() => shareLesson(l.title, l.to)}
+                    aria-label={`Share "${l.title}"`}
+                    title="Share this lesson"
+                    className="shrink-0 flex items-center justify-center w-12 rounded-2xl border bg-card text-primary hover:border-primary hover:bg-accent transition-colors"
+                  >
+                    <Share2 className="w-4 h-4" />
+                  </button>
                 </li>
               );
             })}
