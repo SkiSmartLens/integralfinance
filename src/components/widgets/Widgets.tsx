@@ -77,9 +77,9 @@ function QuoteList({ symbols, labelMap }: { symbols: string[]; labelMap?: Record
           <PickRow
             key={s}
             sym={labelMap?.[s] ?? s}
+            symbol={s}
             price={q?.regularMarketPrice}
             pct={q?.regularMarketChangePercent}
-            onClick={() => dispatchAction({ type: "selectSymbol", symbol: s })}
           />
         );
       })}
