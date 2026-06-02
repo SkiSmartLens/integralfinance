@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { fetchScreener, formatNumber, ScreenerQuote } from "@/lib/yahoo";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { INDEX_TICKERS, SECTORS, TRENDING } from "@/lib/categories";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { cn } from "@/lib/utils";
-import { dispatchAction } from "@/lib/actions";
 
 const LABELS: Record<string, string> = {
   "^GSPC": "S&P 500", "^DJI": "Dow 30", "^IXIC": "Nasdaq", "^RUT": "Russell 2K",
