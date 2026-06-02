@@ -1,14 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  ArrowRight,
-  Sparkles,
-  Lock,
-  Clock,
-  Search,
-  ShieldAlert,
-  Share2,
-} from "lucide-react";
+import { ArrowRight, Sparkles, Lock, Clock, Search, ShieldAlert, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { HomeHeader } from "@/components/HomeHeader";
 import { SEO } from "@/components/SEO";
@@ -92,8 +84,9 @@ const HomeContent = () => {
             Build your investing brain before you turn 18
           </h1>
           <p className="text-lg sm:text-xl text-muted-foreground mt-5 max-w-xl mx-auto">
-            Practice with <span className="font-bold text-foreground">$100,000 of fake money</span> — no
-            bank account, no brokerage, no risk. Just learn how the market actually works.
+            Practice with <span className="font-bold text-foreground">$100,000 of fake money</span> — Learn to invest
+            without the fear: Practice with $100,000 in virtual cash. No real money required. No complicated setup. Just
+            pure, hands-on learning.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
             <Link
@@ -134,13 +127,13 @@ const HomeContent = () => {
                 <div
                   className={cn(
                     "flex items-center gap-4 rounded-2xl border p-4 transition-colors flex-1",
-                    l.locked ? "opacity-50 bg-muted/40" : "bg-card hover:border-primary"
+                    l.locked ? "opacity-50 bg-muted/40" : "bg-card hover:border-primary",
                   )}
                 >
                   <span
                     className={cn(
                       "flex items-center justify-center w-10 h-10 rounded-full font-extrabold shrink-0",
-                      l.locked ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground"
+                      l.locked ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground",
                     )}
                   >
                     {l.n}
@@ -160,7 +153,13 @@ const HomeContent = () => {
               );
               return (
                 <li key={l.n} className="flex items-stretch gap-2">
-                  {l.locked ? inner : <Link to={l.to} className="flex flex-1">{inner}</Link>}
+                  {l.locked ? (
+                    inner
+                  ) : (
+                    <Link to={l.to} className="flex flex-1">
+                      {inner}
+                    </Link>
+                  )}
                   <button
                     type="button"
                     onClick={() => shareLesson(l.title, l.to)}
@@ -198,15 +197,13 @@ const HomeContent = () => {
                   "px-4 py-2 rounded-full text-sm font-bold border transition-colors",
                   activeTerm === t
                     ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-accent text-accent-foreground border-transparent hover:border-primary"
+                    : "bg-accent text-accent-foreground border-transparent hover:border-primary",
                 )}
               >
                 {t}
               </button>
             ))}
-            {filtered.length === 0 && (
-              <p className="text-sm text-muted-foreground">No terms match "{query}".</p>
-            )}
+            {filtered.length === 0 && <p className="text-sm text-muted-foreground">No terms match "{query}".</p>}
           </div>
           {activeTerm && (
             <div className="mt-5 rounded-2xl border bg-card p-5 animate-fade-in">
