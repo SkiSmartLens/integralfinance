@@ -20,7 +20,7 @@ export const HomeHeader = () => (
       <nav className="hidden sm:flex items-center gap-1">
         {LINKS.map((l) =>
           l.to.startsWith("/#") ? (
-            
+            <a
               key={l.to}
               href={l.to}
               className="px-3.5 py-2 rounded-full text-sm font-bold text-foreground hover:bg-muted transition-colors"
