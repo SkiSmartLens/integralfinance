@@ -104,9 +104,9 @@ export function SectorsWidget() {
         const a = pct == null ? 0.15 : Math.max(0.18, Math.min(0.95, Math.abs(pct) / 3));
         const hue = (pct ?? 0) >= 0 ? "var(--chart-up)" : "var(--chart-down)";
         return (
-          <button
+          <Link
             key={s.symbol}
-            onClick={() => dispatchAction({ type: "selectSymbol", symbol: s.symbol })}
+            to={`/stocks/${s.symbol.toLowerCase()}`}
             style={{ background: `hsl(${hue} / ${a})` }}
             className="rounded p-2 text-left hover:scale-[1.02] transition-transform"
           >
@@ -115,7 +115,7 @@ export function SectorsWidget() {
             <div className="text-xs font-bold tabular-nums mt-0.5">
               {pct == null ? "—" : `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`}
             </div>
-          </button>
+          </Link>
         );
       })}
     </div>
