@@ -12,13 +12,13 @@ const LABELS: Record<string, string> = {
   "ETH-USD": "ETH", "EURUSD=X": "EUR/USD", "^FTSE": "FTSE", "^N225": "Nikkei",
 };
 
-function PickRow({ sym, name, price, pct, onClick }: {
-  sym: string; name?: string; price?: number; pct?: number; onClick: () => void;
+function PickRow({ sym, symbol, name, price, pct }: {
+  sym: string; symbol: string; name?: string; price?: number; pct?: number;
 }) {
   const up = (pct ?? 0) >= 0;
   return (
-    <button
-      onClick={onClick}
+    <Link
+      to={`/stocks/${symbol.toLowerCase()}`}
       className="w-full flex items-center justify-between gap-2 px-3 py-2 hover:bg-muted/60 transition-colors text-left"
     >
       <span className="min-w-0">
@@ -31,7 +31,7 @@ function PickRow({ sym, name, price, pct, onClick }: {
           {pct != null ? `${up ? "+" : ""}${pct.toFixed(2)}%` : "—"}
         </span>
       </span>
-    </button>
+    </Link>
   );
 }
 
