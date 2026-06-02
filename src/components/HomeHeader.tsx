@@ -1,6 +1,7 @@
 import { Link, NavLink } from "react-router-dom";
-import { TrendingUp, Sparkles, ArrowRight } from "lucide-react";
+import { Sparkles, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import logo from "@/assets/logo.png";
 
 const LINKS = [
   { to: "/learn/basics", label: "Learn" },
@@ -13,13 +14,13 @@ export const HomeHeader = () => (
   <header className="bg-background/80 backdrop-blur border-b sticky top-0 z-40">
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
       <Link to="/" className="flex items-center gap-2 font-extrabold text-lg shrink-0">
-        <TrendingUp className="text-primary" />
+        <img src={logo} alt="IntegralStocks" className="h-10 w-auto" />
         <span>Integral Stocks</span>
       </Link>
       <nav className="hidden sm:flex items-center gap-1">
         {LINKS.map((l) =>
           l.to.startsWith("/#") ? (
-            <a
+            
               key={l.to}
               href={l.to}
               className="px-3.5 py-2 rounded-full text-sm font-bold text-foreground hover:bg-muted transition-colors"
