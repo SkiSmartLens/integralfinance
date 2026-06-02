@@ -7,13 +7,31 @@ import {
   Clock,
   Search,
   ShieldAlert,
+  Share2,
 } from "lucide-react";
+import { toast } from "sonner";
 import { HomeHeader } from "@/components/HomeHeader";
 import { SEO } from "@/components/SEO";
 import { SiteFooter } from "@/components/SiteFooter";
 import { IntroSplash, hasSeenIntro } from "@/components/IntroSplash";
 import { GLOSSARY } from "@/components/Glossary";
 import { cn } from "@/lib/utils";
+
+const SITE_URL = "https://integralstocks.com";
+
+async function shareLesson(title: string, to: string) {
+  const url = `${SITE_URL}${to}`;
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: `Integral Stocks · ${title}`, url });
+      return;
+    }
+    await navigator.clipboard.writeText(url);
+    toast.success("Lesson link copied!");
+  } catch {
+    /* user cancelled share */
+  }
+}
 
 const LESSONS = [
   { n: 1, title: "What is a stock, really?", read: "4 min", to: "/learn/basics" },
