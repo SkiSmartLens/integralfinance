@@ -246,39 +246,26 @@ const PatternChart = ({
   const W = size;
   const H = Math.round(size * 0.6);
   const pad = 16;
-  const n = pattern.points.length;
-  const innerW = W - pad * 2;
-  const innerH = H - pad * 2;
-
-  // Build candlesticks from the pattern's polyline. Each candle's open is the
-  // previous point's price and its close is the current point's price. Wicks
-  // are a deterministic fraction of the body so each render is stable.
-  const yOf = (v: number) => pad + v * innerH;
-  const candleW = Math.max(4, (innerW / n) * 0.55);
-
-  const candles = pattern.points.map(([x, y], i) => {
-    const prevY = i === 0 ? y : pattern.points[i - 1][1];
-    const openV = prevY;
-    const closeV = y;
-    // y is inverted: smaller y = higher price. Bullish when price rises (closeV < openV).
-    const bullish = closeV <= openV;
-    const topV = Math.min(openV, closeV);
-    const botV = Math.max(openV, closeV);
-    const span = Math.max(0.04, botV - topV);
-    const wick = span * 0.6 + 0.03;
-    const highV = Math.max(0, topV - wick);
-    const lowV = Math.min(1, botV + wick);
-    const cx = pad + x * innerW;
-    return { cx, bullish, topV, botV, highV, lowV };
-  });
-
-  const lastBull = candles[candles.length - 1]?.bullish;
-  const accent =
+  const xs = pattern.points.map(([x]) => pad + x * (W - pad * 2));
+  const ys = pattern.points.map(([, y]) => pad + y * (H - pad * 2));
+  const d = pattern.points
+    .map(([x, y], i) => {
+      const px = pad + x * (W - pad * 2);
+      const py = pad + y * (H - pad * 2);
+      return `${i === 0 ? "M" : "L"}${px.toFixed(1)},${py.toFixed(1)}`;
+    })
+    .join(" ");
+  const last = pattern.points[pattern.points.length - 1];
+  const lastY = pad + last[1] * (H - pad * 2);
+  const trendUp = lastY < H / 2;
+  const stroke =
     highlight === "correct"
       ? "hsl(var(--up))"
       : highlight === "wrong"
       ? "hsl(var(--down))"
-      : null;
+      : trendUp
+      ? "hsl(var(--up))"
+      : "hsl(var(--down))";
 
   return (
     <svg
@@ -287,7 +274,7 @@ const PatternChart = ({
       height="auto"
       className="block"
       role="img"
-      aria-label={`${pattern.name} candlestick chart pattern`}
+      aria-label={`${pattern.name} chart pattern schematic`}
     >
       {/* grid */}
       {[0.25, 0.5, 0.75].map((g) => (
@@ -295,8 +282,8 @@ const PatternChart = ({
           key={g}
           x1={pad}
           x2={W - pad}
-          y1={pad + g * innerH}
-          y2={pad + g * innerH}
+          y1={pad + g * (H - pad * 2)}
+          y2={pad + g * (H - pad * 2)}
           stroke="hsl(var(--border))"
           strokeDasharray="2 4"
           strokeWidth={1}
@@ -308,44 +295,20 @@ const PatternChart = ({
           key={i}
           x1={pad}
           x2={W - pad}
-          y1={pad + lv * innerH}
-          y2={pad + lv * innerH}
+          y1={pad + lv * (H - pad * 2)}
+          y2={pad + lv * (H - pad * 2)}
           stroke="hsl(var(--primary))"
           strokeDasharray="4 4"
           strokeWidth={1.5}
           opacity={0.6}
         />
       ))}
-      {/* candles */}
-      {candles.map((c, i) => {
-        const color = accent ?? (c.bullish ? "hsl(var(--up))" : "hsl(var(--down))");
-        const bodyTop = yOf(c.topV);
-        const bodyH = Math.max(2, yOf(c.botV) - bodyTop);
-        return (
-          <g key={i}>
-            {/* wick */}
-            <line
-              x1={c.cx}
-              x2={c.cx}
-              y1={yOf(c.highV)}
-              y2={yOf(c.lowV)}
-              stroke={color}
-              strokeWidth={1.5}
-            />
-            {/* body */}
-            <rect
-              x={c.cx - candleW / 2}
-              y={bodyTop}
-              width={candleW}
-              height={bodyH}
-              rx={1.5}
-              fill={c.bullish ? color : "hsl(var(--background))"}
-              stroke={color}
-              strokeWidth={1.5}
-            />
-          </g>
-        );
-      })}
+      {/* polyline */}
+      <path d={d} fill="none" stroke={stroke} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+      {/* dots */}
+      {xs.map((x, i) => (
+        <circle key={i} cx={x} cy={ys[i]} r={2} fill={stroke} opacity={0.7} />
+      ))}
     </svg>
   );
 };
