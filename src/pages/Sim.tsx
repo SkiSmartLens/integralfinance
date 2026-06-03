@@ -266,41 +266,41 @@ const Sim = () => {
             <button onClick={() => nav("/")} className="text-sm text-muted-foreground hover:text-foreground transition-colors">← Markets</button>
             <span className="text-muted-foreground">/</span>
             <span className="font-bold tracking-tight bg-gradient-to-r from-primary to-foreground bg-clip-text text-transparent">Simulator</span>
-            {games.length > 0 && (
-              <select value={activeGameId ?? ""} onChange={(e) => setActiveGameId(e.target.value)}
-                className="bg-muted/70 border border-border/50 px-2.5 py-1 rounded-md text-sm ml-2 focus:outline-none focus:ring-2 focus:ring-primary/40">
-                {games.map((g) => <option key={g.id} value={g.id}>{g.name} · {g.join_code}</option>)}
-              </select>
-            )}
             {activeGameId && (() => {
               const g = games.find((x) => x.id === activeGameId);
-              if (!g || g.created_by !== userId) return null;
+              if (!g) return null;
               return (
-                <>
-                  <button onClick={() => togglePublic(g)}
-                    className="ml-1 px-2 py-1 text-[11px] rounded-md bg-muted/70 border border-border/50 flex items-center gap-1 hover:bg-muted transition-colors"
-                    title={g.is_public ? "Public — anyone can browse and join" : "Private — code required"}>
-                    {g.is_public ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
-                    {g.is_public ? "Public" : "Private"}
+                <div className="flex items-center gap-2 flex-wrap ml-2">
+                  <span className="font-bold text-sm">{g.name}</span>
+                  <button onClick={() => copyCode(g.join_code)}
+                    className="px-2 py-1 text-[11px] rounded-md bg-muted/70 border border-border/50 flex items-center gap-1 hover:bg-muted transition-colors tabular-nums"
+                    title="Copy join code to share with friends">
+                    <Copy className="w-3 h-3" /> {g.join_code}
                   </button>
-                  <button onClick={() => setShowDev(true)}
-                    className="px-2 py-1 text-[11px] rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center gap-1 font-semibold hover:bg-amber-500/25 transition-colors"
-                    title="Creator dev tools">
-                    <Wrench className="w-3 h-3" /> Dev
-                  </button>
-                </>
+                  {g.created_by === userId && (
+                    <>
+                      <button onClick={() => togglePublic(g)}
+                        className="px-2 py-1 text-[11px] rounded-md bg-muted/70 border border-border/50 flex items-center gap-1 hover:bg-muted transition-colors"
+                        title={g.is_public ? "Public — anyone can browse and join" : "Private — code required"}>
+                        {g.is_public ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+                        {g.is_public ? "Public" : "Private"}
+                      </button>
+                      <button onClick={() => setShowDev(true)}
+                        className="px-2 py-1 text-[11px] rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center gap-1 font-semibold hover:bg-amber-500/25 transition-colors"
+                        title="Creator dev tools">
+                        <Wrench className="w-3 h-3" /> Dev
+                      </button>
+                    </>
+                  )}
+                </div>
               );
             })()}
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setShowBrowse(true)} className="px-3 py-1.5 text-xs rounded-md bg-muted/70 hover:bg-muted flex items-center gap-1 transition-colors">
-              <Search className="w-3.5 h-3.5" /> Browse
-            </button>
-            <button onClick={() => setShowJoin(true)} className="px-3 py-1.5 text-xs rounded-md bg-muted/70 hover:bg-muted flex items-center gap-1 transition-colors">
-              <Users className="w-3.5 h-3.5" /> Join
-            </button>
-            <button onClick={() => setShowCreate(true)} className="px-3 py-1.5 text-xs rounded-md bg-primary text-primary-foreground flex items-center gap-1 shadow-sm hover:shadow-md hover:opacity-95 transition">
-              <Plus className="w-3.5 h-3.5" /> New game
+            <button onClick={() => setShowMenu(true)}
+              className="px-3 py-1.5 text-xs rounded-md bg-primary text-primary-foreground flex items-center gap-1 shadow-sm hover:shadow-md hover:opacity-95 transition"
+              title="Browse, join, create or switch games">
+              <Menu className="w-3.5 h-3.5" /> Games menu
             </button>
             <button onClick={signOut} className="px-2 py-1.5 text-xs rounded text-muted-foreground hover:text-foreground" title="Sign out">
               <LogOut className="w-4 h-4" />
