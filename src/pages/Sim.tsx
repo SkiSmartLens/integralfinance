@@ -383,7 +383,7 @@ const Sim = () => {
                 )}
               </section>
 
-              <aside className="bg-card border rounded-xl p-5 shadow-sm">
+              <aside className="bg-card border rounded-xl p-5 shadow-sm order-1 lg:order-2">
                 <h3 className="font-bold mb-3">Place order</h3>
                 <form onSubmit={placeOrder} className="space-y-3">
                   <div className="flex gap-1 bg-muted rounded p-1">
