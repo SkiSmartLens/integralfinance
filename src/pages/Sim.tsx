@@ -311,25 +311,39 @@ const Sim = () => {
 
       <main className="container mx-auto px-4 py-6 space-y-6 pb-[80px]">
         {!activeMember ? (
-          <div className="bg-card border rounded-lg p-8 text-center">
+          <div className="bg-card border rounded-lg p-8 text-center max-w-md mx-auto">
             <h2 className="text-xl font-bold mb-2">Welcome to the Simulator</h2>
-            <p className="text-muted-foreground mb-4">Create a new game or join one with a code to start trading.</p>
-            <div className="flex gap-2 justify-center">
-              <button onClick={() => setShowCreate(true)} className="px-4 py-2 rounded bg-primary text-primary-foreground">Create game</button>
-              <button onClick={() => setShowJoin(true)} className="px-4 py-2 rounded bg-muted">Join game</button>
+            <p className="text-muted-foreground mb-5">Pick how you want to start. You'll trade inside one focused game at a time.</p>
+            <div className="flex flex-col gap-2">
+              <button onClick={() => setShowCreate(true)} className="px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold flex items-center justify-center gap-2"><Plus className="w-4 h-4" /> Create a new game</button>
+              <button onClick={() => setShowJoin(true)} className="px-4 py-2.5 rounded-lg bg-muted font-semibold flex items-center justify-center gap-2"><Users className="w-4 h-4" /> Join with a code</button>
+              <button onClick={() => setShowBrowse(true)} className="px-4 py-2.5 rounded-lg bg-muted font-semibold flex items-center justify-center gap-2"><Search className="w-4 h-4" /> Browse public games</button>
             </div>
           </div>
         ) : (
           <>
+            {showHelp && (
+              <div className="bg-accent text-accent-foreground border border-primary/20 rounded-xl p-4 flex items-start gap-3">
+                <HelpCircle className="w-5 h-5 shrink-0 text-primary mt-0.5" />
+                <div className="text-sm flex-1">
+                  <p className="font-bold mb-1">How to use the simulator</p>
+                  <p className="text-muted-foreground">Use the <b>Place order</b> panel to buy and sell with virtual cash. Track your gains in the stats below and climb the leaderboard. Tap <b>Games menu</b> (top right) to switch, create, or join another game.</p>
+                </div>
+                <button onClick={dismissHelp} title="Dismiss" className="shrink-0 text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+              </div>
+            )}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <Stat label="Cash" value={`$${formatNumber(Number(activeMember.cash))}`} />
               <Stat label="Holdings" value={`$${formatNumber(portfolioValue)}`} />
               <Stat label="Equity" value={`$${formatNumber(equity)}`} />
               <Stat label="Day P&L" value={`${dayPL >= 0 ? "+" : ""}$${formatNumber(dayPL)}`}
-                cls={dayPL >= 0 ? "text-up" : "text-down"} />
+                cls={dayPL >= 0 ? "text-up" : "text-down"}
+                hint="Today's gain or loss across all your holdings, vs. yesterday's closing prices." />
               <Stat label="Total Return" value={`${totalReturnPct >= 0 ? "+" : ""}${formatNumber(totalReturnPct)}%`}
-                cls={totalReturnPct >= 0 ? "text-up" : "text-down"} />
+                cls={totalReturnPct >= 0 ? "text-up" : "text-down"}
+                hint="How much your total equity is up or down since the game's starting cash." />
             </div>
+
 
             <div className="grid lg:grid-cols-[1fr_360px] gap-6">
               <section className="bg-card border rounded-xl p-5 shadow-sm">
