@@ -138,71 +138,48 @@ const HomeContent = () => {
         </div>
       </section>
 
-      {/* Disclaimer banner */}
-      <div className="bg-accent text-accent-foreground">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-center gap-2 text-sm font-semibold text-center">
-          <ShieldAlert className="w-4 h-4 shrink-0" />
-          For educational purposes only — not financial advice.
-        </div>
-      </div>
-
       <main className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-14 space-y-20">
         {/* Learning path */}
         <section>
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-1">Your learning path</h2>
-          <p className="text-muted-foreground mb-6">Five short lessons. Start at the top.</p>
+          <p className="text-muted-foreground mb-6">
+            Five short lessons, each linked to a trusted, real-world explainer.
+          </p>
           <ol className="space-y-3">
-            {LESSONS.map((l) => {
-              const inner = (
-                <div
-                  className={cn(
-                    "flex items-center gap-4 rounded-2xl border p-4 transition-colors flex-1",
-                    l.locked ? "opacity-50 bg-muted/40" : "bg-card hover:border-primary",
-                  )}
+            {LESSONS.map((l) => (
+              <li key={l.n} className="flex items-stretch gap-2">
+                <a
+                  href={l.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-1"
                 >
-                  <span
-                    className={cn(
-                      "flex items-center justify-center w-10 h-10 rounded-full font-extrabold shrink-0",
-                      l.locked ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground",
-                    )}
-                  >
-                    {l.n}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="font-bold leading-snug">{l.title}</div>
-                    <div className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                      <Clock className="w-3.5 h-3.5" /> {l.read} read
+                  <div className="flex items-center gap-4 rounded-2xl border p-4 transition-colors flex-1 bg-card hover:border-primary">
+                    <span className="flex items-center justify-center w-10 h-10 rounded-full font-extrabold shrink-0 bg-primary text-primary-foreground">
+                      {l.n}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-bold leading-snug">{l.title}</div>
+                      <div className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                        <Clock className="w-3.5 h-3.5" /> {l.read} read · {l.source}
+                      </div>
                     </div>
-                  </div>
-                  {l.locked ? (
-                    <Lock className="w-4 h-4 text-muted-foreground shrink-0" />
-                  ) : (
                     <ArrowRight className="w-4 h-4 text-primary shrink-0" />
-                  )}
-                </div>
-              );
-              return (
-                <li key={l.n} className="flex items-stretch gap-2">
-                  {l.locked ? (
-                    inner
-                  ) : (
-                    <Link to={l.to} className="flex flex-1">
-                      {inner}
-                    </Link>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => shareLesson(l.title, l.to)}
-                    aria-label={`Share "${l.title}"`}
-                    title="Share this lesson"
-                    className="shrink-0 flex items-center justify-center w-12 rounded-2xl border bg-card text-primary hover:border-primary hover:bg-accent transition-colors"
-                  >
-                    <Share2 className="w-4 h-4" />
-                  </button>
-                </li>
-              );
-            })}
+                  </div>
+                </a>
+                <button
+                  type="button"
+                  onClick={() => shareLesson(l.title, l.url)}
+                  aria-label={`Share "${l.title}"`}
+                  title="Share this lesson"
+                  className="shrink-0 flex items-center justify-center w-12 rounded-2xl border bg-card text-primary hover:border-primary hover:bg-accent transition-colors"
+                >
+                  <Share2 className="w-4 h-4" />
+                </button>
+              </li>
+            ))}
           </ol>
+        </section>
         </section>
 
         {/* Glossary search */}
