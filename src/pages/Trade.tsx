@@ -214,7 +214,7 @@ const Trade = () => {
           </div>
         </section>
 
-        <aside className="bg-card border rounded-xl p-5 shadow-md h-fit lg:sticky lg:top-4 space-y-4 order-1 lg:order-2">ns
+        <aside className="bg-card border rounded-xl p-5 shadow-md h-fit lg:sticky lg:top-4 space-y-4 order-1 lg:order-2">
           {!activeMember ? (
             <div className="text-sm text-muted-foreground">
               Join or create a sim game first. <button onClick={() => nav("/sim")} className="text-primary underline">Go to Simulator →</button>
