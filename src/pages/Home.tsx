@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Sparkles, Lock, Clock, Search, ShieldAlert, Share2 } from "lucide-react";
+import { ArrowRight, Sparkles, Clock, Search, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { HomeHeader } from "@/components/HomeHeader";
 import { SEO } from "@/components/SEO";
@@ -9,7 +9,6 @@ import { IntroSplash, hasSeenIntro } from "@/components/IntroSplash";
 import { GLOSSARY } from "@/components/Glossary";
 import { cn } from "@/lib/utils";
 
-const SITE_URL = "https://integralstocks.com";
 
 async function shareLesson(title: string, url: string) {
   try {
