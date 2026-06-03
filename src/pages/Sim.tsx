@@ -346,7 +346,7 @@ const Sim = () => {
 
 
             <div className="grid lg:grid-cols-[1fr_360px] gap-6">
-              <section className="bg-card border rounded-xl p-5 shadow-sm">
+              <section className="bg-card border rounded-xl p-5 shadow-sm order-2 lg:order-1">
                 <h3 className="font-bold mb-3">Positions</h3>
                 {positions.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-6 text-center">No positions yet. Place an order to begin.</p>
