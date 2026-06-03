@@ -14,7 +14,7 @@ export const HomeHeader = () => (
   <header className="bg-background/80 backdrop-blur border-b sticky top-0 z-40">
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
       <Link to="/" className="flex items-center gap-2 font-extrabold text-lg shrink-0">
-        <img src={logo} alt="IntegralStocks" className="h-10 w-auto" />
+        <img src={logo} alt="IntegralStocks" className="h-14 w-auto max-w-[72px] sm:h-16 sm:max-w-[84px]" />
         <span>Integral Stocks</span>
       </Link>
       <nav className="hidden sm:flex items-center gap-1">
