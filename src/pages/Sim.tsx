@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { SEO } from "@/components/SEO";
-import { DragSheet } from "@/components/DragSheet";
 import { useFlash } from "@/hooks/useFlash";
 import { fetchQuotes, formatNumber, formatLargeNumber } from "@/lib/yahoo";
 import { toast } from "@/hooks/use-toast";
@@ -43,7 +42,6 @@ const Sim = () => {
   const copyCode = async (code: string) => {
     try { await navigator.clipboard.writeText(code); toast({ title: "Join code copied", description: code }); } catch {}
   };
-  const [sheetSignal, setSheetSignal] = useState(0);
 
   // Order ticket
   const [symbol, setSymbol] = useState("AAPL");
@@ -356,7 +354,7 @@ const Sim = () => {
                       <thead className="text-xs text-muted-foreground border-b">
                         <tr><th className="text-left py-2">Symbol</th><th className="text-right">Shares</th>
                           <th className="text-right">Avg Cost</th><th className="text-right">Last</th>
-                          <th className="text-right">Value</th><th className="text-right">P&amp;L</th></tr>
+                          <th className="text-right">Value</th><th className="text-right">Trade</th><th className="text-right">P&amp;L</th></tr>
                       </thead>
                       <tbody>
                         {positions.map((p) => (
@@ -550,61 +548,6 @@ const Sim = () => {
           onChanged={() => { reloadGames(); reloadPortfolio(); }}
         />
       )}
-
-      <DragSheet title="Integral Stocks" openSignal={sheetSignal}>
-        <div className="p-4 space-y-3">
-          {activeMember ? (
-            <>
-              <div className="grid grid-cols-3 gap-3 text-center">
-                <div>
-                  <div className="text-[10px] text-muted-foreground uppercase">Cash</div>
-                  <div className="font-bold tabular-nums">${formatNumber(Number(activeMember.cash))}</div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-muted-foreground uppercase">Equity</div>
-                  <div className="font-bold tabular-nums">${formatNumber(equity)}</div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-muted-foreground uppercase">Total</div>
-                  <div className={cn("font-bold tabular-nums", totalReturnPct >= 0 ? "text-up" : "text-down")}>
-                    {totalReturnPct >= 0 ? "+" : ""}{formatNumber(totalReturnPct)}%
-                  </div>
-                </div>
-              </div>
-              <form onSubmit={placeOrder} className="grid grid-cols-2 gap-2">
-                <div className="col-span-2 flex gap-1 bg-muted rounded p-1">
-                  {(["buy", "sell"] as const).map((s) => (
-                    <button type="button" key={s} onClick={() => setSide(s)}
-                      className={cn("flex-1 py-1.5 rounded text-sm font-semibold capitalize",
-                        side === s ? (s === "buy" ? "bg-up text-white" : "bg-down text-white") : "text-muted-foreground")}>
-                      {s}
-                    </button>
-                  ))}
-                </div>
-                <input value={symbol} onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-                  placeholder="Symbol" className="px-3 py-2 bg-muted rounded outline-none text-sm" />
-                <div className="col-span-1 space-y-1">
-                  <Slider
-                    value={[Math.min(shares, maxShares)]}
-                    min={1} max={maxShares} step={1}
-                    onValueChange={(v) => setShares(v[0])}
-                  />
-                  <div className="text-[10px] text-muted-foreground tabular-nums text-center">
-                    {shares} sh{estCost != null ? ` · $${formatNumber(estCost)}` : ""}
-                  </div>
-                </div>
-                <button disabled={placing} className="col-span-2 py-2 rounded bg-primary text-primary-foreground font-semibold disabled:opacity-60 text-sm">
-                  {placing ? "Placing…" : `${side === "buy" ? "Buy" : "Sell"} ${shares || ""} ${symbol}`}
-                </button>
-              </form>
-            </>
-          ) : (
-            <p className="text-center text-sm text-muted-foreground py-4">
-              Join or create a game to use the quick ticket.
-            </p>
-          )}
-        </div>
-      </DragSheet>
     </div>
   );
 };
@@ -924,6 +867,18 @@ const PositionRow = ({
         </span>
       </td>
       <td className="text-right tabular-nums">{formatLargeNumber(value)}</td>
+      <td className="text-right">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick();
+          }}
+          className="inline-flex items-center rounded-full border border-primary/30 bg-primary/8 px-2.5 py-1 text-[11px] font-semibold text-primary hover:bg-primary/15"
+        >
+          Trade
+        </button>
+      </td>
       <td className={cn("text-right tabular-nums font-semibold", pl >= 0 ? "text-up" : "text-down")}>
         {pl >= 0 ? "+" : ""}{formatNumber(pl)} ({formatNumber(pct)}%)
       </td>
