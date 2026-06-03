@@ -180,7 +180,6 @@ const HomeContent = () => {
             ))}
           </ol>
         </section>
-        </section>
 
         {/* Glossary search */}
         <section id="glossary" className="scroll-mt-20">
