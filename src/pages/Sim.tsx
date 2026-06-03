@@ -597,12 +597,16 @@ const Sim = () => {
   );
 };
 
-const Stat = ({ label, value, cls }: { label: string; value: string; cls?: string }) => (
+const Stat = ({ label, value, cls, hint }: { label: string; value: string; cls?: string; hint?: string }) => (
   <div className="relative overflow-hidden bg-gradient-to-br from-card to-muted/40 border rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
-    <div className="text-[10px] text-muted-foreground uppercase tracking-[0.18em] font-bold">{label}</div>
+    <div className="text-[10px] text-muted-foreground uppercase tracking-[0.18em] font-bold flex items-center gap-1">
+      {label}
+      {hint && <HelpCircle className="w-3 h-3 cursor-help opacity-60" aria-label={hint}><title>{hint}</title></HelpCircle>}
+    </div>
     <div className={cn("text-2xl font-bold tabular-nums mt-1", cls)}>{value}</div>
   </div>
 );
+
 
 const Leaderboard = ({ gameId }: { gameId: string }) => {
   const [rows, setRows] = useState<{ name: string; equity: number }[]>([]);
