@@ -187,7 +187,10 @@ const Trade = () => {
       </div>
 
       <main className="container mx-auto px-4 py-6 grid lg:grid-cols-[1fr_420px] gap-6">
-        <section className="space-y-4">
+        <section className="space-y-4 order-2 lg:order-1">
+          <Link to="/sim" className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline">
+            <ArrowLeft className="w-4 h-4" /> Back to portfolio
+          </Link>
           <div className="bg-card border rounded-xl p-3 shadow-sm">
             <StockChart symbol={symbol} />
           </div>
