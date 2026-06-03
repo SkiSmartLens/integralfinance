@@ -9,7 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Slider } from "@/components/ui/slider";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-import { LogOut, Plus, Users, Search, Globe, Lock, Wrench, Copy, Menu, X, HelpCircle } from "lucide-react";
+import { LogOut, Plus, Users, Search, Globe, Lock, Wrench, Copy, Menu, X, HelpCircle, ChevronDown, ChevronUp } from "lucide-react";
 
 interface Game { id: string; name: string; starting_cash: number; commission: number; join_code: string; created_by: string; is_public?: boolean; }
 interface Member { id: string; game_id: string; user_id: string; cash: number; }
@@ -46,6 +46,7 @@ const Sim = () => {
   const [showHelp, setShowHelp] = useState(() => {
     try { return localStorage.getItem("simHelpDismissed") !== "1"; } catch { return true; }
   });
+  const [showHelpExpanded, setShowHelpExpanded] = useState(false);
   const dismissHelp = () => {
     setShowHelp(false);
     try { localStorage.setItem("simHelpDismissed", "1"); } catch {}
@@ -425,13 +426,28 @@ const Sim = () => {
         ) : (
           <>
             {showHelp && (
-              <div className="bg-accent text-accent-foreground border border-primary/20 rounded-xl p-4 flex items-start gap-3">
-                <HelpCircle className="w-5 h-5 shrink-0 text-primary mt-0.5" />
-                <div className="text-sm flex-1">
-                  <p className="font-bold mb-1">How to use the simulator</p>
-                  <p className="text-muted-foreground">Use the <b>Place order</b> panel to buy and sell with virtual cash. Track your gains in the stats below and climb the leaderboard. Tap <b>Games menu</b> (top right) to switch, create, or join another game.</p>
+              <div className="bg-accent text-accent-foreground border border-primary/20 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <HelpCircle className="w-5 h-5 shrink-0 text-primary mt-0.5" />
+                  <div className="min-w-0 flex-1 text-sm">
+                    <button
+                      type="button"
+                      onClick={() => setShowHelpExpanded((v) => !v)}
+                      className="w-full text-left flex items-center justify-between gap-3"
+                      aria-expanded={showHelpExpanded}
+                    >
+                      <span>
+                        <span className="font-bold block">How to use the simulator</span>
+                        <span className="text-muted-foreground text-xs">Tap to expand or collapse this tip.</span>
+                      </span>
+                      {showHelpExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                    </button>
+                    {showHelpExpanded && (
+                      <p className="mt-3 text-muted-foreground">Use the <b>Place order</b> panel to buy and sell with virtual cash. Track your gains in the stats below and climb the leaderboard. Tap <b>Games menu</b> (top right) to switch, create, or join another game.</p>
+                    )}
+                  </div>
+                  <button onClick={dismissHelp} title="Dismiss" className="shrink-0 text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
                 </div>
-                <button onClick={dismissHelp} title="Dismiss" className="shrink-0 text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
               </div>
             )}
             <nav className="flex flex-wrap gap-2 rounded-xl border bg-card p-2 shadow-sm sticky top-2 z-10">
