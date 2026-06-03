@@ -736,6 +736,51 @@ const Allocation = ({ cash, rows }: { cash: number; rows: { symbol: string; valu
   );
 };
 
+const GameMenuModal = ({ games, activeGameId, onClose, onSelect, onCreate, onJoin, onBrowse, onCopy }: {
+  games: Game[];
+  activeGameId: string | null;
+  onClose: () => void;
+  onSelect: (id: string) => void;
+  onCreate: () => void;
+  onJoin: () => void;
+  onBrowse: () => void;
+  onCopy: (code: string) => void;
+}) => (
+  <Modal onClose={onClose}>
+    <div className="flex items-center justify-between mb-3">
+      <h3 className="font-bold text-lg">Games menu</h3>
+      <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+    </div>
+    {games.length > 0 && (
+      <div className="mb-4">
+        <div className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2">Your games</div>
+        <ul className="space-y-1.5 max-h-60 overflow-y-auto">
+          {games.map((g) => (
+            <li key={g.id}>
+              <div className={cn("flex items-center gap-2 rounded-lg border p-2.5", g.id === activeGameId ? "border-primary bg-accent/50" : "bg-card")}>
+                <button onClick={() => onSelect(g.id)} className="flex-1 text-left min-w-0">
+                  <div className="font-semibold text-sm truncate">{g.name}</div>
+                  <div className="text-[11px] text-muted-foreground">{g.id === activeGameId ? "Active now" : "Tap to switch"}</div>
+                </button>
+                <button onClick={() => onCopy(g.join_code)} title="Copy join code"
+                  className="px-2 py-1 text-[11px] rounded-md bg-muted/70 border flex items-center gap-1 tabular-nums shrink-0">
+                  <Copy className="w-3 h-3" /> {g.join_code}
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+    <div className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2">Start or join another</div>
+    <div className="flex flex-col gap-2">
+      <button onClick={onCreate} className="px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold flex items-center justify-center gap-2"><Plus className="w-4 h-4" /> Create a new game</button>
+      <button onClick={onJoin} className="px-4 py-2.5 rounded-lg bg-muted font-semibold flex items-center justify-center gap-2"><Users className="w-4 h-4" /> Join with a code</button>
+      <button onClick={onBrowse} className="px-4 py-2.5 rounded-lg bg-muted font-semibold flex items-center justify-center gap-2"><Search className="w-4 h-4" /> Browse public games</button>
+    </div>
+  </Modal>
+);
+
 const CreateGameModal = ({ onClose, onCreate }: { onClose: () => void; onCreate: (n: string, c: number, commission: number, allowShort: boolean, isPublic: boolean) => void }) => {
   const [name, setName] = useState("My Game");
   const [cash, setCash] = useState(100000);
