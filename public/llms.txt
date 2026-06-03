@@ -1,11 +1,35 @@
 # Integral Stocks
 
-> Real-time stock market dashboard with live quotes, interactive charts, financial news, sector heatmaps, an economic calendar, and a multiplayer paper-trading simulator.
+> Beginner-friendly stock market dashboard with live quotes, interactive charts, AI insights that explain why stocks move, bite-sized lessons, financial news, sector heatmaps, an economic calendar, and a multiplayer paper-trading simulator.
+
+Integral Stocks helps new investors understand the stock market. AI insights explain the reasons behind daily price movements, short lessons teach the basics, and a risk-free simulator lets users practice trading.
 
 ## Pages
 
-- [Home](/): Live quotes, charts, watchlists, and breaking financial news organized by category (markets, tech, crypto, IPOs, earnings).
-- [Screeners](/screener): Curated stock screeners — top gainers, losers, most active, undervalued growth, small-cap movers — with sortable columns and price filters.
-- [Calendar](/calendar): A personal market calendar for tracking earnings dates, IPOs, dividends, and macro events.
+- [Home](/): Learning path, bite-sized investing lessons, glossary search, and live market sections.
+- [Stocks](/stocks): Live quotes, interactive charts, AI insights, watchlists, and news by category (markets, tech, crypto, IPOs, earnings).
+- [Stock detail](/stocks/aapl): Per-ticker page with live price, chart, AI-generated explanation of recent movement, and headlines (e.g. /stocks/aapl, /stocks/tsla, /stocks/nvda).
+- [News](/news): Breaking financial news organized by sector and topic.
+- [Start Here](/start): Orientation guide for first-time investors.
+- [Screeners](/screener): Curated screeners — top gainers, losers, most active — with sortable columns and price filters.
+- [Calendar](/calendar): Personal market calendar for earnings dates, IPOs, dividends, and macro events.
 - [Trading Simulator](/sim): Multiplayer paper-trading game with live prices, leaderboards, market/limit/stop orders, and shareable join codes.
+- [Watchlist](/watchlist): Personal list of tracked symbols.
+
+## Learn
+
+- [Stock basics](/learn/basics): Plain-English introduction to stocks, shares, and how markets work.
+- [Chart patterns](/learn/patterns): How to read common price chart patterns.
+- [Indicators](/learn/indicators): Explanations of common technical indicators.
+
+## About
+
+- [About](/about): What Integral Stocks is and who it's for.
+- [FAQ](/faq): Frequently asked questions.
+- [Data sources](/data-sources): Where quotes, news, and AI insights come from.
+- [Disclaimer](/disclaimer): Educational use and not financial advice.
+- [Contact](/contact): Get in touch.
+
+## Optional
+
 - [Sign in](/auth): Account access for the simulator and personal watchlist.
