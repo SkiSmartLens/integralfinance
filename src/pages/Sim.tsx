@@ -32,6 +32,17 @@ const Sim = () => {
   const [showJoin, setShowJoin] = useState(false);
   const [showBrowse, setShowBrowse] = useState(false);
   const [showDev, setShowDev] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [showHelp, setShowHelp] = useState(() => {
+    try { return localStorage.getItem("simHelpDismissed") !== "1"; } catch { return true; }
+  });
+  const dismissHelp = () => {
+    setShowHelp(false);
+    try { localStorage.setItem("simHelpDismissed", "1"); } catch {}
+  };
+  const copyCode = async (code: string) => {
+    try { await navigator.clipboard.writeText(code); toast({ title: "Join code copied", description: code }); } catch {}
+  };
   const [sheetSignal, setSheetSignal] = useState(0);
 
   // Order ticket
