@@ -76,9 +76,24 @@ const TERM_DEFS: Record<string, string> = {
 };
 
 const ARTICLES = [
-  { tag: "Basics", title: "Why your first $50 matters more than your next $5,000", read: "3 min" },
-  { tag: "Mindset", title: "The boring strategy that quietly beats most traders", read: "5 min" },
-  { tag: "Explained", title: "What actually happens when a stock 'goes up'", read: "4 min" },
+  {
+    tag: "Basics",
+    title: "Why your first $50 matters more than your next $5,000",
+    read: "3 min",
+    url: "https://www.investor.gov/introduction-investing/investing-basics/investment-products/stocks",
+  },
+  {
+    tag: "Mindset",
+    title: "The boring strategy that quietly beats most traders",
+    read: "5 min",
+    url: "https://www.investopedia.com/articles/investing/082614/how-stock-market-works.asp",
+  },
+  {
+    tag: "Explained",
+    title: "What actually happens when a stock 'goes up'",
+    read: "4 min",
+    url: "https://www.investopedia.com/articles/technical/03/060303.asp",
+  },
 ];
 
 const HomeContent = () => {
@@ -223,22 +238,34 @@ const HomeContent = () => {
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-6">Fresh reads</h2>
           <div className="divide-y border rounded-2xl overflow-hidden bg-card">
             {ARTICLES.map((a) => (
-              <Link
-                key={a.title}
-                to="/learn/basics"
-                className="flex items-center gap-4 p-5 hover:bg-muted/50 transition-colors"
-              >
-                <div className="min-w-0 flex-1">
-                  <span className="inline-block text-[11px] font-extrabold uppercase tracking-wider text-primary bg-accent px-2 py-0.5 rounded mb-1.5">
-                    {a.tag}
-                  </span>
-                  <div className="font-bold leading-snug">{a.title}</div>
-                  <div className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
-                    <Clock className="w-3.5 h-3.5" /> {a.read} read
+              <li key={a.title} className="flex items-stretch gap-2 p-5 hover:bg-muted/50 transition-colors">
+                <a
+                  href={a.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-1 items-center gap-4"
+                >
+                  <div className="min-w-0 flex-1">
+                    <span className="inline-block text-[11px] font-extrabold uppercase tracking-wider text-primary bg-accent px-2 py-0.5 rounded mb-1.5">
+                      {a.tag}
+                    </span>
+                    <div className="font-bold leading-snug">{a.title}</div>
+                    <div className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
+                      <Clock className="w-3.5 h-3.5" /> {a.read} read
+                    </div>
                   </div>
-                </div>
-                <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
-              </Link>
+                  <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                </a>
+                <button
+                  type="button"
+                  onClick={() => shareLesson(a.title, a.url)}
+                  aria-label={`Share "${a.title}"`}
+                  title="Share this article"
+                  className="shrink-0 flex items-center justify-center w-12 rounded-2xl border bg-card text-primary hover:border-primary hover:bg-accent transition-colors"
+                >
+                  <Share2 className="w-4 h-4" />
+                </button>
+              </li>
             ))}
           </div>
         </section>

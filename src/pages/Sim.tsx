@@ -25,7 +25,9 @@ const Sim = () => {
   const [userEmail, setUserEmail] = useState("");
   const [games, setGames] = useState<Game[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
-  const [activeGameId, setActiveGameId] = useState<string | null>(null);
+  const [activeGameId, setActiveGameId] = useState<string | null>(() => {
+    try { return localStorage.getItem("activeSimGame"); } catch { return null; }
+  });
   const [positions, setPositions] = useState<Position[]>([]);
   const [txs, setTxs] = useState<Tx[]>([]);
   const [pending, setPending] = useState<Order[]>([]);
@@ -38,6 +40,9 @@ const Sim = () => {
   const [showMenu, setShowMenu] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [publicGames, setPublicGames] = useState<Game[]>([]);
+  const [publicLoading, setPublicLoading] = useState(false);
+  const [activeSection, setActiveSection] = useState("overview");
   const [showHelp, setShowHelp] = useState(() => {
     try { return localStorage.getItem("simHelpDismissed") !== "1"; } catch { return true; }
   });
@@ -81,6 +86,14 @@ const Sim = () => {
   }, [nav]);
 
   const isAdmin = ADMIN_EMAILS.includes((userEmail || "").toLowerCase());
+  const filteredPublicGames = publicGames.filter((g) =>
+    !searchQuery.trim() || g.name.toLowerCase().includes(searchQuery.toLowerCase()) || g.join_code.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const jumpToSection = (id: string) => {
+    setActiveSection(id);
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const reloadGames = async () => {
     if (!userId) return;
@@ -99,6 +112,18 @@ const Sim = () => {
   };
 
   useEffect(() => { reloadGames(); /* eslint-disable-next-line */ }, [userId]);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      setPublicLoading(true);
+      const { data } = await supabase.from("games").select("*").eq("is_public", true).order("created_at", { ascending: false }).limit(100);
+      if (!alive) return;
+      setPublicGames((data ?? []) as Game[]);
+      setPublicLoading(false);
+    })();
+    return () => { alive = false; };
+  }, []);
 
   useEffect(() => {
     if (activeGameId) localStorage.setItem("activeSimGame", activeGameId);
@@ -295,7 +320,7 @@ const Sim = () => {
       <div className="border-b bg-gradient-to-r from-card via-card to-muted/30 backdrop-blur">
         <div className="container mx-auto px-4 py-3 flex flex-wrap items-center gap-3 justify-between">
           <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={() => nav("/")} className="text-sm text-muted-foreground hover:text-foreground transition-colors">← Markets</button>
+            <button onClick={() => nav("/")} className="text-sm text-muted-foreground hover:text-foreground transition-colors">← Home</button>
             <span className="text-muted-foreground">/</span>
             <span className="font-bold tracking-tight bg-gradient-to-r from-primary to-foreground bg-clip-text text-transparent">Simulator</span>
             {activeGameId && (() => {
@@ -347,19 +372,49 @@ const Sim = () => {
         </div>
       </div>
 
-      <main className="container mx-auto px-4 py-6 space-y-6 pb-[80px]">
+      <main className="container mx-auto px-4 py-6 space-y-6">
         {!activeMember ? (
           <div className="bg-card border rounded-lg p-8 text-center max-w-md mx-auto">
             <h2 className="text-xl font-bold mb-2">Welcome to the Simulator</h2>
             <p className="text-muted-foreground mb-5">Pick how you want to start. You'll trade inside one focused game at a time.</p>
             <div className="rounded-xl border bg-muted/40 p-3 text-left text-sm text-muted-foreground">
               <label className="text-[11px] uppercase tracking-[0.2em] font-semibold text-foreground">Find or create a game</label>
-              <input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search game name or join code"
-                className="mt-2 w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
-              />
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") e.preventDefault(); }}
+                  placeholder="Search game name or join code"
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                />
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery((v) => v.trim())}
+                  className="rounded-md border bg-background px-3 py-2 text-muted-foreground hover:text-foreground"
+                  aria-label="Search public games"
+                >
+                  <Search className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="mt-3 space-y-2">
+                {publicLoading ? (
+                  <p className="text-xs text-muted-foreground">Loading public games…</p>
+                ) : filteredPublicGames.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No public games match this search yet.</p>
+                ) : (
+                  filteredPublicGames.slice(0, 6).map((g) => (
+                    <button
+                      key={g.id}
+                      type="button"
+                      onClick={() => joinGameById(g.id, Number(g.starting_cash), g.join_code)}
+                      className="w-full rounded-lg border bg-background px-3 py-2 text-left hover:border-primary hover:bg-accent/30"
+                    >
+                      <div className="text-sm font-semibold">{g.name}</div>
+                      <div className="text-[11px] text-muted-foreground">Code {g.join_code} · ${formatNumber(Number(g.starting_cash))} start</div>
+                    </button>
+                  ))
+                )}
+              </div>
             </div>
             <div className="flex flex-col gap-2">
               <button onClick={() => setShowCreate(true)} className="px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold flex items-center justify-center gap-2"><Plus className="w-4 h-4" /> Create a new game</button>
@@ -379,7 +434,29 @@ const Sim = () => {
                 <button onClick={dismissHelp} title="Dismiss" className="shrink-0 text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
               </div>
             )}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <nav className="flex flex-wrap gap-2 rounded-xl border bg-card p-2 shadow-sm sticky top-2 z-10">
+              {[
+                { id: "overview", label: "Overview" },
+                { id: "holdings", label: "Holdings" },
+                { id: "transactions", label: "Transactions" },
+                { id: "pending-orders", label: "Pending Orders" },
+                { id: "leaderboard", label: "Leaderboard" },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => jumpToSection(tab.id)}
+                  className={cn(
+                    "rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
+                    activeSection === tab.id ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+
+            <div id="overview" className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <Stat label="Cash" value={`$${formatNumber(Number(activeMember.cash))}`} />
               <Stat label="Holdings" value={`$${formatNumber(portfolioValue)}`} />
               <Stat label="Equity" value={`$${formatNumber(equity)}`} />
@@ -393,7 +470,7 @@ const Sim = () => {
 
 
             <div className="grid lg:grid-cols-[1fr_360px] gap-6">
-              <section className="bg-card border rounded-xl p-5 shadow-sm order-2 lg:order-1">
+              <section id="holdings" className="bg-card border rounded-xl p-5 shadow-sm order-2 lg:order-1">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
                     <h3 className="font-bold">Positions & earnings</h3>
@@ -523,7 +600,7 @@ const Sim = () => {
 
             <Leaderboard gameId={activeGameId!} />
 
-            <section className="bg-card border rounded-xl p-5 shadow-sm">
+            <section id="pending-orders" className="bg-card border rounded-xl p-5 shadow-sm">
               <h3 className="font-bold mb-3">Pending orders</h3>
               {pending.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-4 text-center">No queued or working orders.</p>
@@ -559,7 +636,7 @@ const Sim = () => {
               )}
             </section>
 
-            <section className="bg-card border rounded-xl p-5 shadow-sm">
+            <section id="transactions" className="bg-card border rounded-xl p-5 shadow-sm">
               <h3 className="font-bold mb-3">Recent transactions</h3>
               {txs.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-4 text-center">No trades yet.</p>
@@ -589,8 +666,13 @@ const Sim = () => {
       {showSettings && (
         <SettingsModal
           isAdmin={isAdmin}
+          activeGameId={activeGameId}
+          gameName={games.find((g) => g.id === activeGameId)?.name ?? ""}
+          startingCash={games.find((g) => g.id === activeGameId)?.starting_cash ?? 100000}
+          commission={games.find((g) => g.id === activeGameId)?.commission ?? 0}
           onClose={() => setShowSettings(false)}
           onLogout={handleLogoutFromGame}
+          onUpdated={() => reloadGames()}
         />
       )}
       {showMenu && (
@@ -667,7 +749,7 @@ const Leaderboard = ({ gameId }: { gameId: string }) => {
     return () => { alive = false; clearInterval(t); };
   }, [gameId]);
   return (
-    <section className="bg-card border rounded-xl p-5 shadow-sm">
+    <section id="leaderboard" className="bg-card border rounded-xl p-5 shadow-sm">
       <h3 className="font-bold mb-3">Leaderboard</h3>
       <table className="w-full text-sm">
         <thead className="text-xs text-muted-foreground border-b">
@@ -779,31 +861,118 @@ const Allocation = ({ cash, rows }: { cash: number; rows: { symbol: string; valu
   );
 };
 
-const SettingsModal = ({ isAdmin, onClose, onLogout }: { isAdmin: boolean; onClose: () => void; onLogout: () => void }) => (
-  <Modal onClose={onClose}>
-    <div className="flex items-center justify-between mb-3">
-      <div>
-        <h3 className="font-bold text-lg">Settings</h3>
-        <p className="text-xs text-muted-foreground">Your simulator session stays active until you log out manually.</p>
+const SettingsModal = ({
+  isAdmin,
+  activeGameId,
+  gameName,
+  startingCash,
+  commission,
+  onClose,
+  onLogout,
+  onUpdated,
+}: {
+  isAdmin: boolean;
+  activeGameId: string | null;
+  gameName: string;
+  startingCash: number;
+  commission: number;
+  onClose: () => void;
+  onLogout: () => void;
+  onUpdated: () => void;
+}) => {
+  const [panel, setPanel] = useState<"overview" | "members" | "settings">("overview");
+  const [members, setMembers] = useState<any[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [draft, setDraft] = useState({ name: gameName, starting_cash: startingCash, commission });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setDraft({ name: gameName, starting_cash: startingCash, commission });
+  }, [gameName, startingCash, commission]);
+
+  useEffect(() => {
+    if (!activeGameId || panel !== "members") return;
+    let alive = true;
+    (async () => {
+      setLoadingMembers(true);
+      const { data } = await supabase.from("game_members").select("*").eq("game_id", activeGameId).order("cash", { ascending: false });
+      if (!alive) return;
+      setMembers((data ?? []) as any[]);
+      setLoadingMembers(false);
+    })();
+    return () => { alive = false; };
+  }, [activeGameId, panel]);
+
+  const saveSettings = async () => {
+    if (!activeGameId) return;
+    setSaving(true);
+    const { error } = await supabase.from("games").update({
+      name: draft.name.trim(),
+      starting_cash: Number(draft.starting_cash),
+      commission: Number(draft.commission),
+    }).eq("id", activeGameId);
+    setSaving(false);
+    if (error) return toast({ title: "Save failed", description: error.message, variant: "destructive" });
+    toast({ title: "Game settings updated" });
+    onUpdated();
+  };
+
+  return (
+    <Modal onClose={onClose}>
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <h3 className="font-bold text-lg">Settings</h3>
+          <p className="text-xs text-muted-foreground">Your simulator session stays active until you log out manually.</p>
+        </div>
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
       </div>
-      <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
-    </div>
-    <div className="space-y-3 text-sm">
-      <section className="rounded-lg border bg-muted/50 p-3 space-y-2">
-        <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Admin status</div>
-        <div className="font-semibold">{isAdmin ? "Full admin access enabled" : "Standard player access"}</div>
-        <p className="text-xs text-muted-foreground">Admin users can manage simulator settings and user tools from this workspace.</p>
-        {isAdmin && (
-          <div className="grid gap-2">
-            <button className="rounded-md border bg-background px-3 py-2 text-left text-sm font-semibold">User management</button>
-            <button className="rounded-md border bg-background px-3 py-2 text-left text-sm font-semibold">Simulator settings</button>
-          </div>
+      <div className="space-y-3 text-sm">
+        <section className="rounded-lg border bg-muted/50 p-3 space-y-2">
+          <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Admin status</div>
+          <div className="font-semibold">{isAdmin ? "Full admin access enabled" : "Standard player access"}</div>
+          <p className="text-xs text-muted-foreground">Admin users can manage simulator settings and user tools from this workspace.</p>
+          {isAdmin && (
+            <div className="grid gap-2">
+              <button onClick={() => setPanel("members")} className={cn("rounded-md border bg-background px-3 py-2 text-left text-sm font-semibold", panel === "members" && "border-primary bg-accent")}>User management</button>
+              <button onClick={() => setPanel("settings")} className={cn("rounded-md border bg-background px-3 py-2 text-left text-sm font-semibold", panel === "settings" && "border-primary bg-accent")}>Simulator settings</button>
+            </div>
+          )}
+        </section>
+
+        {isAdmin && panel === "members" && (
+          <section className="rounded-lg border bg-muted/40 p-3 space-y-2">
+            <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Game members</div>
+            {loadingMembers ? <p className="text-xs text-muted-foreground">Loading members…</p> : members.length === 0 ? <p className="text-xs text-muted-foreground">No members found in this game.</p> : (
+              <ul className="space-y-2 max-h-60 overflow-y-auto">
+                {members.map((m) => (
+                  <li key={m.id} className="rounded-md border bg-background px-3 py-2 text-xs">
+                    <div className="font-semibold">User ID: {m.user_id}</div>
+                    <div className="text-muted-foreground">Cash: ${formatNumber(Number(m.cash))}</div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         )}
-      </section>
-      <button onClick={onLogout} className="w-full rounded-lg bg-down/10 text-down border border-down/30 px-4 py-2.5 font-semibold hover:bg-down/20">Log Out of Game</button>
-    </div>
-  </Modal>
-);
+
+        {isAdmin && panel === "settings" && (
+          <section className="rounded-lg border bg-muted/40 p-3 space-y-2">
+            <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Game settings</div>
+            <label className="block text-xs text-muted-foreground">Game name</label>
+            <input value={draft.name} onChange={(e) => setDraft((v) => ({ ...v, name: e.target.value }))} className="w-full rounded-md border bg-background px-3 py-2 text-sm" />
+            <label className="block text-xs text-muted-foreground">Starting cash</label>
+            <input type="number" min={1000} step={1000} value={draft.starting_cash} onChange={(e) => setDraft((v) => ({ ...v, starting_cash: Number(e.target.value) }))} className="w-full rounded-md border bg-background px-3 py-2 text-sm" />
+            <label className="block text-xs text-muted-foreground">Commission</label>
+            <input type="number" min={0} step={0.5} value={draft.commission} onChange={(e) => setDraft((v) => ({ ...v, commission: Number(e.target.value) }))} className="w-full rounded-md border bg-background px-3 py-2 text-sm" />
+            <button onClick={saveSettings} disabled={saving} className="w-full rounded-lg bg-primary text-primary-foreground px-4 py-2.5 font-semibold disabled:opacity-60">{saving ? "Saving…" : "Save settings"}</button>
+          </section>
+        )}
+
+        <button onClick={onLogout} className="w-full rounded-lg bg-down/10 text-down border border-down/30 px-4 py-2.5 font-semibold hover:bg-down/20">Log Out of Game</button>
+      </div>
+    </Modal>
+  );
+};
 
 const GameMenuModal = ({ games, activeGameId, onClose, onSelect, onCreate, onJoin, onBrowse, onCopy }: {
   games: Game[];

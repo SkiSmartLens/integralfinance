@@ -8,8 +8,8 @@ import logo from "@/assets/logo.png";
 const NAV_LINKS = [
   { to: "/stocks", label: "Stocks" },
   { to: "/news", label: "News" },
-  { to: "/simulator", label: "Simulator" },
-  { to: "/start", label: "Start Here", highlight: true },
+  { to: "/sim", label: "Simulator", accent: true },
+  { to: "/start", label: "Start Here" },
 ];
 
 interface Props {
@@ -135,15 +135,15 @@ export const Header = ({ onSearch }: Props) => {
               className={({ isActive }) =>
                 cn(
                   "px-3.5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-colors",
-                  l.highlight
-                    ? "bg-primary text-primary-foreground hover:opacity-90"
+                  l.accent
+                    ? "bg-primary text-primary-foreground shadow-sm hover:opacity-90"
                     : isActive
                       ? "bg-accent text-accent-foreground"
                       : "text-foreground hover:bg-muted",
                 )
               }
             >
-              {l.highlight && <Sparkles className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />}
+              {l.label === "Start Here" && <Sparkles className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />}
               {l.label}
             </NavLink>
           ))}
@@ -156,8 +156,8 @@ export const Header = ({ onSearch }: Props) => {
             to={l.to}
             className={({ isActive }) =>
               cn(
-                "flex-1 text-center px-4 py-2.5 text-sm font-bold whitespace-nowrap transition-colors",
-                l.highlight ? "text-primary" : isActive ? "text-foreground bg-muted" : "text-muted-foreground",
+                "min-w-max flex-1 text-center px-4 py-2.5 text-sm font-bold whitespace-nowrap transition-colors",
+                l.accent ? "text-primary bg-primary/10 font-extrabold" : isActive ? "text-foreground bg-muted" : "text-muted-foreground",
               )
             }
           >
