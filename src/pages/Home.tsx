@@ -11,8 +11,7 @@ import { cn } from "@/lib/utils";
 
 const SITE_URL = "https://integralstocks.com";
 
-async function shareLesson(title: string, to: string) {
-  const url = `${SITE_URL}${to}`;
+async function shareLesson(title: string, url: string) {
   try {
     if (navigator.share) {
       await navigator.share({ title: `Integral Stocks · ${title}`, url });
@@ -25,12 +24,43 @@ async function shareLesson(title: string, to: string) {
   }
 }
 
+// Each lesson links to a real, beginner-friendly explainer from a reliable source.
 const LESSONS = [
-  { n: 1, title: "What is a stock, really?", read: "4 min", to: "/learn/basics" },
-  { n: 2, title: "How the market actually moves", read: "6 min", to: "/learn/basics" },
-  { n: 3, title: "Reading a price chart", read: "5 min", to: "/learn/patterns" },
-  { n: 4, title: "Risk, diversification & ETFs", read: "7 min", to: "/learn/indicators", locked: true },
-  { n: 5, title: "Building your first portfolio", read: "8 min", to: "/learn/indicators", locked: true },
+  {
+    n: 1,
+    title: "What is a stock, really?",
+    read: "4 min",
+    source: "Investor.gov (SEC)",
+    url: "https://www.investor.gov/introduction-investing/investing-basics/investment-products/stocks",
+  },
+  {
+    n: 2,
+    title: "How the stock market actually moves",
+    read: "6 min",
+    source: "Investopedia",
+    url: "https://www.investopedia.com/articles/investing/082614/how-stock-market-works.asp",
+  },
+  {
+    n: 3,
+    title: "Reading a price chart",
+    read: "5 min",
+    source: "Investopedia",
+    url: "https://www.investopedia.com/articles/technical/03/060303.asp",
+  },
+  {
+    n: 4,
+    title: "Risk, diversification & ETFs",
+    read: "7 min",
+    source: "Investor.gov (SEC)",
+    url: "https://www.investor.gov/introduction-investing/investing-basics/how-stock-markets-work/diversification",
+  },
+  {
+    n: 5,
+    title: "Building your first portfolio",
+    read: "8 min",
+    source: "Investopedia",
+    url: "https://www.investopedia.com/articles/basics/03/050203.asp",
+  },
 ];
 
 const TERMS = ["ETF", "Dividend", "Index Fund", "Bull Market", "Market Cap", "Compound Interest"];
