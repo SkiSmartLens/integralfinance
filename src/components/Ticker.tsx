@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { INDEX_TICKERS } from "@/lib/categories";
 import { formatNumber } from "@/lib/yahoo";
@@ -29,7 +30,11 @@ export const Ticker = () => {
         {items.map((q, i) => {
           const up = (q.regularMarketChange ?? 0) >= 0;
           return (
-            <div key={i} className="flex items-center gap-2 px-6 text-sm">
+            <Link
+              key={i}
+              to={`/stocks/${encodeURIComponent(q.symbol.toLowerCase())}`}
+              className="flex items-center gap-2 px-6 text-sm hover:bg-muted/60 transition-colors rounded"
+            >
               <span className="font-semibold">{LABELS[q.symbol] || q.symbol}</span>
               <span className="text-foreground">{formatNumber(q.regularMarketPrice)}</span>
               <span className={up ? "text-up" : "text-down"}>
@@ -37,7 +42,7 @@ export const Ticker = () => {
                 {formatNumber(q.regularMarketChangePercent)}%)
               </span>
               <span className="text-border">|</span>
-            </div>
+            </Link>
           );
         })}
       </div>

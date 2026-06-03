@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { SEO } from "@/components/SEO";
@@ -187,7 +187,10 @@ const Trade = () => {
       </div>
 
       <main className="container mx-auto px-4 py-6 grid lg:grid-cols-[1fr_420px] gap-6">
-        <section className="space-y-4">
+        <section className="space-y-4 order-2 lg:order-1">
+          <Link to="/sim" className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline">
+            <ArrowLeft className="w-4 h-4" /> Back to portfolio
+          </Link>
           <div className="bg-card border rounded-xl p-3 shadow-sm">
             <StockChart symbol={symbol} />
           </div>
@@ -211,7 +214,7 @@ const Trade = () => {
           </div>
         </section>
 
-        <aside className="bg-card border rounded-xl p-5 shadow-md h-fit lg:sticky lg:top-4 space-y-4">
+        <aside className="bg-card border rounded-xl p-5 shadow-md h-fit lg:sticky lg:top-4 space-y-4 order-1 lg:order-2">
           {!activeMember ? (
             <div className="text-sm text-muted-foreground">
               Join or create a sim game first. <button onClick={() => nav("/sim")} className="text-primary underline">Go to Simulator →</button>
@@ -232,7 +235,9 @@ const Trade = () => {
                   </button>
                 ))}
               </div>
-              <p className="text-[11px] text-muted-foreground -mt-2">{sideMeta[side].help}</p>
+              <div className="rounded-lg bg-accent/60 border border-primary/20 p-3 text-sm font-semibold text-foreground -mt-1">
+                {sideMeta[side].help}
+              </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1">
@@ -267,6 +272,11 @@ const Trade = () => {
                   </button>
                 ))}
               </div>
+              <p className="text-xs text-muted-foreground -mt-1">
+                {orderType === "market" && "Market: fills right now at the best available live price."}
+                {orderType === "limit" && "Limit: only fills at your set price or better — may not fill."}
+                {orderType === "stop" && "Stop: turns into a market order once the price hits your trigger."}
+              </p>
               {orderType === "limit" && (
                 <input type="number" step="0.01" value={limitPrice} onChange={(e) => setLimitPrice(Number(e.target.value))}
                   placeholder={`Limit price (last $${last ? formatNumber(last) : "—"})`}

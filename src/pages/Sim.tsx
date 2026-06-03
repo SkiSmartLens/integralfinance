@@ -9,7 +9,7 @@ import { fetchQuotes, formatNumber, formatLargeNumber } from "@/lib/yahoo";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Slider } from "@/components/ui/slider";
-import { LogOut, Plus, Users, Search, Globe, Lock, Wrench } from "lucide-react";
+import { LogOut, Plus, Users, Search, Globe, Lock, Wrench, Copy, Menu, X, HelpCircle } from "lucide-react";
 
 interface Game { id: string; name: string; starting_cash: number; commission: number; join_code: string; created_by: string; is_public?: boolean; }
 interface Member { id: string; game_id: string; user_id: string; cash: number; }
@@ -32,6 +32,17 @@ const Sim = () => {
   const [showJoin, setShowJoin] = useState(false);
   const [showBrowse, setShowBrowse] = useState(false);
   const [showDev, setShowDev] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [showHelp, setShowHelp] = useState(() => {
+    try { return localStorage.getItem("simHelpDismissed") !== "1"; } catch { return true; }
+  });
+  const dismissHelp = () => {
+    setShowHelp(false);
+    try { localStorage.setItem("simHelpDismissed", "1"); } catch {}
+  };
+  const copyCode = async (code: string) => {
+    try { await navigator.clipboard.writeText(code); toast({ title: "Join code copied", description: code }); } catch {}
+  };
   const [sheetSignal, setSheetSignal] = useState(0);
 
   // Order ticket
@@ -255,41 +266,41 @@ const Sim = () => {
             <button onClick={() => nav("/")} className="text-sm text-muted-foreground hover:text-foreground transition-colors">← Markets</button>
             <span className="text-muted-foreground">/</span>
             <span className="font-bold tracking-tight bg-gradient-to-r from-primary to-foreground bg-clip-text text-transparent">Simulator</span>
-            {games.length > 0 && (
-              <select value={activeGameId ?? ""} onChange={(e) => setActiveGameId(e.target.value)}
-                className="bg-muted/70 border border-border/50 px-2.5 py-1 rounded-md text-sm ml-2 focus:outline-none focus:ring-2 focus:ring-primary/40">
-                {games.map((g) => <option key={g.id} value={g.id}>{g.name} · {g.join_code}</option>)}
-              </select>
-            )}
             {activeGameId && (() => {
               const g = games.find((x) => x.id === activeGameId);
-              if (!g || g.created_by !== userId) return null;
+              if (!g) return null;
               return (
-                <>
-                  <button onClick={() => togglePublic(g)}
-                    className="ml-1 px-2 py-1 text-[11px] rounded-md bg-muted/70 border border-border/50 flex items-center gap-1 hover:bg-muted transition-colors"
-                    title={g.is_public ? "Public — anyone can browse and join" : "Private — code required"}>
-                    {g.is_public ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
-                    {g.is_public ? "Public" : "Private"}
+                <div className="flex items-center gap-2 flex-wrap ml-2">
+                  <span className="font-bold text-sm">{g.name}</span>
+                  <button onClick={() => copyCode(g.join_code)}
+                    className="px-2 py-1 text-[11px] rounded-md bg-muted/70 border border-border/50 flex items-center gap-1 hover:bg-muted transition-colors tabular-nums"
+                    title="Copy join code to share with friends">
+                    <Copy className="w-3 h-3" /> {g.join_code}
                   </button>
-                  <button onClick={() => setShowDev(true)}
-                    className="px-2 py-1 text-[11px] rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center gap-1 font-semibold hover:bg-amber-500/25 transition-colors"
-                    title="Creator dev tools">
-                    <Wrench className="w-3 h-3" /> Dev
-                  </button>
-                </>
+                  {g.created_by === userId && (
+                    <>
+                      <button onClick={() => togglePublic(g)}
+                        className="px-2 py-1 text-[11px] rounded-md bg-muted/70 border border-border/50 flex items-center gap-1 hover:bg-muted transition-colors"
+                        title={g.is_public ? "Public — anyone can browse and join" : "Private — code required"}>
+                        {g.is_public ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+                        {g.is_public ? "Public" : "Private"}
+                      </button>
+                      <button onClick={() => setShowDev(true)}
+                        className="px-2 py-1 text-[11px] rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center gap-1 font-semibold hover:bg-amber-500/25 transition-colors"
+                        title="Creator dev tools">
+                        <Wrench className="w-3 h-3" /> Dev
+                      </button>
+                    </>
+                  )}
+                </div>
               );
             })()}
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setShowBrowse(true)} className="px-3 py-1.5 text-xs rounded-md bg-muted/70 hover:bg-muted flex items-center gap-1 transition-colors">
-              <Search className="w-3.5 h-3.5" /> Browse
-            </button>
-            <button onClick={() => setShowJoin(true)} className="px-3 py-1.5 text-xs rounded-md bg-muted/70 hover:bg-muted flex items-center gap-1 transition-colors">
-              <Users className="w-3.5 h-3.5" /> Join
-            </button>
-            <button onClick={() => setShowCreate(true)} className="px-3 py-1.5 text-xs rounded-md bg-primary text-primary-foreground flex items-center gap-1 shadow-sm hover:shadow-md hover:opacity-95 transition">
-              <Plus className="w-3.5 h-3.5" /> New game
+            <button onClick={() => setShowMenu(true)}
+              className="px-3 py-1.5 text-xs rounded-md bg-primary text-primary-foreground flex items-center gap-1 shadow-sm hover:shadow-md hover:opacity-95 transition"
+              title="Browse, join, create or switch games">
+              <Menu className="w-3.5 h-3.5" /> Games menu
             </button>
             <button onClick={signOut} className="px-2 py-1.5 text-xs rounded text-muted-foreground hover:text-foreground" title="Sign out">
               <LogOut className="w-4 h-4" />
@@ -300,28 +311,42 @@ const Sim = () => {
 
       <main className="container mx-auto px-4 py-6 space-y-6 pb-[80px]">
         {!activeMember ? (
-          <div className="bg-card border rounded-lg p-8 text-center">
+          <div className="bg-card border rounded-lg p-8 text-center max-w-md mx-auto">
             <h2 className="text-xl font-bold mb-2">Welcome to the Simulator</h2>
-            <p className="text-muted-foreground mb-4">Create a new game or join one with a code to start trading.</p>
-            <div className="flex gap-2 justify-center">
-              <button onClick={() => setShowCreate(true)} className="px-4 py-2 rounded bg-primary text-primary-foreground">Create game</button>
-              <button onClick={() => setShowJoin(true)} className="px-4 py-2 rounded bg-muted">Join game</button>
+            <p className="text-muted-foreground mb-5">Pick how you want to start. You'll trade inside one focused game at a time.</p>
+            <div className="flex flex-col gap-2">
+              <button onClick={() => setShowCreate(true)} className="px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold flex items-center justify-center gap-2"><Plus className="w-4 h-4" /> Create a new game</button>
+              <button onClick={() => setShowJoin(true)} className="px-4 py-2.5 rounded-lg bg-muted font-semibold flex items-center justify-center gap-2"><Users className="w-4 h-4" /> Join with a code</button>
+              <button onClick={() => setShowBrowse(true)} className="px-4 py-2.5 rounded-lg bg-muted font-semibold flex items-center justify-center gap-2"><Search className="w-4 h-4" /> Browse public games</button>
             </div>
           </div>
         ) : (
           <>
+            {showHelp && (
+              <div className="bg-accent text-accent-foreground border border-primary/20 rounded-xl p-4 flex items-start gap-3">
+                <HelpCircle className="w-5 h-5 shrink-0 text-primary mt-0.5" />
+                <div className="text-sm flex-1">
+                  <p className="font-bold mb-1">How to use the simulator</p>
+                  <p className="text-muted-foreground">Use the <b>Place order</b> panel to buy and sell with virtual cash. Track your gains in the stats below and climb the leaderboard. Tap <b>Games menu</b> (top right) to switch, create, or join another game.</p>
+                </div>
+                <button onClick={dismissHelp} title="Dismiss" className="shrink-0 text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+              </div>
+            )}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <Stat label="Cash" value={`$${formatNumber(Number(activeMember.cash))}`} />
               <Stat label="Holdings" value={`$${formatNumber(portfolioValue)}`} />
               <Stat label="Equity" value={`$${formatNumber(equity)}`} />
               <Stat label="Day P&L" value={`${dayPL >= 0 ? "+" : ""}$${formatNumber(dayPL)}`}
-                cls={dayPL >= 0 ? "text-up" : "text-down"} />
+                cls={dayPL >= 0 ? "text-up" : "text-down"}
+                hint="Today's gain or loss across all your holdings, vs. yesterday's closing prices." />
               <Stat label="Total Return" value={`${totalReturnPct >= 0 ? "+" : ""}${formatNumber(totalReturnPct)}%`}
-                cls={totalReturnPct >= 0 ? "text-up" : "text-down"} />
+                cls={totalReturnPct >= 0 ? "text-up" : "text-down"}
+                hint="How much your total equity is up or down since the game's starting cash." />
             </div>
 
+
             <div className="grid lg:grid-cols-[1fr_360px] gap-6">
-              <section className="bg-card border rounded-xl p-5 shadow-sm">
+              <section className="bg-card border rounded-xl p-5 shadow-sm order-2 lg:order-1">
                 <h3 className="font-bold mb-3">Positions</h3>
                 {positions.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-6 text-center">No positions yet. Place an order to begin.</p>
@@ -358,7 +383,7 @@ const Sim = () => {
                 )}
               </section>
 
-              <aside className="bg-card border rounded-xl p-5 shadow-sm">
+              <aside className="bg-card border rounded-xl p-5 shadow-sm order-1 lg:order-2">
                 <h3 className="font-bold mb-3">Place order</h3>
                 <form onSubmit={placeOrder} className="space-y-3">
                   <div className="flex gap-1 bg-muted rounded p-1">
@@ -496,6 +521,18 @@ const Sim = () => {
         )}
       </main>
 
+      {showMenu && (
+        <GameMenuModal
+          games={games}
+          activeGameId={activeGameId}
+          onClose={() => setShowMenu(false)}
+          onSelect={(id) => { setActiveGameId(id); setShowMenu(false); }}
+          onCreate={() => { setShowMenu(false); setShowCreate(true); }}
+          onJoin={() => { setShowMenu(false); setShowJoin(true); }}
+          onBrowse={() => { setShowMenu(false); setShowBrowse(true); }}
+          onCopy={copyCode}
+        />
+      )}
       {showCreate && <CreateGameModal onClose={() => setShowCreate(false)} onCreate={createGame} />}
       {showJoin && <JoinGameModal onClose={() => setShowJoin(false)} onJoin={joinGame} />}
       {showBrowse && (
@@ -572,12 +609,16 @@ const Sim = () => {
   );
 };
 
-const Stat = ({ label, value, cls }: { label: string; value: string; cls?: string }) => (
+const Stat = ({ label, value, cls, hint }: { label: string; value: string; cls?: string; hint?: string }) => (
   <div className="relative overflow-hidden bg-gradient-to-br from-card to-muted/40 border rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
-    <div className="text-[10px] text-muted-foreground uppercase tracking-[0.18em] font-bold">{label}</div>
+    <div className="text-[10px] text-muted-foreground uppercase tracking-[0.18em] font-bold flex items-center gap-1">
+      {label}
+      {hint && <HelpCircle className="w-3 h-3 cursor-help opacity-60" aria-label={hint}><title>{hint}</title></HelpCircle>}
+    </div>
     <div className={cn("text-2xl font-bold tabular-nums mt-1", cls)}>{value}</div>
   </div>
 );
+
 
 const Leaderboard = ({ gameId }: { gameId: string }) => {
   const [rows, setRows] = useState<{ name: string; equity: number }[]>([]);
@@ -694,6 +735,51 @@ const Allocation = ({ cash, rows }: { cash: number; rows: { symbol: string; valu
     </div>
   );
 };
+
+const GameMenuModal = ({ games, activeGameId, onClose, onSelect, onCreate, onJoin, onBrowse, onCopy }: {
+  games: Game[];
+  activeGameId: string | null;
+  onClose: () => void;
+  onSelect: (id: string) => void;
+  onCreate: () => void;
+  onJoin: () => void;
+  onBrowse: () => void;
+  onCopy: (code: string) => void;
+}) => (
+  <Modal onClose={onClose}>
+    <div className="flex items-center justify-between mb-3">
+      <h3 className="font-bold text-lg">Games menu</h3>
+      <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+    </div>
+    {games.length > 0 && (
+      <div className="mb-4">
+        <div className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2">Your games</div>
+        <ul className="space-y-1.5 max-h-60 overflow-y-auto">
+          {games.map((g) => (
+            <li key={g.id}>
+              <div className={cn("flex items-center gap-2 rounded-lg border p-2.5", g.id === activeGameId ? "border-primary bg-accent/50" : "bg-card")}>
+                <button onClick={() => onSelect(g.id)} className="flex-1 text-left min-w-0">
+                  <div className="font-semibold text-sm truncate">{g.name}</div>
+                  <div className="text-[11px] text-muted-foreground">{g.id === activeGameId ? "Active now" : "Tap to switch"}</div>
+                </button>
+                <button onClick={() => onCopy(g.join_code)} title="Copy join code"
+                  className="px-2 py-1 text-[11px] rounded-md bg-muted/70 border flex items-center gap-1 tabular-nums shrink-0">
+                  <Copy className="w-3 h-3" /> {g.join_code}
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+    <div className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2">Start or join another</div>
+    <div className="flex flex-col gap-2">
+      <button onClick={onCreate} className="px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold flex items-center justify-center gap-2"><Plus className="w-4 h-4" /> Create a new game</button>
+      <button onClick={onJoin} className="px-4 py-2.5 rounded-lg bg-muted font-semibold flex items-center justify-center gap-2"><Users className="w-4 h-4" /> Join with a code</button>
+      <button onClick={onBrowse} className="px-4 py-2.5 rounded-lg bg-muted font-semibold flex items-center justify-center gap-2"><Search className="w-4 h-4" /> Browse public games</button>
+    </div>
+  </Modal>
+);
 
 const CreateGameModal = ({ onClose, onCreate }: { onClose: () => void; onCreate: (n: string, c: number, commission: number, allowShort: boolean, isPublic: boolean) => void }) => {
   const [name, setName] = useState("My Game");

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Sparkles, Lock, Clock, Search, ShieldAlert, Share2 } from "lucide-react";
+import { ArrowRight, Sparkles, Clock, Search, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { HomeHeader } from "@/components/HomeHeader";
 import { SEO } from "@/components/SEO";
@@ -9,10 +9,8 @@ import { IntroSplash, hasSeenIntro } from "@/components/IntroSplash";
 import { GLOSSARY } from "@/components/Glossary";
 import { cn } from "@/lib/utils";
 
-const SITE_URL = "https://integralstocks.com";
 
-async function shareLesson(title: string, to: string) {
-  const url = `${SITE_URL}${to}`;
+async function shareLesson(title: string, url: string) {
   try {
     if (navigator.share) {
       await navigator.share({ title: `Integral Stocks · ${title}`, url });
@@ -25,12 +23,43 @@ async function shareLesson(title: string, to: string) {
   }
 }
 
+// Each lesson links to a real, beginner-friendly explainer from a reliable source.
 const LESSONS = [
-  { n: 1, title: "What is a stock, really?", read: "4 min", to: "/learn/basics" },
-  { n: 2, title: "How the market actually moves", read: "6 min", to: "/learn/basics" },
-  { n: 3, title: "Reading a price chart", read: "5 min", to: "/learn/patterns" },
-  { n: 4, title: "Risk, diversification & ETFs", read: "7 min", to: "/learn/indicators", locked: true },
-  { n: 5, title: "Building your first portfolio", read: "8 min", to: "/learn/indicators", locked: true },
+  {
+    n: 1,
+    title: "What is a stock, really?",
+    read: "4 min",
+    source: "Investor.gov (SEC)",
+    url: "https://www.investor.gov/introduction-investing/investing-basics/investment-products/stocks",
+  },
+  {
+    n: 2,
+    title: "How the stock market actually moves",
+    read: "6 min",
+    source: "Investopedia",
+    url: "https://www.investopedia.com/articles/investing/082614/how-stock-market-works.asp",
+  },
+  {
+    n: 3,
+    title: "Reading a price chart",
+    read: "5 min",
+    source: "Investopedia",
+    url: "https://www.investopedia.com/articles/technical/03/060303.asp",
+  },
+  {
+    n: 4,
+    title: "Risk, diversification & ETFs",
+    read: "7 min",
+    source: "Investor.gov (SEC)",
+    url: "https://www.investor.gov/introduction-investing/investing-basics/how-stock-markets-work/diversification",
+  },
+  {
+    n: 5,
+    title: "Building your first portfolio",
+    read: "8 min",
+    source: "Investopedia",
+    url: "https://www.investopedia.com/articles/basics/03/050203.asp",
+  },
 ];
 
 const TERMS = ["ETF", "Dividend", "Index Fund", "Bull Market", "Market Cap", "Compound Interest"];
@@ -108,70 +137,46 @@ const HomeContent = () => {
         </div>
       </section>
 
-      {/* Disclaimer banner */}
-      <div className="bg-accent text-accent-foreground">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-center gap-2 text-sm font-semibold text-center">
-          <ShieldAlert className="w-4 h-4 shrink-0" />
-          For educational purposes only — not financial advice.
-        </div>
-      </div>
-
       <main className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-14 space-y-20">
         {/* Learning path */}
         <section>
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-1">Your learning path</h2>
-          <p className="text-muted-foreground mb-6">Five short lessons. Start at the top.</p>
+          <p className="text-muted-foreground mb-6">
+            Five short lessons, each linked to a trusted, real-world explainer.
+          </p>
           <ol className="space-y-3">
-            {LESSONS.map((l) => {
-              const inner = (
-                <div
-                  className={cn(
-                    "flex items-center gap-4 rounded-2xl border p-4 transition-colors flex-1",
-                    l.locked ? "opacity-50 bg-muted/40" : "bg-card hover:border-primary",
-                  )}
+            {LESSONS.map((l) => (
+              <li key={l.n} className="flex items-stretch gap-2">
+                <a
+                  href={l.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-1"
                 >
-                  <span
-                    className={cn(
-                      "flex items-center justify-center w-10 h-10 rounded-full font-extrabold shrink-0",
-                      l.locked ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground",
-                    )}
-                  >
-                    {l.n}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="font-bold leading-snug">{l.title}</div>
-                    <div className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                      <Clock className="w-3.5 h-3.5" /> {l.read} read
+                  <div className="flex items-center gap-4 rounded-2xl border p-4 transition-colors flex-1 bg-card hover:border-primary">
+                    <span className="flex items-center justify-center w-10 h-10 rounded-full font-extrabold shrink-0 bg-primary text-primary-foreground">
+                      {l.n}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-bold leading-snug">{l.title}</div>
+                      <div className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                        <Clock className="w-3.5 h-3.5" /> {l.read} read · {l.source}
+                      </div>
                     </div>
-                  </div>
-                  {l.locked ? (
-                    <Lock className="w-4 h-4 text-muted-foreground shrink-0" />
-                  ) : (
                     <ArrowRight className="w-4 h-4 text-primary shrink-0" />
-                  )}
-                </div>
-              );
-              return (
-                <li key={l.n} className="flex items-stretch gap-2">
-                  {l.locked ? (
-                    inner
-                  ) : (
-                    <Link to={l.to} className="flex flex-1">
-                      {inner}
-                    </Link>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => shareLesson(l.title, l.to)}
-                    aria-label={`Share "${l.title}"`}
-                    title="Share this lesson"
-                    className="shrink-0 flex items-center justify-center w-12 rounded-2xl border bg-card text-primary hover:border-primary hover:bg-accent transition-colors"
-                  >
-                    <Share2 className="w-4 h-4" />
-                  </button>
-                </li>
-              );
-            })}
+                  </div>
+                </a>
+                <button
+                  type="button"
+                  onClick={() => shareLesson(l.title, l.url)}
+                  aria-label={`Share "${l.title}"`}
+                  title="Share this lesson"
+                  className="shrink-0 flex items-center justify-center w-12 rounded-2xl border bg-card text-primary hover:border-primary hover:bg-accent transition-colors"
+                >
+                  <Share2 className="w-4 h-4" />
+                </button>
+              </li>
+            ))}
           </ol>
         </section>
 
