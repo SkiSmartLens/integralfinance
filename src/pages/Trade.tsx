@@ -113,9 +113,11 @@ const Trade = () => {
 
   const estCost = last ? last * shares : 0;
   const cashAfter = side === "buy" || side === "cover" ? cash - estCost : cash + estCost;
+  const insufficientFunds = side === "buy" && estCost > cash;
 
   const place = async () => {
     if (!activeMember) return toast({ title: "Join a sim game first", variant: "destructive" });
+    if (insufficientFunds) return toast({ title: "Insufficient funds", description: "You need more cash before placing this buy order.", variant: "destructive" });
     if ((side === "short" || side === "cover") && !allowShort)
       return toast({ title: "Shorting is disabled in this game", description: "Create a new game with shorts enabled.", variant: "destructive" });
     setPlacing(true);
@@ -296,7 +298,8 @@ const Trade = () => {
                 <Row label="Cash after" value={`$${formatNumber(cashAfter)}`} bold cls={cashAfter < 0 ? "text-down" : ""} />
               </div>
 
-              <button onClick={place} disabled={placing || maxShares < 1}
+              {insufficientFunds && <p className="text-[11px] font-semibold text-down">Insufficient Funds</p>}
+              <button onClick={place} disabled={placing || maxShares < 1 || insufficientFunds}
                 className={cn(
                   "w-full py-3 rounded-xl font-extrabold text-white shadow-md hover:shadow-lg transition disabled:opacity-50 flex items-center justify-center gap-2",
                   side === "buy" || side === "cover" ? "bg-up hover:brightness-110" : "bg-down hover:brightness-110"

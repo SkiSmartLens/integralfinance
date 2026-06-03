@@ -8,6 +8,7 @@ import { fetchQuotes, formatNumber, formatLargeNumber } from "@/lib/yahoo";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Slider } from "@/components/ui/slider";
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { LogOut, Plus, Users, Search, Globe, Lock, Wrench, Copy, Menu, X, HelpCircle } from "lucide-react";
 
 interface Game { id: string; name: string; starting_cash: number; commission: number; join_code: string; created_by: string; is_public?: boolean; }
@@ -16,9 +17,12 @@ interface Position { id: string; symbol: string; shares: number; avg_cost: numbe
 interface Tx { id: string; symbol: string; side: string; shares: number; price: number; created_at: string; }
 interface Order { id: string; symbol: string; side: string; order_type: string; shares: number; limit_price: number | null; stop_price: number | null; status: string; created_at: string; }
 
+const ADMIN_EMAILS = ["william.s.wolenski@gmail.com"];
+
 const Sim = () => {
   const nav = useNavigate();
   const [userId, setUserId] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState("");
   const [games, setGames] = useState<Game[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [activeGameId, setActiveGameId] = useState<string | null>(null);
@@ -32,6 +36,8 @@ const Sim = () => {
   const [showBrowse, setShowBrowse] = useState(false);
   const [showDev, setShowDev] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [showHelp, setShowHelp] = useState(() => {
     try { return localStorage.getItem("simHelpDismissed") !== "1"; } catch { return true; }
   });
@@ -54,15 +60,27 @@ const Sim = () => {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (!session) nav("/auth");
-      else setUserId(session.user.id);
+      if (!session) {
+        setUserId(null);
+        setUserEmail("");
+        return;
+      }
+      setUserId(session.user.id);
+      setUserEmail(session.user.email ?? "");
     });
     supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) nav("/auth");
-      else setUserId(data.session.user.id);
+      if (!data.session) {
+        setUserId(null);
+        setUserEmail("");
+        return;
+      }
+      setUserId(data.session.user.id);
+      setUserEmail(data.session.user.email ?? "");
     });
     return () => subscription.unsubscribe();
   }, [nav]);
+
+  const isAdmin = ADMIN_EMAILS.includes((userEmail || "").toLowerCase());
 
   const reloadGames = async () => {
     if (!userId) return;
@@ -72,13 +90,20 @@ const Sim = () => {
     if (ids.length) {
       const { data: gs } = await supabase.from("games").select("*").in("id", ids);
       setGames((gs ?? []) as Game[]);
-      if (!activeGameId && gs && gs.length) setActiveGameId(gs[0].id);
+      const saved = localStorage.getItem("activeSimGame");
+      const fallback = saved && (gs ?? []).some((g) => g.id === saved) ? saved : (gs ?? [])[0]?.id ?? null;
+      if (!activeGameId && fallback) setActiveGameId(fallback);
     } else {
       setGames([]);
     }
   };
 
   useEffect(() => { reloadGames(); /* eslint-disable-next-line */ }, [userId]);
+
+  useEffect(() => {
+    if (activeGameId) localStorage.setItem("activeSimGame", activeGameId);
+    else localStorage.removeItem("activeSimGame");
+  }, [activeGameId]);
 
   const activeMember = members.find((m) => m.game_id === activeGameId);
 
@@ -142,6 +167,7 @@ const Sim = () => {
     ? (ticketPrice && ticketPrice > 0 ? Math.max(1, Math.floor(cashAvail / ticketPrice)) : 1000)
     : Math.max(1, ownedShares || 1);
   const estCost = ticketPrice ? ticketPrice * shares : undefined;
+  const insufficientFunds = side === "buy" && estCost != null && estCost > cashAvail;
 
   const portfolioValue = positions.reduce((sum, p) => sum + (prices[p.symbol] ?? p.avg_cost) * Number(p.shares), 0);
   const dayPL = positions.reduce((sum, p) => {
@@ -218,6 +244,7 @@ const Sim = () => {
   const placeOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeMember) return toast({ title: "Join or create a game first", variant: "destructive" });
+    if (insufficientFunds) return toast({ title: "Insufficient funds", description: "You need more cash to place this buy order.", variant: "destructive" });
     setPlacing(true);
     const { data, error } = await supabase.functions.invoke("place-order", {
       body: {
@@ -248,6 +275,13 @@ const Sim = () => {
   };
 
   const signOut = async () => { await supabase.auth.signOut(); nav("/auth"); };
+
+  const handleLogoutFromGame = () => {
+    setActiveGameId(null);
+    setShowSettings(false);
+    setShowMenu(false);
+    toast({ title: "Logged out of game", description: "You can now search for or create a new game." });
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -295,6 +329,12 @@ const Sim = () => {
             })()}
           </div>
           <div className="flex items-center gap-2">
+            {isAdmin && <span className="rounded-full border border-amber-400/50 bg-amber-500/10 px-2 py-1 text-[11px] font-semibold text-amber-700 dark:text-amber-300">Admin</span>}
+            <button onClick={() => setShowSettings(true)}
+              className="px-3 py-1.5 text-xs rounded-md bg-muted text-foreground flex items-center gap-1 shadow-sm hover:bg-accent transition"
+              title="Settings and game session controls">
+              <Wrench className="w-3.5 h-3.5" /> Settings
+            </button>
             <button onClick={() => setShowMenu(true)}
               className="px-3 py-1.5 text-xs rounded-md bg-primary text-primary-foreground flex items-center gap-1 shadow-sm hover:shadow-md hover:opacity-95 transition"
               title="Browse, join, create or switch games">
@@ -312,6 +352,15 @@ const Sim = () => {
           <div className="bg-card border rounded-lg p-8 text-center max-w-md mx-auto">
             <h2 className="text-xl font-bold mb-2">Welcome to the Simulator</h2>
             <p className="text-muted-foreground mb-5">Pick how you want to start. You'll trade inside one focused game at a time.</p>
+            <div className="rounded-xl border bg-muted/40 p-3 text-left text-sm text-muted-foreground">
+              <label className="text-[11px] uppercase tracking-[0.2em] font-semibold text-foreground">Find or create a game</label>
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search game name or join code"
+                className="mt-2 w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
             <div className="flex flex-col gap-2">
               <button onClick={() => setShowCreate(true)} className="px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold flex items-center justify-center gap-2"><Plus className="w-4 h-4" /> Create a new game</button>
               <button onClick={() => setShowJoin(true)} className="px-4 py-2.5 rounded-lg bg-muted font-semibold flex items-center justify-center gap-2"><Users className="w-4 h-4" /> Join with a code</button>
@@ -345,7 +394,12 @@ const Sim = () => {
 
             <div className="grid lg:grid-cols-[1fr_360px] gap-6">
               <section className="bg-card border rounded-xl p-5 shadow-sm order-2 lg:order-1">
-                <h3 className="font-bold mb-3">Positions</h3>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="font-bold">Positions & earnings</h3>
+                    <p className="text-xs text-muted-foreground">See how each holding contributes to your portfolio and overall gains.</p>
+                  </div>
+                </div>
                 {positions.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-6 text-center">No positions yet. Place an order to begin.</p>
                 ) : (
@@ -371,13 +425,23 @@ const Sim = () => {
                   </div>
                 )}
                 {positions.length > 0 && (
-                  <Allocation
-                    cash={Number(activeMember.cash)}
-                    rows={positions.map((p) => ({
-                      symbol: p.symbol,
-                      value: (prices[p.symbol] ?? Number(p.avg_cost)) * Number(p.shares),
-                    }))}
-                  />
+                  <div className="mt-4 rounded-xl border bg-muted/30 p-4">
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <div>
+                        <h4 className="text-sm font-semibold">Earnings pie chart</h4>
+                        <p className="text-[11px] text-muted-foreground">Green and red slices reflect gains and losses by position.</p>
+                      </div>
+                    </div>
+                    <Allocation
+                      cash={Number(activeMember.cash)}
+                      rows={positions.map((p) => ({
+                        symbol: p.symbol,
+                        value: (prices[p.symbol] ?? Number(p.avg_cost)) * Number(p.shares),
+                        avgCost: Number(p.avg_cost),
+                        last: prices[p.symbol] ?? Number(p.avg_cost),
+                      }))}
+                    />
+                  </div>
                 )}
               </section>
 
@@ -441,7 +505,10 @@ const Sim = () => {
                     <input type="number" step="0.01" value={stopPrice} onChange={(e) => setStopPrice(Number(e.target.value))}
                       placeholder="Stop price" className="w-full px-3 py-2 bg-muted rounded outline-none" />
                   )}
-                  <button disabled={placing} className={cn(
+                  {insufficientFunds && (
+                    <p className="text-[11px] font-semibold text-down">Insufficient Funds</p>
+                  )}
+                  <button disabled={placing || insufficientFunds} className={cn(
                     "w-full py-2.5 rounded-lg font-semibold text-white shadow-sm hover:shadow-md transition disabled:opacity-60",
                     side === "buy" ? "bg-up hover:brightness-110" : "bg-down hover:brightness-110"
                   )}>
@@ -519,6 +586,13 @@ const Sim = () => {
         )}
       </main>
 
+      {showSettings && (
+        <SettingsModal
+          isAdmin={isAdmin}
+          onClose={() => setShowSettings(false)}
+          onLogout={handleLogoutFromGame}
+        />
+      )}
       {showMenu && (
         <GameMenuModal
           games={games}
@@ -621,63 +695,115 @@ const Modal = ({ children, onClose }: any) => (
   </div>
 );
 
-const ALLOC_COLORS = [
-  "hsl(var(--primary))",
-  "hsl(var(--chart-up))",
-  "hsl(var(--chart-down))",
-  "hsl(45 95% 55%)",
-  "hsl(280 70% 60%)",
-  "hsl(190 80% 50%)",
-  "hsl(20 90% 60%)",
-  "hsl(150 60% 45%)",
-  "hsl(330 70% 60%)",
-  "hsl(220 60% 60%)",
-];
+const Allocation = ({ cash, rows }: { cash: number; rows: { symbol: string; value: number; avgCost: number; last: number }[] }) => {
+  const holdings = rows.filter((r) => r.value > 0);
+  const maxAbsGain = Math.max(1, ...holdings.map((r) => Math.abs((r.last - r.avgCost) * Number(r.value / r.last || 0))));
 
-const Allocation = ({ cash, rows }: { cash: number; rows: { symbol: string; value: number }[] }) => {
-  const total = cash + rows.reduce((s, r) => s + r.value, 0);
-  if (total <= 0) return null;
-  const slices = [
-    ...rows.map((r, i) => ({ label: r.symbol, value: r.value, color: ALLOC_COLORS[i % ALLOC_COLORS.length] })),
-    { label: "Cash", value: cash, color: "hsl(var(--muted-foreground) / 0.5)" },
-  ].filter((s) => s.value > 0);
-  // Conic gradient slices.
-  let acc = 0;
-  const stops = slices
-    .map((s) => {
-      const start = (acc / total) * 100;
-      acc += s.value;
-      const end = (acc / total) * 100;
-      return `${s.color} ${start}% ${end}%`;
-    })
-    .join(", ");
+  const data = holdings.map((r) => {
+    const shares = r.value / r.last;
+    const gainLoss = (r.last - r.avgCost) * shares;
+    const changePct = r.avgCost > 0 ? ((r.last - r.avgCost) / r.avgCost) * 100 : 0;
+    const lightness = Math.max(35, 65 - Math.min(25, (Math.abs(gainLoss) / maxAbsGain) * 25));
+    const hue = gainLoss >= 0 ? 142 : 12;
+    return {
+      name: r.symbol,
+      value: r.value,
+      gainLoss,
+      changePct,
+      fill: `hsl(${hue} 70% ${lightness}%)`,
+    };
+  });
+
+  if (!data.length) return null;
+
   return (
-    <div className="mt-4 pt-4 border-t flex items-center gap-5 flex-wrap">
-      <div
-        className="w-28 h-28 rounded-full shrink-0 relative"
-        style={{ background: `conic-gradient(${stops})` }}
-        aria-label="Allocation pie chart"
-      >
-        <div className="absolute inset-3 rounded-full bg-card flex flex-col items-center justify-center">
-          <div className="text-[10px] text-muted-foreground uppercase">Equity</div>
-          <div className="text-xs font-bold tabular-nums">${formatLargeNumber(total)}</div>
+    <div className="mt-4 pt-4 border-t">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <h4 className="text-sm font-semibold">Portfolio pie chart</h4>
+          <p className="text-[11px] text-muted-foreground">Slice size reflects position value; hover for dollar value and gain/loss.</p>
+        </div>
+        <div className="text-right text-xs text-muted-foreground">
+          <div className="font-semibold text-foreground">Cash: ${formatNumber(cash)}</div>
+          <div>Total holdings: ${formatNumber(rows.reduce((sum, r) => sum + r.value, 0))}</div>
         </div>
       </div>
-      <ul className="flex-1 min-w-0 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-        {slices.map((s) => {
-          const pct = (s.value / total) * 100;
-          return (
-            <li key={s.label} className="flex items-center gap-2 min-w-0">
-              <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: s.color }} />
-              <span className="font-semibold truncate">{s.label}</span>
-              <span className="ml-auto tabular-nums text-muted-foreground">{pct.toFixed(1)}%</span>
+      <div className="grid gap-4 lg:grid-cols-[1fr_220px] items-center">
+        <div className="h-56 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={data}
+                dataKey="value"
+                nameKey="name"
+                innerRadius={48}
+                outerRadius={88}
+                paddingAngle={2}
+                label={({ name }) => name}
+                labelLine={false}
+              >
+                {data.map((entry) => (
+                  <Cell key={entry.name} fill={entry.fill} />
+                ))}
+              </Pie>
+              <Tooltip
+                formatter={(value: number, _name, entry: any) => {
+                  const gainLoss = entry?.payload?.gainLoss ?? 0;
+                  return [
+                    <span key="value">$${formatNumber(Number(value))}</span>,
+                    entry?.payload?.name ?? "Holding",
+                    <span key="gain" className={cn("block text-[11px]", gainLoss >= 0 ? "text-up" : "text-down")}>P/L: {gainLoss >= 0 ? "+" : ""}${formatNumber(gainLoss)}</span>,
+                  ];
+                }}
+                contentStyle={{ borderRadius: 12, borderColor: "hsl(var(--border))" }}
+                labelFormatter={(label) => `Holding ${label}`}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+        <ul className="space-y-2 text-xs">
+          {data.map((item) => (
+            <li key={item.name} className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2">
+              <span className="flex items-center gap-2 min-w-0">
+                <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: item.fill }} />
+                <span className="font-semibold truncate">{item.name}</span>
+              </span>
+              <span className="text-right tabular-nums text-muted-foreground">
+                {item.gainLoss >= 0 ? "+" : ""}${formatNumber(item.gainLoss)}
+              </span>
             </li>
-          );
-        })}
-      </ul>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 };
+
+const SettingsModal = ({ isAdmin, onClose, onLogout }: { isAdmin: boolean; onClose: () => void; onLogout: () => void }) => (
+  <Modal onClose={onClose}>
+    <div className="flex items-center justify-between mb-3">
+      <div>
+        <h3 className="font-bold text-lg">Settings</h3>
+        <p className="text-xs text-muted-foreground">Your simulator session stays active until you log out manually.</p>
+      </div>
+      <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+    </div>
+    <div className="space-y-3 text-sm">
+      <section className="rounded-lg border bg-muted/50 p-3 space-y-2">
+        <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Admin status</div>
+        <div className="font-semibold">{isAdmin ? "Full admin access enabled" : "Standard player access"}</div>
+        <p className="text-xs text-muted-foreground">Admin users can manage simulator settings and user tools from this workspace.</p>
+        {isAdmin && (
+          <div className="grid gap-2">
+            <button className="rounded-md border bg-background px-3 py-2 text-left text-sm font-semibold">User management</button>
+            <button className="rounded-md border bg-background px-3 py-2 text-left text-sm font-semibold">Simulator settings</button>
+          </div>
+        )}
+      </section>
+      <button onClick={onLogout} className="w-full rounded-lg bg-down/10 text-down border border-down/30 px-4 py-2.5 font-semibold hover:bg-down/20">Log Out of Game</button>
+    </div>
+  </Modal>
+);
 
 const GameMenuModal = ({ games, activeGameId, onClose, onSelect, onCreate, onJoin, onBrowse, onCopy }: {
   games: Game[];
