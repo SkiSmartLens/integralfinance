@@ -235,7 +235,9 @@ const Trade = () => {
                   </button>
                 ))}
               </div>
-              <p className="text-[11px] text-muted-foreground -mt-2">{sideMeta[side].help}</p>
+              <div className="rounded-lg bg-accent/60 border border-primary/20 p-3 text-sm font-semibold text-foreground -mt-1">
+                {sideMeta[side].help}
+              </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1">
