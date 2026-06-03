@@ -521,6 +521,18 @@ const Sim = () => {
         )}
       </main>
 
+      {showMenu && (
+        <GameMenuModal
+          games={games}
+          activeGameId={activeGameId}
+          onClose={() => setShowMenu(false)}
+          onSelect={(id) => { setActiveGameId(id); setShowMenu(false); }}
+          onCreate={() => { setShowMenu(false); setShowCreate(true); }}
+          onJoin={() => { setShowMenu(false); setShowJoin(true); }}
+          onBrowse={() => { setShowMenu(false); setShowBrowse(true); }}
+          onCopy={copyCode}
+        />
+      )}
       {showCreate && <CreateGameModal onClose={() => setShowCreate(false)} onCreate={createGame} />}
       {showJoin && <JoinGameModal onClose={() => setShowJoin(false)} onJoin={joinGame} />}
       {showBrowse && (
