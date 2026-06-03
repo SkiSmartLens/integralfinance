@@ -58,7 +58,7 @@ const Sim = () => {
   // Order ticket
   const [symbol, setSymbol] = useState("AAPL");
   const [shares, setShares] = useState(10);
-  const [side, setSide] = useState<"buy" | "sell">("buy");
+  const [side, setSide] = useState<"buy" | "sell" | "short" | "cover">("buy");
   const [orderType, setOrderType] = useState<"market" | "limit" | "stop">("market");
   const [limitPrice, setLimitPrice] = useState<number | "">("");
   const [stopPrice, setStopPrice] = useState<number | "">("");
@@ -188,12 +188,25 @@ const Sim = () => {
   }, [symbol, prices]);
 
   const cashAvail = Number(activeMember?.cash ?? 0);
-  const ownedShares = Number(positions.find((p) => p.symbol === symbol.toUpperCase())?.shares ?? 0);
-  const maxShares = side === "buy"
+  const currentPositionShares = Number(positions.find((p) => p.symbol === symbol.toUpperCase())?.shares ?? 0);
+  const isLong = currentPositionShares > 0;
+  const isShort = currentPositionShares < 0;
+  const activeGame = games.find((g) => g.id === activeGameId) || null;
+  const allowShort = Boolean(activeGame?.allow_short);
+
+  useEffect(() => {
+    if (isLong && (side === "short" || side === "cover")) setSide("buy");
+    if (isShort && (side === "buy" || side === "sell")) setSide("cover");
+  }, [isLong, isShort]);
+
+  const maxShares = side === "buy" || side === "short"
     ? (ticketPrice && ticketPrice > 0 ? Math.max(1, Math.floor(cashAvail / ticketPrice)) : 1000)
-    : Math.max(1, ownedShares || 1);
+    : side === "sell"
+      ? Math.max(1, isLong ? currentPositionShares : 1)
+      : Math.max(1, isShort ? Math.abs(currentPositionShares) : 1);
   const estCost = ticketPrice ? ticketPrice * shares : undefined;
-  const insufficientFunds = side === "buy" && estCost != null && estCost > cashAvail;
+  const cashAfter = side === "buy" || side === "cover" ? cashAvail - (estCost ?? 0) : cashAvail + (estCost ?? 0);
+  const insufficientFunds = (side === "buy" || side === "cover") && estCost != null && estCost > cashAvail;
 
   const portfolioValue = positions.reduce((sum, p) => sum + (prices[p.symbol] ?? p.avg_cost) * Number(p.shares), 0);
   const dayPL = positions.reduce((sum, p) => {
@@ -270,7 +283,8 @@ const Sim = () => {
   const placeOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeMember) return toast({ title: "Join or create a game first", variant: "destructive" });
-    if (insufficientFunds) return toast({ title: "Insufficient funds", description: "You need more cash to place this buy order.", variant: "destructive" });
+    if ((side === "short" || side === "cover") && !allowShort) return toast({ title: "Shorting is disabled in this game", description: "Create a game with short selling enabled to use this action.", variant: "destructive" });
+    if (insufficientFunds) return toast({ title: "Insufficient funds", description: "You need more cash to place this trade.", variant: "destructive" });
     setPlacing(true);
     const { data, error } = await supabase.functions.invoke("place-order", {
       body: {
@@ -601,11 +615,11 @@ const Sim = () => {
                   {insufficientFunds && (
                     <p className="text-[11px] font-semibold text-down">Insufficient Funds</p>
                   )}
-                  <button disabled={placing || insufficientFunds} className={cn(
+                  <button disabled={placing || insufficientFunds || (side === "short" && !allowShort)} className={cn(
                     "w-full py-2.5 rounded-lg font-semibold text-white shadow-sm hover:shadow-md transition disabled:opacity-60",
-                    side === "buy" ? "bg-up hover:brightness-110" : "bg-down hover:brightness-110"
+                    side === "buy" || side === "cover" ? "bg-up hover:brightness-110" : "bg-down hover:brightness-110"
                   )}>
-                    {placing ? "Placing…" : `${side === "buy" ? "Buy" : "Sell"} ${shares || ""} ${symbol}`}
+                    {placing ? "Placing…" : `${side === "buy" ? "Buy" : side === "sell" ? "Sell" : side === "short" ? "Short" : "Cover"} ${shares || ""} ${symbol}`}
                   </button>
                   <p className="text-[10px] text-muted-foreground">
                     After-hours orders are queued and filled at the next live print.
