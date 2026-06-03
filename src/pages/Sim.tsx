@@ -9,7 +9,7 @@ import { fetchQuotes, formatNumber, formatLargeNumber } from "@/lib/yahoo";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Slider } from "@/components/ui/slider";
-import { LogOut, Plus, Users, Search, Globe, Lock, Wrench } from "lucide-react";
+import { LogOut, Plus, Users, Search, Globe, Lock, Wrench, Copy, Menu, X, HelpCircle } from "lucide-react";
 
 interface Game { id: string; name: string; starting_cash: number; commission: number; join_code: string; created_by: string; is_public?: boolean; }
 interface Member { id: string; game_id: string; user_id: string; cash: number; }
