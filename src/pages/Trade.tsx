@@ -272,6 +272,11 @@ const Trade = () => {
                   </button>
                 ))}
               </div>
+              <p className="text-xs text-muted-foreground -mt-1">
+                {orderType === "market" && "Market: fills right now at the best available live price."}
+                {orderType === "limit" && "Limit: only fills at your set price or better — may not fill."}
+                {orderType === "stop" && "Stop: turns into a market order once the price hits your trigger."}
+              </p>
               {orderType === "limit" && (
                 <input type="number" step="0.01" value={limitPrice} onChange={(e) => setLimitPrice(Number(e.target.value))}
                   placeholder={`Limit price (last $${last ? formatNumber(last) : "—"})`}
