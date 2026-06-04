@@ -14,7 +14,7 @@ export const IntroSplash = ({ onEnter }: Props) => {
 
   const enter = () => {
     try {
-      sessionStorage.setItem(STORAGE_KEY, "1");
+      localStorage.setItem(STORAGE_KEY, "1");
     } catch {
       /* ignore */
     }
@@ -60,7 +60,7 @@ export const IntroSplash = ({ onEnter }: Props) => {
           </button>
           <Link
             to="/stocks"
-            onClick={() => { try { sessionStorage.setItem(STORAGE_KEY, "1"); } catch { /* ignore */ } }}
+            onClick={() => { try { localStorage.setItem(STORAGE_KEY, "1"); } catch { /* ignore */ } }}
             className="text-sm font-bold text-muted-foreground underline underline-offset-4 hover:text-primary transition-colors"
           >
             Skip to full dashboard →
@@ -73,7 +73,7 @@ export const IntroSplash = ({ onEnter }: Props) => {
 
 export const hasSeenIntro = () => {
   try {
-    return sessionStorage.getItem(STORAGE_KEY) === "1";
+    return localStorage.getItem(STORAGE_KEY) === "1";
   } catch {
     return false;
   }
