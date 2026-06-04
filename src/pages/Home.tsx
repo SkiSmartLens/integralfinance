@@ -162,10 +162,8 @@ const HomeContent = () => {
           <ol className="space-y-3">
             {LESSONS.map((l) => (
               <li key={l.n} className="flex items-stretch gap-2">
-                <a
-                  href={l.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <Link
+                  to={l.url}
                   className="flex flex-1"
                 >
                   <div className="flex items-center gap-4 rounded-2xl border p-4 transition-colors flex-1 bg-card hover:border-primary">
