@@ -178,7 +178,7 @@ const HomeContent = () => {
                     </div>
                     <ArrowRight className="w-4 h-4 text-primary shrink-0" />
                   </div>
-                </a>
+                </Link>
                 <button
                   type="button"
                   onClick={() => shareLesson(l.title, l.url)}
