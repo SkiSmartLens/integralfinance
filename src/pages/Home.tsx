@@ -10,7 +10,8 @@ import { GLOSSARY } from "@/components/Glossary";
 import { cn } from "@/lib/utils";
 
 
-async function shareLesson(title: string, url: string) {
+async function shareLesson(title: string, rawUrl: string) {
+  const url = rawUrl.startsWith("http") ? rawUrl : `${window.location.origin}${rawUrl}`;
   try {
     if (navigator.share) {
       await navigator.share({ title: `Integral Stocks · ${title}`, url });
