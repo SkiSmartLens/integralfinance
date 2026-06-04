@@ -328,7 +328,7 @@ const Sim = () => {
       <SEO
         title="Trading Simulator — Integral Stocks"
         description="Multiplayer paper-trading simulator with live prices, leaderboards, limit/stop orders, and shareable game codes."
-        path="/sim"
+        path="/simulator"
       />
       <h1 className="sr-only">Trading Simulator</h1>
       <Header onSearch={(s) => nav(`/sim/trade/${s.toUpperCase()}`)} />

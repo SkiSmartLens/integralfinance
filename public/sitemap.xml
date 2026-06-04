@@ -2,58 +2,170 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://integralstocks.com/</loc>
-    <lastmod>2026-05-28</lastmod>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/about</loc>
-    <lastmod>2026-05-28</lastmod>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/contact</loc>
-    <lastmod>2026-05-28</lastmod>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/disclaimer</loc>
-    <lastmod>2026-05-28</lastmod>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/data-sources</loc>
-    <lastmod>2026-05-28</lastmod>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/faq</loc>
-    <lastmod>2026-05-28</lastmod>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/news</loc>
-    <lastmod>2026-05-28</lastmod>
+    <lastmod>2026-06-04</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
   </url>
   <url>
     <loc>https://integralstocks.com/stocks</loc>
+    <lastmod>2026-06-04</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/news</loc>
+    <lastmod>2026-06-04</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/screener</loc>
+    <lastmod>2026-06-04</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/calendar</loc>
+    <lastmod>2026-06-04</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/start</loc>
     <lastmod>2026-05-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/watchlist</loc>
+    <lastmod>2026-05-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://integralstocks.com/simulator</loc>
     <lastmod>2026-05-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://integralstocks.com/screener</loc>
+    <loc>https://integralstocks.com/about</loc>
     <lastmod>2026-05-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://integralstocks.com/calendar</loc>
+    <loc>https://integralstocks.com/contact</loc>
     <lastmod>2026-05-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/disclaimer</loc>
+    <lastmod>2026-05-28</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/data-sources</loc>
+    <lastmod>2026-05-28</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/faq</loc>
+    <lastmod>2026-05-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
   </url>
   <url>
     <loc>https://integralstocks.com/learn/basics</loc>
     <lastmod>2026-05-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://integralstocks.com/learn/indicators</loc>
     <lastmod>2026-05-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://integralstocks.com/learn/patterns</loc>
     <lastmod>2026-05-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/stocks/aapl</loc>
+    <lastmod>2026-06-04</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/stocks/msft</loc>
+    <lastmod>2026-06-04</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/stocks/nvda</loc>
+    <lastmod>2026-06-04</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/stocks/googl</loc>
+    <lastmod>2026-06-04</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/stocks/meta</loc>
+    <lastmod>2026-06-04</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/stocks/amzn</loc>
+    <lastmod>2026-06-04</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/stocks/tsla</loc>
+    <lastmod>2026-06-04</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/stocks/amd</loc>
+    <lastmod>2026-06-04</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/stocks/nflx</loc>
+    <lastmod>2026-06-04</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/stocks/orcl</loc>
+    <lastmod>2026-06-04</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/stocks/btc-usd</loc>
+    <lastmod>2026-06-04</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/stocks/eth-usd</loc>
+    <lastmod>2026-06-04</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.7</priority>
   </url>
 </urlset>
