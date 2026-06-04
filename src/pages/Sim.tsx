@@ -11,7 +11,7 @@ import { Slider } from "@/components/ui/slider";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { LogOut, Plus, Users, Search, Globe, Lock, Wrench, Copy, Menu, X, HelpCircle, ChevronDown, ChevronUp } from "lucide-react";
 
-interface Game { id: string; name: string; starting_cash: number; commission: number; join_code: string; created_by: string; is_public?: boolean; }
+interface Game { id: string; name: string; starting_cash: number; commission: number; join_code: string; created_by: string; is_public?: boolean; allow_short?: boolean; }
 interface Member { id: string; game_id: string; user_id: string; cash: number; }
 interface Position { id: string; symbol: string; shares: number; avg_cost: number; }
 interface Tx { id: string; symbol: string; side: string; shares: number; price: number; created_at: string; }

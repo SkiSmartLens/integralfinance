@@ -10,7 +10,8 @@ import { GLOSSARY } from "@/components/Glossary";
 import { cn } from "@/lib/utils";
 
 
-async function shareLesson(title: string, url: string) {
+async function shareLesson(title: string, rawUrl: string) {
+  const url = rawUrl.startsWith("http") ? rawUrl : `${window.location.origin}${rawUrl}`;
   try {
     if (navigator.share) {
       await navigator.share({ title: `Integral Stocks · ${title}`, url });
@@ -23,42 +24,42 @@ async function shareLesson(title: string, url: string) {
   }
 }
 
-// Each lesson links to a real, beginner-friendly explainer from a reliable source.
+// Each lesson links to an in-app learning page so the path always works.
 const LESSONS = [
   {
     n: 1,
     title: "What is a stock, really?",
     read: "4 min",
-    source: "Investor.gov (SEC)",
-    url: "https://www.investor.gov/introduction-investing/investing-basics/investment-products/stocks",
+    source: "Integral Basics",
+    url: "/learn/basics",
   },
   {
     n: 2,
     title: "How the stock market actually moves",
     read: "6 min",
-    source: "Investopedia",
-    url: "https://www.investopedia.com/articles/investing/082614/how-stock-market-works.asp",
+    source: "Integral Basics",
+    url: "/learn/basics",
   },
   {
     n: 3,
     title: "Reading a price chart",
     read: "5 min",
-    source: "Investopedia",
-    url: "https://www.investopedia.com/articles/technical/03/060303.asp",
+    source: "Integral Indicators",
+    url: "/learn/indicators",
   },
   {
     n: 4,
-    title: "Risk, diversification & ETFs",
+    title: "Key indicators explained",
     read: "7 min",
-    source: "Investor.gov (SEC)",
-    url: "https://www.investor.gov/introduction-investing/investing-basics/how-stock-markets-work/diversification",
+    source: "Integral Indicators",
+    url: "/learn/indicators",
   },
   {
     n: 5,
-    title: "Building your first portfolio",
+    title: "Spotting chart patterns",
     read: "8 min",
-    source: "Investopedia",
-    url: "https://www.investopedia.com/articles/basics/03/050203.asp",
+    source: "Integral Patterns",
+    url: "/learn/patterns",
   },
 ];
 
@@ -162,10 +163,8 @@ const HomeContent = () => {
           <ol className="space-y-3">
             {LESSONS.map((l) => (
               <li key={l.n} className="flex items-stretch gap-2">
-                <a
-                  href={l.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <Link
+                  to={l.url}
                   className="flex flex-1"
                 >
                   <div className="flex items-center gap-4 rounded-2xl border p-4 transition-colors flex-1 bg-card hover:border-primary">
@@ -180,7 +179,7 @@ const HomeContent = () => {
                     </div>
                     <ArrowRight className="w-4 h-4 text-primary shrink-0" />
                   </div>
-                </a>
+                </Link>
                 <button
                   type="button"
                   onClick={() => shareLesson(l.title, l.url)}
