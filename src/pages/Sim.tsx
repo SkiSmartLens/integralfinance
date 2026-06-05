@@ -145,6 +145,7 @@ const Sim = () => {
     setPositions((pos ?? []) as Position[]);
     setTxs((tx ?? []) as Tx[]);
     setPending((ords ?? []) as Order[]);
+    setTxPage(0);
   };
 
   useEffect(() => { reloadPortfolio(); /* eslint-disable-next-line */ }, [activeMember?.id]);
