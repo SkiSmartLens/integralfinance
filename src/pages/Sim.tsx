@@ -623,6 +623,14 @@ const Sim = () => {
                   {insufficientFunds && (
                     <p className="text-[11px] font-semibold text-down">Insufficient Funds</p>
                   )}
+                  <div className="flex items-center justify-between rounded-lg bg-muted/50 border px-3 py-2">
+                    <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">
+                      Live price · {symbol || "—"}
+                    </span>
+                    <span className="text-base font-bold tabular-nums">
+                      {ticketPrice ? `$${formatNumber(ticketPrice)}` : "—"}
+                    </span>
+                  </div>
                   <button disabled={placing || insufficientFunds || (side === "short" && !allowShort)} className={cn(
                     "w-full py-2.5 rounded-lg font-semibold text-white shadow-sm hover:shadow-md transition disabled:opacity-60",
                     side === "buy" || side === "cover" ? "bg-up hover:brightness-110" : "bg-down hover:brightness-110"
