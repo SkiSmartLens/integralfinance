@@ -312,6 +312,7 @@ const Sim = () => {
     });
     reloadPortfolio();
     reloadGames();
+    setLeaderboardRefresh((n) => n + 1);
   };
 
   const cancelOrder = async (id: string) => {
