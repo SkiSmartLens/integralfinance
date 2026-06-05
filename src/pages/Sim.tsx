@@ -139,7 +139,7 @@ const Sim = () => {
     if (!activeMember) return;
     const [{ data: pos }, { data: tx }, { data: ords }] = await Promise.all([
       supabase.from("positions").select("*").eq("member_id", activeMember.id),
-      supabase.from("transactions").select("*").eq("member_id", activeMember.id).order("created_at", { ascending: false }).limit(20),
+      supabase.from("transactions").select("*").eq("member_id", activeMember.id).order("created_at", { ascending: false }).limit(100),
       supabase.from("orders").select("*").eq("member_id", activeMember.id).eq("status", "pending").order("created_at", { ascending: false }),
     ]);
     setPositions((pos ?? []) as Position[]);
