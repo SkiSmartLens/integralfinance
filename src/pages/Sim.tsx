@@ -63,6 +63,8 @@ const Sim = () => {
   const [limitPrice, setLimitPrice] = useState<number | "">("");
   const [stopPrice, setStopPrice] = useState<number | "">("");
   const [placing, setPlacing] = useState(false);
+  const [txPage, setTxPage] = useState(0);
+  const [leaderboardRefresh, setLeaderboardRefresh] = useState(0);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
