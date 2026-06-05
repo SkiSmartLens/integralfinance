@@ -789,16 +789,18 @@ const Stat = ({ label, value, cls, hint }: { label: string; value: string; cls?:
 );
 
 
-const Leaderboard = ({ gameId }: { gameId: string }) => {
-  const [rows, setRows] = useState<{ name: string; equity: number }[]>([]);
+const Leaderboard = ({ gameId, refreshKey }: { gameId: string; refreshKey?: number }) => {
+  const [rows, setRows] = useState<{ name: string; equity: number; pct: number }[]>([]);
   useEffect(() => {
     let alive = true;
     const load = async () => {
+      const { data: game } = await supabase.from("games").select("starting_cash").eq("id", gameId).maybeSingle();
+      const start = Number(game?.starting_cash ?? 100000) || 100000;
       const { data: ms } = await supabase.from("game_members").select("id, user_id, cash").eq("game_id", gameId);
       if (!ms || !alive) return;
       const userIds = ms.map((m) => m.user_id);
       const { data: profiles } = await supabase.from("profiles").select("user_id, display_name").in("user_id", userIds);
-      const result: { name: string; equity: number }[] = [];
+      const result: { name: string; equity: number; pct: number }[] = [];
       for (const m of ms) {
         const { data: pos } = await supabase.from("positions").select("symbol, shares, avg_cost").eq("member_id", m.id);
         let value = Number(m.cash);
@@ -809,7 +811,8 @@ const Leaderboard = ({ gameId }: { gameId: string }) => {
           for (const p of pos) value += (map[p.symbol] ?? Number(p.avg_cost)) * Number(p.shares);
         }
         const name = profiles?.find((p) => p.user_id === m.user_id)?.display_name ?? "trader";
-        result.push({ name, equity: value });
+        const pct = start > 0 ? ((value - start) / start) * 100 : 0;
+        result.push({ name, equity: value, pct });
       }
       result.sort((a, b) => b.equity - a.equity);
       if (alive) setRows(result);
@@ -817,19 +820,22 @@ const Leaderboard = ({ gameId }: { gameId: string }) => {
     load();
     const t = setInterval(load, 30000);
     return () => { alive = false; clearInterval(t); };
-  }, [gameId]);
+  }, [gameId, refreshKey]);
   return (
     <section id="leaderboard" className="bg-card border rounded-xl p-5 shadow-sm">
       <h3 className="font-bold mb-3">Leaderboard</h3>
       <table className="w-full text-sm">
         <thead className="text-xs text-muted-foreground border-b">
-          <tr><th className="text-left py-2 w-12">#</th><th className="text-left">Trader</th><th className="text-right">Equity</th></tr>
+          <tr><th className="text-left py-2 w-12">#</th><th className="text-left">Trader</th><th className="text-right">Return</th><th className="text-right">Equity</th></tr>
         </thead>
         <tbody>
           {rows.map((r, i) => (
             <tr key={i} className="border-b last:border-0">
               <td className="py-2 font-semibold">{i + 1}</td>
               <td>{r.name}</td>
+              <td className={cn("text-right tabular-nums font-semibold", r.pct >= 0 ? "text-up" : "text-down")}>
+                {r.pct >= 0 ? "+" : ""}{formatNumber(r.pct)}%
+              </td>
               <td className="text-right tabular-nums">${formatNumber(r.equity)}</td>
             </tr>
           ))}
