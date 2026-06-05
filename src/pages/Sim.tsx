@@ -18,6 +18,7 @@ interface Tx { id: string; symbol: string; side: string; shares: number; price: 
 interface Order { id: string; symbol: string; side: string; order_type: string; shares: number; limit_price: number | null; stop_price: number | null; status: string; created_at: string; }
 
 const ADMIN_EMAILS = ["william.s.wolenski@gmail.com"];
+const TX_PAGE_SIZE = 20;
 
 const Sim = () => {
   const nav = useNavigate();
@@ -63,6 +64,8 @@ const Sim = () => {
   const [limitPrice, setLimitPrice] = useState<number | "">("");
   const [stopPrice, setStopPrice] = useState<number | "">("");
   const [placing, setPlacing] = useState(false);
+  const [txPage, setTxPage] = useState(0);
+  const [leaderboardRefresh, setLeaderboardRefresh] = useState(0);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
@@ -137,12 +140,13 @@ const Sim = () => {
     if (!activeMember) return;
     const [{ data: pos }, { data: tx }, { data: ords }] = await Promise.all([
       supabase.from("positions").select("*").eq("member_id", activeMember.id),
-      supabase.from("transactions").select("*").eq("member_id", activeMember.id).order("created_at", { ascending: false }).limit(20),
+      supabase.from("transactions").select("*").eq("member_id", activeMember.id).order("created_at", { ascending: false }).limit(100),
       supabase.from("orders").select("*").eq("member_id", activeMember.id).eq("status", "pending").order("created_at", { ascending: false }),
     ]);
     setPositions((pos ?? []) as Position[]);
     setTxs((tx ?? []) as Tx[]);
     setPending((ords ?? []) as Order[]);
+    setTxPage(0);
   };
 
   useEffect(() => { reloadPortfolio(); /* eslint-disable-next-line */ }, [activeMember?.id]);
@@ -170,22 +174,26 @@ const Sim = () => {
   }, [positions.map((p) => p.symbol).join(",")]);
 
   // Live price for the symbol in the order ticket — drives the shares slider max.
+  // Fetches when a symbol is typed, then refreshes every 15 seconds.
   const [ticketPrice, setTicketPrice] = useState<number | undefined>(undefined);
   useEffect(() => {
     const sym = symbol.trim().toUpperCase();
     if (!sym) { setTicketPrice(undefined); return; }
-    if (prices[sym]) { setTicketPrice(prices[sym]); return; }
     let alive = true;
-    setTicketPrice(undefined);
-    const handle = setTimeout(() => {
+    // Seed instantly from already-loaded position prices if available.
+    setTicketPrice(prices[sym] ?? undefined);
+    const fetchPrice = () => {
       fetchQuotes([sym]).then((qs) => {
         if (!alive) return;
         const p = qs[0]?.regularMarketPrice;
         if (typeof p === "number") setTicketPrice(p);
       }).catch(() => {});
-    }, 250);
-    return () => { alive = false; clearTimeout(handle); };
-  }, [symbol, prices]);
+    };
+    const handle = setTimeout(fetchPrice, 250);
+    const interval = setInterval(fetchPrice, 15000);
+    return () => { alive = false; clearTimeout(handle); clearInterval(interval); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [symbol]);
 
   const cashAvail = Number(activeMember?.cash ?? 0);
   const currentPositionShares = Number(positions.find((p) => p.symbol === symbol.toUpperCase())?.shares ?? 0);
@@ -305,6 +313,7 @@ const Sim = () => {
     });
     reloadPortfolio();
     reloadGames();
+    setLeaderboardRefresh((n) => n + 1);
   };
 
   const cancelOrder = async (id: string) => {
@@ -615,6 +624,14 @@ const Sim = () => {
                   {insufficientFunds && (
                     <p className="text-[11px] font-semibold text-down">Insufficient Funds</p>
                   )}
+                  <div className="flex items-center justify-between rounded-lg bg-muted/50 border px-3 py-2">
+                    <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">
+                      Live price · {symbol || "—"}
+                    </span>
+                    <span className="text-base font-bold tabular-nums">
+                      {ticketPrice ? `$${formatNumber(ticketPrice)}` : "—"}
+                    </span>
+                  </div>
                   <button disabled={placing || insufficientFunds || (side === "short" && !allowShort)} className={cn(
                     "w-full py-2.5 rounded-lg font-semibold text-white shadow-sm hover:shadow-md transition disabled:opacity-60",
                     side === "buy" || side === "cover" ? "bg-up hover:brightness-110" : "bg-down hover:brightness-110"
@@ -628,7 +645,7 @@ const Sim = () => {
               </aside>
             </div>
 
-            <Leaderboard gameId={activeGameId!} />
+            <Leaderboard gameId={activeGameId!} refreshKey={leaderboardRefresh} />
 
             <section id="pending-orders" className="bg-card border rounded-xl p-5 shadow-sm">
               <h3 className="font-bold mb-3">Pending orders</h3>
@@ -676,7 +693,7 @@ const Sim = () => {
                     <tr><th className="text-left py-2">Time</th><th className="text-left">Symbol</th><th>Side</th><th className="text-right">Shares</th><th className="text-right">Price</th></tr>
                   </thead>
                   <tbody>
-                    {txs.map((t) => (
+                    {txs.slice(txPage * TX_PAGE_SIZE, txPage * TX_PAGE_SIZE + TX_PAGE_SIZE).map((t) => (
                       <tr key={t.id} className="border-b last:border-0">
                         <td className="py-2 text-muted-foreground">{new Date(t.created_at).toLocaleString()}</td>
                         <td className="font-semibold">{t.symbol}</td>
@@ -687,6 +704,29 @@ const Sim = () => {
                     ))}
                   </tbody>
                 </table>
+              )}
+              {txs.length > TX_PAGE_SIZE && (
+                <div className="flex items-center justify-between mt-3 text-xs">
+                  <button
+                    type="button"
+                    disabled={txPage === 0}
+                    onClick={() => setTxPage((p) => Math.max(0, p - 1))}
+                    className="px-3 py-1.5 rounded bg-muted hover:bg-accent font-semibold disabled:opacity-40"
+                  >
+                    Previous
+                  </button>
+                  <span className="text-muted-foreground tabular-nums">
+                    {txPage * TX_PAGE_SIZE + 1}–{Math.min((txPage + 1) * TX_PAGE_SIZE, txs.length)} of {txs.length}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={(txPage + 1) * TX_PAGE_SIZE >= txs.length}
+                    onClick={() => setTxPage((p) => ((p + 1) * TX_PAGE_SIZE < txs.length ? p + 1 : p))}
+                    className="px-3 py-1.5 rounded bg-muted hover:bg-accent font-semibold disabled:opacity-40"
+                  >
+                    Next
+                  </button>
+                </div>
               )}
             </section>
           </>
@@ -749,16 +789,18 @@ const Stat = ({ label, value, cls, hint }: { label: string; value: string; cls?:
 );
 
 
-const Leaderboard = ({ gameId }: { gameId: string }) => {
-  const [rows, setRows] = useState<{ name: string; equity: number }[]>([]);
+const Leaderboard = ({ gameId, refreshKey }: { gameId: string; refreshKey?: number }) => {
+  const [rows, setRows] = useState<{ name: string; equity: number; pct: number }[]>([]);
   useEffect(() => {
     let alive = true;
     const load = async () => {
+      const { data: game } = await supabase.from("games").select("starting_cash").eq("id", gameId).maybeSingle();
+      const start = Number(game?.starting_cash ?? 100000) || 100000;
       const { data: ms } = await supabase.from("game_members").select("id, user_id, cash").eq("game_id", gameId);
       if (!ms || !alive) return;
       const userIds = ms.map((m) => m.user_id);
       const { data: profiles } = await supabase.from("profiles").select("user_id, display_name").in("user_id", userIds);
-      const result: { name: string; equity: number }[] = [];
+      const result: { name: string; equity: number; pct: number }[] = [];
       for (const m of ms) {
         const { data: pos } = await supabase.from("positions").select("symbol, shares, avg_cost").eq("member_id", m.id);
         let value = Number(m.cash);
@@ -769,7 +811,8 @@ const Leaderboard = ({ gameId }: { gameId: string }) => {
           for (const p of pos) value += (map[p.symbol] ?? Number(p.avg_cost)) * Number(p.shares);
         }
         const name = profiles?.find((p) => p.user_id === m.user_id)?.display_name ?? "trader";
-        result.push({ name, equity: value });
+        const pct = start > 0 ? ((value - start) / start) * 100 : 0;
+        result.push({ name, equity: value, pct });
       }
       result.sort((a, b) => b.equity - a.equity);
       if (alive) setRows(result);
@@ -777,19 +820,22 @@ const Leaderboard = ({ gameId }: { gameId: string }) => {
     load();
     const t = setInterval(load, 30000);
     return () => { alive = false; clearInterval(t); };
-  }, [gameId]);
+  }, [gameId, refreshKey]);
   return (
     <section id="leaderboard" className="bg-card border rounded-xl p-5 shadow-sm">
       <h3 className="font-bold mb-3">Leaderboard</h3>
       <table className="w-full text-sm">
         <thead className="text-xs text-muted-foreground border-b">
-          <tr><th className="text-left py-2 w-12">#</th><th className="text-left">Trader</th><th className="text-right">Equity</th></tr>
+          <tr><th className="text-left py-2 w-12">#</th><th className="text-left">Trader</th><th className="text-right">Return</th><th className="text-right">Equity</th></tr>
         </thead>
         <tbody>
           {rows.map((r, i) => (
             <tr key={i} className="border-b last:border-0">
               <td className="py-2 font-semibold">{i + 1}</td>
               <td>{r.name}</td>
+              <td className={cn("text-right tabular-nums font-semibold", r.pct >= 0 ? "text-up" : "text-down")}>
+                {r.pct >= 0 ? "+" : ""}{formatNumber(r.pct)}%
+              </td>
               <td className="text-right tabular-nums">${formatNumber(r.equity)}</td>
             </tr>
           ))}
