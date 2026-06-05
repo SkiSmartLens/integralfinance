@@ -644,7 +644,7 @@ const Sim = () => {
               </aside>
             </div>
 
-            <Leaderboard gameId={activeGameId!} />
+            <Leaderboard gameId={activeGameId!} refreshKey={leaderboardRefresh} />
 
             <section id="pending-orders" className="bg-card border rounded-xl p-5 shadow-sm">
               <h3 className="font-bold mb-3">Pending orders</h3>
