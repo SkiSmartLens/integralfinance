@@ -2,7 +2,22 @@
 
 import { writeFileSync } from "fs";
 import { resolve } from "path";
-import { TRENDING } from "../src/lib/categories";
+import { CATEGORIES, INDEX_TICKERS, TRENDING, SECTORS } from "../src/lib/categories";
+
+// Collect every ticker referenced anywhere in the app's data.
+function collectTickers(): string[] {
+  const set = new Set<string>();
+  for (const c of CATEGORIES) {
+    c.symbols?.forEach((s) => set.add(s));
+    c.subTopics?.forEach((st) => st.symbols?.forEach((s) => set.add(s)));
+  }
+  INDEX_TICKERS.forEach((s) => set.add(s));
+  TRENDING.forEach((s) => set.add(s));
+  SECTORS.forEach((s) => set.add(s.symbol));
+  return Array.from(set).sort();
+}
+
+const ALL_TICKERS = collectTickers();
 
 const BASE_URL = "https://integralstocks.com";
 
@@ -33,13 +48,14 @@ const staticEntries: SitemapEntry[] = [
   { path: "/disclaimer", lastmod: staticLastmod, changefreq: "yearly", priority: "0.3" },
   { path: "/data-sources", lastmod: staticLastmod, changefreq: "yearly", priority: "0.3" },
   { path: "/faq", lastmod: staticLastmod, changefreq: "monthly", priority: "0.5" },
+  { path: "/auth", lastmod: staticLastmod, changefreq: "yearly", priority: "0.4" },
   { path: "/learn/basics", lastmod: staticLastmod, changefreq: "monthly", priority: "0.7" },
   { path: "/learn/indicators", lastmod: staticLastmod, changefreq: "monthly", priority: "0.7" },
   { path: "/learn/patterns", lastmod: staticLastmod, changefreq: "monthly", priority: "0.7" },
 ];
 
-// Individual stock pages for the trending tickers.
-const stockEntries: SitemapEntry[] = TRENDING.map((symbol) => ({
+// Individual stock pages for every ticker referenced in the app's data.
+const stockEntries: SitemapEntry[] = ALL_TICKERS.map((symbol) => ({
   path: `/stocks/${symbol.toLowerCase()}`,
   lastmod: dynamicLastmod,
   changefreq: "hourly",
