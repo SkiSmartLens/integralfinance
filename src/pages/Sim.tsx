@@ -170,22 +170,26 @@ const Sim = () => {
   }, [positions.map((p) => p.symbol).join(",")]);
 
   // Live price for the symbol in the order ticket — drives the shares slider max.
+  // Fetches when a symbol is typed, then refreshes every 15 seconds.
   const [ticketPrice, setTicketPrice] = useState<number | undefined>(undefined);
   useEffect(() => {
     const sym = symbol.trim().toUpperCase();
     if (!sym) { setTicketPrice(undefined); return; }
-    if (prices[sym]) { setTicketPrice(prices[sym]); return; }
     let alive = true;
-    setTicketPrice(undefined);
-    const handle = setTimeout(() => {
+    // Seed instantly from already-loaded position prices if available.
+    setTicketPrice(prices[sym] ?? undefined);
+    const fetchPrice = () => {
       fetchQuotes([sym]).then((qs) => {
         if (!alive) return;
         const p = qs[0]?.regularMarketPrice;
         if (typeof p === "number") setTicketPrice(p);
       }).catch(() => {});
-    }, 250);
-    return () => { alive = false; clearTimeout(handle); };
-  }, [symbol, prices]);
+    };
+    const handle = setTimeout(fetchPrice, 250);
+    const interval = setInterval(fetchPrice, 15000);
+    return () => { alive = false; clearTimeout(handle); clearInterval(interval); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [symbol]);
 
   const cashAvail = Number(activeMember?.cash ?? 0);
   const currentPositionShares = Number(positions.find((p) => p.symbol === symbol.toUpperCase())?.shares ?? 0);
