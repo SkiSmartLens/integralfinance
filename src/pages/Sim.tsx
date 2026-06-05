@@ -692,7 +692,7 @@ const Sim = () => {
                     <tr><th className="text-left py-2">Time</th><th className="text-left">Symbol</th><th>Side</th><th className="text-right">Shares</th><th className="text-right">Price</th></tr>
                   </thead>
                   <tbody>
-                    {txs.map((t) => (
+                    {txs.slice(txPage * TX_PAGE_SIZE, txPage * TX_PAGE_SIZE + TX_PAGE_SIZE).map((t) => (
                       <tr key={t.id} className="border-b last:border-0">
                         <td className="py-2 text-muted-foreground">{new Date(t.created_at).toLocaleString()}</td>
                         <td className="font-semibold">{t.symbol}</td>
@@ -703,6 +703,29 @@ const Sim = () => {
                     ))}
                   </tbody>
                 </table>
+              )}
+              {txs.length > TX_PAGE_SIZE && (
+                <div className="flex items-center justify-between mt-3 text-xs">
+                  <button
+                    type="button"
+                    disabled={txPage === 0}
+                    onClick={() => setTxPage((p) => Math.max(0, p - 1))}
+                    className="px-3 py-1.5 rounded bg-muted hover:bg-accent font-semibold disabled:opacity-40"
+                  >
+                    Previous
+                  </button>
+                  <span className="text-muted-foreground tabular-nums">
+                    {txPage * TX_PAGE_SIZE + 1}–{Math.min((txPage + 1) * TX_PAGE_SIZE, txs.length)} of {txs.length}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={(txPage + 1) * TX_PAGE_SIZE >= txs.length}
+                    onClick={() => setTxPage((p) => ((p + 1) * TX_PAGE_SIZE < txs.length ? p + 1 : p))}
+                    className="px-3 py-1.5 rounded bg-muted hover:bg-accent font-semibold disabled:opacity-40"
+                  >
+                    Next
+                  </button>
+                </div>
               )}
             </section>
           </>
