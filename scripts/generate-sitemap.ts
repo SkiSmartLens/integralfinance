@@ -2,7 +2,22 @@
 
 import { writeFileSync } from "fs";
 import { resolve } from "path";
-import { TRENDING } from "../src/lib/categories";
+import { CATEGORIES, INDEX_TICKERS, TRENDING, SECTORS } from "../src/lib/categories";
+
+// Collect every ticker referenced anywhere in the app's data.
+function collectTickers(): string[] {
+  const set = new Set<string>();
+  for (const c of CATEGORIES) {
+    c.symbols?.forEach((s) => set.add(s));
+    c.subTopics?.forEach((st) => st.symbols?.forEach((s) => set.add(s)));
+  }
+  INDEX_TICKERS.forEach((s) => set.add(s));
+  TRENDING.forEach((s) => set.add(s));
+  SECTORS.forEach((s) => set.add(s.symbol));
+  return Array.from(set).sort();
+}
+
+const ALL_TICKERS = collectTickers();
 
 const BASE_URL = "https://integralstocks.com";
 
