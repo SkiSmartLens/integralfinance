@@ -48,13 +48,14 @@ const staticEntries: SitemapEntry[] = [
   { path: "/disclaimer", lastmod: staticLastmod, changefreq: "yearly", priority: "0.3" },
   { path: "/data-sources", lastmod: staticLastmod, changefreq: "yearly", priority: "0.3" },
   { path: "/faq", lastmod: staticLastmod, changefreq: "monthly", priority: "0.5" },
+  { path: "/auth", lastmod: staticLastmod, changefreq: "yearly", priority: "0.4" },
   { path: "/learn/basics", lastmod: staticLastmod, changefreq: "monthly", priority: "0.7" },
   { path: "/learn/indicators", lastmod: staticLastmod, changefreq: "monthly", priority: "0.7" },
   { path: "/learn/patterns", lastmod: staticLastmod, changefreq: "monthly", priority: "0.7" },
 ];
 
-// Individual stock pages for the trending tickers.
-const stockEntries: SitemapEntry[] = TRENDING.map((symbol) => ({
+// Individual stock pages for every ticker referenced in the app's data.
+const stockEntries: SitemapEntry[] = ALL_TICKERS.map((symbol) => ({
   path: `/stocks/${symbol.toLowerCase()}`,
   lastmod: dynamicLastmod,
   changefreq: "hourly",
