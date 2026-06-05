@@ -18,6 +18,7 @@ interface Tx { id: string; symbol: string; side: string; shares: number; price: 
 interface Order { id: string; symbol: string; side: string; order_type: string; shares: number; limit_price: number | null; stop_price: number | null; status: string; created_at: string; }
 
 const ADMIN_EMAILS = ["william.s.wolenski@gmail.com"];
+const TX_PAGE_SIZE = 20;
 
 const Sim = () => {
   const nav = useNavigate();
