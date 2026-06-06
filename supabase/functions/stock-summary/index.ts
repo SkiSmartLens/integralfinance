@@ -143,7 +143,7 @@ Produce a DETAILED, in-depth analyst-grade summary. Be specific and quantitative
 
 Return strict JSON with shape:
 {
-  "whyMoved": string,              // 2-4 sentences explaining specifically WHY ${companyName} (${sym}) moved ${q.regularMarketChangePercent?.toFixed?.(2)}% today. Tie the move to the recent headlines above (earnings, guidance, news, analyst calls, sector moves). If the move is large (e.g. a big jump or drop), explain the likely catalyst in plain English a beginner can understand. If there are no clear catalysts, say the move is likely broad market or sector driven.
+  "whyMoved": string,              // 2-4 sentences explaining specifically WHY ${companyName} (${sym}) moved ${q.regularMarketChangePercent?.toFixed?.(2)}% today. Base this ONLY on the "Web search results (Google)" and headlines provided above — summarize the actual reported reason, do NOT invent or speculate a catalyst that is not in those sources. Quote the concrete catalyst (earnings, guidance, analyst rating change, product/legal/macro news) reported there in plain English a beginner understands. If the provided sources do not give a clear company-specific reason, say the move appears to be driven by broad market or sector action rather than guessing a specific cause.
   "positives": [string],           // 4-6 detailed bullets, each 1-2 sentences with specifics
   "negatives": [string],           // 4-6 detailed bullets, each 1-2 sentences with specifics
   "revenueGrowth": string,         // 2-3 sentences on historical + expected revenue growth trajectory, cite YoY % if known
