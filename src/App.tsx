@@ -7,7 +7,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index.tsx";
 import Home from "./pages/Home.tsx";
 import { DevMenu } from "@/components/DevMenu";
-
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 const Auth = lazy(() => import("./pages/Auth.tsx"));
 const Sim = lazy(() => import("./pages/Sim.tsx"));
@@ -23,10 +22,12 @@ const FAQ = lazy(() => import("./pages/FAQ.tsx"));
 const LearnPatterns = lazy(() => import("./pages/LearnPatterns.tsx"));
 const LearnBasics = lazy(() => import("./pages/LearnBasics.tsx"));
 const LearnIndicators = lazy(() => import("./pages/LearnIndicators.tsx"));
+const LearnHub = lazy(() => import("./pages/LearnHub.tsx"));
+const LearnReading = lazy(() => import("./pages/LearnReading.tsx"));
+const LearnPortfolio = lazy(() => import("./pages/LearnPortfolio.tsx"));
+const LearnAdvanced = lazy(() => import("./pages/LearnAdvanced.tsx"));
 const StockTicker = lazy(() => import("./pages/StockTicker.tsx"));
 const StartHere = lazy(() => import("./pages/StartHere.tsx"));
-
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -37,7 +38,6 @@ const queryClient = new QueryClient({
     },
   },
 });
-
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -63,9 +63,13 @@ const App = () => (
             <Route path="/disclaimer" element={<Disclaimer />} />
             <Route path="/data-sources" element={<DataSources />} />
             <Route path="/faq" element={<FAQ />} />
-            <Route path="/learn/patterns" element={<LearnPatterns />} />
+            <Route path="/learn" element={<LearnHub />} />
             <Route path="/learn/basics" element={<LearnBasics />} />
+            <Route path="/learn/patterns" element={<LearnPatterns />} />
             <Route path="/learn/indicators" element={<LearnIndicators />} />
+            <Route path="/learn/reading" element={<LearnReading />} />
+            <Route path="/learn/portfolio" element={<LearnPortfolio />} />
+            <Route path="/learn/advanced" element={<LearnAdvanced />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
@@ -75,5 +79,4 @@ const App = () => (
     </TooltipProvider>
   </QueryClientProvider>
 );
-
 export default App;
