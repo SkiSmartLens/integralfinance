@@ -9,7 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Slider } from "@/components/ui/slider";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-import { LogOut, Plus, Users, Search, Globe, Lock, Wrench, Copy, Menu, X, HelpCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { LogOut, Plus, Users, Search, Globe, Lock, Wrench, Copy, Menu, X, HelpCircle, ChevronDown, ChevronUp, ArrowUp, LineChart } from "lucide-react";
 
 interface Game { id: string; name: string; starting_cash: number; commission: number; join_code: string; created_by: string; is_public?: boolean; allow_short?: boolean; }
 interface Member { id: string; game_id: string; user_id: string; cash: number; }
@@ -66,6 +66,20 @@ const Sim = () => {
   const [placing, setPlacing] = useState(false);
   const [txPage, setTxPage] = useState(0);
   const [leaderboardRefresh, setLeaderboardRefresh] = useState(0);
+  const [showBackToTop, setShowBackToTop] = useState(false);
+
+  // Show the back-to-top button after scrolling 400px.
+  useEffect(() => {
+    const onScroll = () => setShowBackToTop(window.scrollY > 400);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const scrollToOrderForm = () => {
+    document.getElementById("order-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
@@ -361,13 +375,13 @@ const Sim = () => {
                   {g.created_by === userId && (
                     <>
                       <button onClick={() => togglePublic(g)}
-                        className="px-2 py-1 text-[11px] rounded-md bg-muted/70 border border-border/50 flex items-center gap-1 hover:bg-muted transition-colors"
+                        className="px-2 py-1 text-[11px] rounded-md bg-muted/70 border border-border/50 hidden md:flex items-center gap-1 hover:bg-muted transition-colors"
                         title={g.is_public ? "Public — anyone can browse and join" : "Private — code required"}>
                         {g.is_public ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
                         {g.is_public ? "Public" : "Private"}
                       </button>
                       <button onClick={() => setShowDev(true)}
-                        className="px-2 py-1 text-[11px] rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center gap-1 font-semibold hover:bg-amber-500/25 transition-colors"
+                        className="px-2 py-1 text-[11px] rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 hidden md:flex items-center gap-1 font-semibold hover:bg-amber-500/25 transition-colors"
                         title="Creator dev tools">
                         <Wrench className="w-3 h-3" /> Dev
                       </button>
@@ -473,7 +487,7 @@ const Sim = () => {
                 </div>
               </div>
             )}
-            <nav className="flex flex-wrap gap-2 rounded-xl border bg-card p-2 shadow-sm sticky top-2 z-10">
+            <nav className="flex md:flex-wrap gap-2 rounded-xl border bg-card p-2 shadow-sm sticky top-2 z-10 overflow-x-auto no-scrollbar">
               {[
                 { id: "overview", label: "Overview" },
                 { id: "holdings", label: "Holdings" },
@@ -486,7 +500,7 @@ const Sim = () => {
                   type="button"
                   onClick={() => jumpToSection(tab.id)}
                   className={cn(
-                    "rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
+                    "rounded-lg px-3 py-2 text-sm font-semibold transition-colors shrink-0 whitespace-nowrap",
                     activeSection === tab.id ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                 >
@@ -561,7 +575,7 @@ const Sim = () => {
                 )}
               </section>
 
-              <aside className="bg-card border rounded-xl p-5 shadow-sm order-1 lg:order-2">
+              <aside id="order-form" className="bg-card border rounded-xl p-5 shadow-sm order-1 lg:order-2">
                 <h3 className="font-bold mb-3">Place order</h3>
                 <form onSubmit={placeOrder} className="space-y-3">
                   <div className="flex gap-1 bg-muted rounded p-1">
@@ -733,18 +747,50 @@ const Sim = () => {
         )}
       </main>
 
-      {showSettings && (
-        <SettingsModal
-          isAdmin={isAdmin}
-          activeGameId={activeGameId}
-          gameName={games.find((g) => g.id === activeGameId)?.name ?? ""}
-          startingCash={games.find((g) => g.id === activeGameId)?.starting_cash ?? 100000}
-          commission={games.find((g) => g.id === activeGameId)?.commission ?? 0}
-          onClose={() => setShowSettings(false)}
-          onLogout={handleLogoutFromGame}
-          onUpdated={() => reloadGames()}
-        />
+      {/* Floating action buttons */}
+      {activeMember && (
+        <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-3">
+          {showBackToTop && (
+            <button
+              type="button"
+              onClick={scrollToTop}
+              aria-label="Back to top"
+              className="h-11 w-11 rounded-full bg-muted text-foreground border shadow-lg flex items-center justify-center hover:bg-accent transition"
+            >
+              <ArrowUp className="w-5 h-5" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={scrollToOrderForm}
+            className="h-12 px-5 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center gap-2 font-semibold hover:opacity-95 transition"
+          >
+            <LineChart className="w-5 h-5" /> Trade
+          </button>
+        </div>
       )}
+
+
+      {showSettings && (() => {
+        const g = games.find((x) => x.id === activeGameId) || null;
+        const isOwner = !!g && g.created_by === userId;
+        return (
+          <SettingsModal
+            isAdmin={isAdmin}
+            activeGameId={activeGameId}
+            gameName={g?.name ?? ""}
+            startingCash={g?.starting_cash ?? 100000}
+            commission={g?.commission ?? 0}
+            isOwner={isOwner}
+            isPublic={!!g?.is_public}
+            onTogglePublic={isOwner && g ? () => togglePublic(g) : undefined}
+            onOpenDev={isOwner ? () => { setShowSettings(false); setShowDev(true); } : undefined}
+            onClose={() => setShowSettings(false)}
+            onLogout={handleLogoutFromGame}
+            onUpdated={() => reloadGames()}
+          />
+        );
+      })()}
       {showMenu && (
         <GameMenuModal
           games={games}
@@ -943,6 +989,10 @@ const SettingsModal = ({
   gameName,
   startingCash,
   commission,
+  isOwner,
+  isPublic,
+  onTogglePublic,
+  onOpenDev,
   onClose,
   onLogout,
   onUpdated,
@@ -952,6 +1002,10 @@ const SettingsModal = ({
   gameName: string;
   startingCash: number;
   commission: number;
+  isOwner?: boolean;
+  isPublic?: boolean;
+  onTogglePublic?: () => void;
+  onOpenDev?: () => void;
   onClose: () => void;
   onLogout: () => void;
   onUpdated: () => void;
@@ -1014,6 +1068,31 @@ const SettingsModal = ({
             </div>
           )}
         </section>
+
+        {isOwner && (onTogglePublic || onOpenDev) && (
+          <section className="rounded-lg border bg-muted/40 p-3 space-y-2 md:hidden">
+            <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Game owner controls</div>
+            {onTogglePublic && (
+              <button
+                onClick={onTogglePublic}
+                className="w-full rounded-md border bg-background px-3 py-2 text-left text-sm font-semibold flex items-center gap-2"
+              >
+                {isPublic ? <Globe className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                {isPublic ? "Public — tap to make private" : "Private — tap to make public"}
+              </button>
+            )}
+            {onOpenDev && (
+              <button
+                onClick={onOpenDev}
+                className="w-full rounded-md border bg-background px-3 py-2 text-left text-sm font-semibold flex items-center gap-2 text-amber-600 dark:text-amber-400"
+              >
+                <Wrench className="w-4 h-4" /> Dev tools
+              </button>
+            )}
+          </section>
+        )}
+
+
 
         {isAdmin && panel === "members" && (
           <section className="rounded-lg border bg-muted/40 p-3 space-y-2">
