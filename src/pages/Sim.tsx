@@ -473,7 +473,7 @@ const Sim = () => {
                 </div>
               </div>
             )}
-            <nav className="flex flex-wrap gap-2 rounded-xl border bg-card p-2 shadow-sm sticky top-2 z-10">
+            <nav className="flex md:flex-wrap gap-2 rounded-xl border bg-card p-2 shadow-sm sticky top-2 z-10 overflow-x-auto no-scrollbar">
               {[
                 { id: "overview", label: "Overview" },
                 { id: "holdings", label: "Holdings" },
@@ -486,7 +486,7 @@ const Sim = () => {
                   type="button"
                   onClick={() => jumpToSection(tab.id)}
                   className={cn(
-                    "rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
+                    "rounded-lg px-3 py-2 text-sm font-semibold transition-colors shrink-0 whitespace-nowrap",
                     activeSection === tab.id ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                 >
