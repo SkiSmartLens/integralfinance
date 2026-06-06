@@ -257,6 +257,14 @@ export type Database = {
     }
     Functions: {
       is_game_member: { Args: { _game_id: string }; Returns: boolean }
+      join_game_by_code: {
+        Args: { _code: string }
+        Returns: {
+          id: string
+          join_code: string
+          starting_cash: number
+        }[]
+      }
       member_in_my_game: { Args: { _member_id: string }; Returns: boolean }
       owns_member: { Args: { _member_id: string }; Returns: boolean }
     }
