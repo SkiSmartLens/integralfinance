@@ -361,13 +361,13 @@ const Sim = () => {
                   {g.created_by === userId && (
                     <>
                       <button onClick={() => togglePublic(g)}
-                        className="px-2 py-1 text-[11px] rounded-md bg-muted/70 border border-border/50 flex items-center gap-1 hover:bg-muted transition-colors"
+                        className="px-2 py-1 text-[11px] rounded-md bg-muted/70 border border-border/50 hidden md:flex items-center gap-1 hover:bg-muted transition-colors"
                         title={g.is_public ? "Public — anyone can browse and join" : "Private — code required"}>
                         {g.is_public ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
                         {g.is_public ? "Public" : "Private"}
                       </button>
                       <button onClick={() => setShowDev(true)}
-                        className="px-2 py-1 text-[11px] rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center gap-1 font-semibold hover:bg-amber-500/25 transition-colors"
+                        className="px-2 py-1 text-[11px] rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 hidden md:flex items-center gap-1 font-semibold hover:bg-amber-500/25 transition-colors"
                         title="Creator dev tools">
                         <Wrench className="w-3 h-3" /> Dev
                       </button>
