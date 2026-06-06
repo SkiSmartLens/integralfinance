@@ -255,6 +255,9 @@ const PatternChart = ({
       return `${i === 0 ? "M" : "L"}${px.toFixed(1)},${py.toFixed(1)}`;
     })
     .join(" ");
+  // Closed area path for the mountain fill (down to the baseline, back to start).
+  const baseY = H - pad;
+  const areaD = `${d} L${xs[xs.length - 1].toFixed(1)},${baseY.toFixed(1)} L${xs[0].toFixed(1)},${baseY.toFixed(1)} Z`;
   const last = pattern.points[pattern.points.length - 1];
   const lastY = pad + last[1] * (H - pad * 2);
   const trendUp = lastY < H / 2;
@@ -266,6 +269,7 @@ const PatternChart = ({
       : trendUp
       ? "hsl(var(--up))"
       : "hsl(var(--down))";
+  const gradId = `mtn-${pattern.id}-${highlight ?? "n"}`;
 
   return (
     <svg
@@ -276,6 +280,12 @@ const PatternChart = ({
       role="img"
       aria-label={`${pattern.name} chart pattern schematic`}
     >
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={stroke} stopOpacity={0.35} />
+          <stop offset="100%" stopColor={stroke} stopOpacity={0.02} />
+        </linearGradient>
+      </defs>
       {/* grid */}
       {[0.25, 0.5, 0.75].map((g) => (
         <line
@@ -303,12 +313,10 @@ const PatternChart = ({
           opacity={0.6}
         />
       ))}
-      {/* polyline */}
+      {/* mountain fill */}
+      <path d={areaD} fill={`url(#${gradId})`} stroke="none" />
+      {/* line on top */}
       <path d={d} fill="none" stroke={stroke} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-      {/* dots */}
-      {xs.map((x, i) => (
-        <circle key={i} cx={x} cy={ys[i]} r={2} fill={stroke} opacity={0.7} />
-      ))}
     </svg>
   );
 };
