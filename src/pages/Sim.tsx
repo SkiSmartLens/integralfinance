@@ -989,6 +989,10 @@ const SettingsModal = ({
   gameName,
   startingCash,
   commission,
+  isOwner,
+  isPublic,
+  onTogglePublic,
+  onOpenDev,
   onClose,
   onLogout,
   onUpdated,
@@ -998,6 +1002,10 @@ const SettingsModal = ({
   gameName: string;
   startingCash: number;
   commission: number;
+  isOwner?: boolean;
+  isPublic?: boolean;
+  onTogglePublic?: () => void;
+  onOpenDev?: () => void;
   onClose: () => void;
   onLogout: () => void;
   onUpdated: () => void;
