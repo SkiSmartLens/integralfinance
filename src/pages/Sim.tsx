@@ -771,18 +771,26 @@ const Sim = () => {
       )}
 
 
-      {showSettings && (
-        <SettingsModal
-          isAdmin={isAdmin}
-          activeGameId={activeGameId}
-          gameName={games.find((g) => g.id === activeGameId)?.name ?? ""}
-          startingCash={games.find((g) => g.id === activeGameId)?.starting_cash ?? 100000}
-          commission={games.find((g) => g.id === activeGameId)?.commission ?? 0}
-          onClose={() => setShowSettings(false)}
-          onLogout={handleLogoutFromGame}
-          onUpdated={() => reloadGames()}
-        />
-      )}
+      {showSettings && (() => {
+        const g = games.find((x) => x.id === activeGameId) || null;
+        const isOwner = !!g && g.created_by === userId;
+        return (
+          <SettingsModal
+            isAdmin={isAdmin}
+            activeGameId={activeGameId}
+            gameName={g?.name ?? ""}
+            startingCash={g?.starting_cash ?? 100000}
+            commission={g?.commission ?? 0}
+            isOwner={isOwner}
+            isPublic={!!g?.is_public}
+            onTogglePublic={isOwner && g ? () => togglePublic(g) : undefined}
+            onOpenDev={isOwner ? () => { setShowSettings(false); setShowDev(true); } : undefined}
+            onClose={() => setShowSettings(false)}
+            onLogout={handleLogoutFromGame}
+            onUpdated={() => reloadGames()}
+          />
+        );
+      })()}
       {showMenu && (
         <GameMenuModal
           games={games}
