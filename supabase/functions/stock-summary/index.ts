@@ -136,7 +136,7 @@ Recommendation: ${q.averageAnalystRating ?? q.recommendationKey ?? "?"}
 
 Recent headlines about ${companyName} (${sym}):
 ${headlines.join("\n") || "(no recent headlines)"}
-
+${webBlock}
 CRITICAL: ONLY analyze ${companyName} (${sym}). Do NOT discuss any other ticker or company. Ignore any headline above that is not directly about ${companyName}.
 
 Produce a DETAILED, in-depth analyst-grade summary. Be specific and quantitative where possible (cite numbers, % growth, margins, multiples). Avoid generic filler. Plain English, no disclaimers.
