@@ -274,9 +274,14 @@ const Sim = () => {
 
   const joinGame = async (code: string) => {
     if (!userId) return;
-    const { data: g, error } = await supabase.from("games").select("*").eq("join_code", code.toUpperCase()).maybeSingle();
+    const { data, error } = await supabase.rpc("join_game_by_code", { _code: code.toUpperCase() });
+    const g = Array.isArray(data) ? data[0] : data;
     if (error || !g) return toast({ title: "Game not found", description: error?.message, variant: "destructive" });
-    return joinGameById(g.id, Number(g.starting_cash), g.join_code);
+    if (g.join_code) { try { localStorage.setItem("lastJoinCode", g.join_code); } catch {} }
+    setShowJoin(false);
+    setActiveGameId(g.id);
+    await reloadGames();
+    toast({ title: "Joined game" });
   };
 
   const joinGameById = async (gameId: string, startingCash: number, joinCode?: string) => {
