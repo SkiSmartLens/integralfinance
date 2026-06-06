@@ -66,6 +66,20 @@ const Sim = () => {
   const [placing, setPlacing] = useState(false);
   const [txPage, setTxPage] = useState(0);
   const [leaderboardRefresh, setLeaderboardRefresh] = useState(0);
+  const [showBackToTop, setShowBackToTop] = useState(false);
+
+  // Show the back-to-top button after scrolling 400px.
+  useEffect(() => {
+    const onScroll = () => setShowBackToTop(window.scrollY > 400);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const scrollToOrderForm = () => {
+    document.getElementById("order-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
