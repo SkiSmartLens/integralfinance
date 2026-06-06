@@ -247,7 +247,6 @@ const PatternChart = ({
   const H = Math.round(size * 0.6);
   const pad = 16;
   const xs = pattern.points.map(([x]) => pad + x * (W - pad * 2));
-  const ys = pattern.points.map(([, y]) => pad + y * (H - pad * 2));
   const d = pattern.points
     .map(([x, y], i) => {
       const px = pad + x * (W - pad * 2);
