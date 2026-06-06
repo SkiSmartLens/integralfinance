@@ -66,6 +66,45 @@ Deno.serve(async (req) => {
       .slice(0, 10)
       .map((n: any) => `- ${n.title} (${n.publisher})`);
 
+    // 3) Google the actual reason the stock moved today via Firecrawl web search.
+    //    We feed these real, dated results to the model so the "why moved"
+    //    explanation reflects what actually happened — not an invented reason.
+    let webContext = "";
+    const changePct = typeof q.regularMarketChangePercent === "number" ? q.regularMarketChangePercent : undefined;
+    const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
+    if (FIRECRAWL_API_KEY) {
+      try {
+        const dir = changePct == null ? "move" : changePct >= 0 ? "rise / go up" : "fall / drop";
+        const searchQuery = `Why did ${companyName} (${sym}) stock ${dir} today`;
+        const fcRes = await fetch("https://api.firecrawl.dev/v2/search", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ query: searchQuery, limit: 6, tbs: "qdr:w" }),
+        });
+        if (fcRes.ok) {
+          const fc = await fcRes.json().catch(() => ({}));
+          const results: any[] = fc?.data?.web ?? fc?.web ?? (Array.isArray(fc?.data) ? fc.data : []) ?? [];
+          const lines = results
+            .map((r: any) => {
+              const title = r.title ?? "";
+              const snippet = (r.description ?? r.snippet ?? "").toString().slice(0, 300);
+              const src = r.url ? new URL(r.url).hostname.replace(/^www\./, "") : "";
+              return title ? `- ${title}${snippet ? `: ${snippet}` : ""}${src ? ` (${src})` : ""}` : "";
+            })
+            .filter(Boolean)
+            .slice(0, 6);
+          if (lines.length) webContext = lines.join("\n");
+        } else {
+          console.warn("firecrawl search failed", fcRes.status);
+        }
+      } catch (e) {
+        console.warn("firecrawl error", e instanceof Error ? e.message : e);
+      }
+    }
+    const webBlock = webContext
+      ? `\n\nWeb search results (Google) for why ${companyName} (${sym}) moved today — use these as the SOURCE OF TRUTH for the "whyMoved" field:\n${webContext}\n`
+      : "";
+
     const beginnerPrompt = `Stock: ${companyName} (${sym})
 Sector: ${q.sector ?? ""}  Industry: ${q.industry ?? ""}
 Price: ${q.regularMarketPrice} ${q.currency ?? ""}
