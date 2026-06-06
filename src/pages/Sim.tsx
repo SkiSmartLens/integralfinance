@@ -747,6 +747,30 @@ const Sim = () => {
         )}
       </main>
 
+      {/* Floating action buttons */}
+      {activeMember && (
+        <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-3">
+          {showBackToTop && (
+            <button
+              type="button"
+              onClick={scrollToTop}
+              aria-label="Back to top"
+              className="h-11 w-11 rounded-full bg-muted text-foreground border shadow-lg flex items-center justify-center hover:bg-accent transition"
+            >
+              <ArrowUp className="w-5 h-5" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={scrollToOrderForm}
+            className="h-12 px-5 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center gap-2 font-semibold hover:opacity-95 transition"
+          >
+            <LineChart className="w-5 h-5" /> Trade
+          </button>
+        </div>
+      )}
+
+
       {showSettings && (
         <SettingsModal
           isAdmin={isAdmin}
