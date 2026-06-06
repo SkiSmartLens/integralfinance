@@ -66,6 +66,45 @@ Deno.serve(async (req) => {
       .slice(0, 10)
       .map((n: any) => `- ${n.title} (${n.publisher})`);
 
+    // 3) Google the actual reason the stock moved today via Firecrawl web search.
+    //    We feed these real, dated results to the model so the "why moved"
+    //    explanation reflects what actually happened — not an invented reason.
+    let webContext = "";
+    const changePct = typeof q.regularMarketChangePercent === "number" ? q.regularMarketChangePercent : undefined;
+    const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
+    if (FIRECRAWL_API_KEY) {
+      try {
+        const dir = changePct == null ? "move" : changePct >= 0 ? "rise / go up" : "fall / drop";
+        const searchQuery = `Why did ${companyName} (${sym}) stock ${dir} today`;
+        const fcRes = await fetch("https://api.firecrawl.dev/v2/search", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ query: searchQuery, limit: 6 }),
+        });
+        if (fcRes.ok) {
+          const fc = await fcRes.json().catch(() => ({}));
+          const results: any[] = fc?.data?.web ?? fc?.web ?? (Array.isArray(fc?.data) ? fc.data : []) ?? [];
+          const lines = results
+            .map((r: any) => {
+              const title = r.title ?? "";
+              const snippet = (r.description ?? r.snippet ?? "").toString().slice(0, 300);
+              const src = r.url ? new URL(r.url).hostname.replace(/^www\./, "") : "";
+              return title ? `- ${title}${snippet ? `: ${snippet}` : ""}${src ? ` (${src})` : ""}` : "";
+            })
+            .filter(Boolean)
+            .slice(0, 6);
+          if (lines.length) webContext = lines.join("\n");
+        } else {
+          console.warn("firecrawl search failed", fcRes.status);
+        }
+      } catch (e) {
+        console.warn("firecrawl error", e instanceof Error ? e.message : e);
+      }
+    }
+    const webBlock = webContext
+      ? `\n\nWeb search results (Google) for why ${companyName} (${sym}) moved today — use these as the SOURCE OF TRUTH for the "whyMoved" field:\n${webContext}\n`
+      : "";
+
     const beginnerPrompt = `Stock: ${companyName} (${sym})
 Sector: ${q.sector ?? ""}  Industry: ${q.industry ?? ""}
 Price: ${q.regularMarketPrice} ${q.currency ?? ""}
@@ -97,14 +136,14 @@ Recommendation: ${q.averageAnalystRating ?? q.recommendationKey ?? "?"}
 
 Recent headlines about ${companyName} (${sym}):
 ${headlines.join("\n") || "(no recent headlines)"}
-
+${webBlock}
 CRITICAL: ONLY analyze ${companyName} (${sym}). Do NOT discuss any other ticker or company. Ignore any headline above that is not directly about ${companyName}.
 
 Produce a DETAILED, in-depth analyst-grade summary. Be specific and quantitative where possible (cite numbers, % growth, margins, multiples). Avoid generic filler. Plain English, no disclaimers.
 
 Return strict JSON with shape:
 {
-  "whyMoved": string,              // 2-4 sentences explaining specifically WHY ${companyName} (${sym}) moved ${q.regularMarketChangePercent?.toFixed?.(2)}% today. Tie the move to the recent headlines above (earnings, guidance, news, analyst calls, sector moves). If the move is large (e.g. a big jump or drop), explain the likely catalyst in plain English a beginner can understand. If there are no clear catalysts, say the move is likely broad market or sector driven.
+  "whyMoved": string,              // 2-4 sentences explaining specifically WHY ${companyName} (${sym}) moved ${q.regularMarketChangePercent?.toFixed?.(2)}% today. Base this ONLY on the "Web search results (Google)" and headlines provided above — summarize the actual reported reason, do NOT invent or speculate a catalyst that is not in those sources. Quote the concrete catalyst (earnings, guidance, analyst rating change, product/legal/macro news) reported there in plain English a beginner understands. If the provided sources do not give a clear company-specific reason, say the move appears to be driven by broad market or sector action rather than guessing a specific cause.
   "positives": [string],           // 4-6 detailed bullets, each 1-2 sentences with specifics
   "negatives": [string],           // 4-6 detailed bullets, each 1-2 sentences with specifics
   "revenueGrowth": string,         // 2-3 sentences on historical + expected revenue growth trajectory, cite YoY % if known
