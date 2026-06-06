@@ -1069,6 +1069,31 @@ const SettingsModal = ({
           )}
         </section>
 
+        {isOwner && (onTogglePublic || onOpenDev) && (
+          <section className="rounded-lg border bg-muted/40 p-3 space-y-2 md:hidden">
+            <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Game owner controls</div>
+            {onTogglePublic && (
+              <button
+                onClick={onTogglePublic}
+                className="w-full rounded-md border bg-background px-3 py-2 text-left text-sm font-semibold flex items-center gap-2"
+              >
+                {isPublic ? <Globe className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                {isPublic ? "Public — tap to make private" : "Private — tap to make public"}
+              </button>
+            )}
+            {onOpenDev && (
+              <button
+                onClick={onOpenDev}
+                className="w-full rounded-md border bg-background px-3 py-2 text-left text-sm font-semibold flex items-center gap-2 text-amber-600 dark:text-amber-400"
+              >
+                <Wrench className="w-4 h-4" /> Dev tools
+              </button>
+            )}
+          </section>
+        )}
+
+
+
         {isAdmin && panel === "members" && (
           <section className="rounded-lg border bg-muted/40 p-3 space-y-2">
             <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Game members</div>
