@@ -7,7 +7,7 @@ import logo from "@/assets/logo.png";
 
 const NAV_LINKS = [
   { to: "/stocks", label: "Stocks" },
-  { to: "/learn/basics", label: "Learn" },
+  { to: "/learn", label: "Learn" },
   { to: "/sim", label: "Simulator", accent: true },
   { to: "/start", label: "Start Here" },
 ];
@@ -157,7 +157,11 @@ export const Header = ({ onSearch }: Props) => {
             className={({ isActive }) =>
               cn(
                 "min-w-max flex-1 text-center px-4 py-2.5 text-sm font-bold whitespace-nowrap transition-colors",
-                l.accent ? "text-primary bg-primary/10 font-extrabold" : isActive ? "text-foreground bg-muted" : "text-muted-foreground",
+                l.accent
+                  ? "text-primary bg-primary/10 font-extrabold"
+                  : isActive
+                    ? "text-foreground bg-muted"
+                    : "text-muted-foreground",
               )
             }
           >
