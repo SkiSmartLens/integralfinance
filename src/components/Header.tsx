@@ -7,6 +7,7 @@ import logo from "@/assets/logo.png";
 
 const NAV_LINKS = [
   { to: "/stocks", label: "Stocks" },
+  { to: "/market-brief", label: "Market Brief" },
   { to: "/learn", label: "Learn" },
   { to: "/sim", label: "Simulator", accent: true },
   { to: "/start", label: "Start Here" },
