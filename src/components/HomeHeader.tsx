@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import logo from "@/assets/logo.png";
 
 const LINKS = [
+  { to: "/market-brief", label: "Market Brief" },
   { to: "/learn/basics", label: "Learn" },
   { to: "/simulator", label: "Simulator" },
   { to: "/#glossary", label: "Glossary" },
