@@ -28,6 +28,7 @@ const LearnPortfolio = lazy(() => import("./pages/LearnPortfolio.tsx"));
 const LearnAdvanced = lazy(() => import("./pages/LearnAdvanced.tsx"));
 const StockTicker = lazy(() => import("./pages/StockTicker.tsx"));
 const StartHere = lazy(() => import("./pages/StartHere.tsx"));
+const MarketBrief = lazy(() => import("./pages/MarketBrief.tsx"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -51,6 +52,7 @@ const App = () => (
             <Route path="/stocks/:ticker" element={<StockTicker />} />
             <Route path="/news" element={<Index />} />
             <Route path="/start" element={<StartHere />} />
+            <Route path="/market-brief" element={<MarketBrief />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/sim" element={<Sim />} />
             <Route path="/simulator" element={<Sim />} />
