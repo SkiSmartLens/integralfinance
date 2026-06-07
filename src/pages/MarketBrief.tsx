@@ -164,6 +164,13 @@ const MarketBrief = () => {
           <p className="text-base sm:text-lg text-muted-foreground mt-4 max-w-2xl">
             {todayLabel()} — the top stories, the biggest winners and losers, and one lesson to help it all make sense.
           </p>
+          <button
+            onClick={handleShare}
+            className="inline-flex items-center gap-2 mt-6 px-5 py-2.5 rounded-full bg-primary text-primary-foreground font-extrabold hover:opacity-90 transition-opacity"
+          >
+            {shared ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+            {shared ? "Copied!" : "Share today's brief"}
+          </button>
         </div>
       </section>
 
