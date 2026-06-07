@@ -49,9 +49,14 @@ const staticEntries: SitemapEntry[] = [
   { path: "/data-sources", lastmod: staticLastmod, changefreq: "yearly", priority: "0.3" },
   { path: "/faq", lastmod: staticLastmod, changefreq: "monthly", priority: "0.5" },
   { path: "/auth", lastmod: staticLastmod, changefreq: "yearly", priority: "0.4" },
+  { path: "/market-brief", lastmod: dynamicLastmod, changefreq: "daily", priority: "0.8" },
+  { path: "/learn", lastmod: staticLastmod, changefreq: "monthly", priority: "0.8" },
   { path: "/learn/basics", lastmod: staticLastmod, changefreq: "monthly", priority: "0.7" },
+  { path: "/learn/reading", lastmod: staticLastmod, changefreq: "monthly", priority: "0.7" },
   { path: "/learn/indicators", lastmod: staticLastmod, changefreq: "monthly", priority: "0.7" },
   { path: "/learn/patterns", lastmod: staticLastmod, changefreq: "monthly", priority: "0.7" },
+  { path: "/learn/portfolio", lastmod: staticLastmod, changefreq: "monthly", priority: "0.7" },
+  { path: "/learn/advanced", lastmod: staticLastmod, changefreq: "monthly", priority: "0.7" },
 ];
 
 // Individual stock pages for every ticker referenced in the app's data.
