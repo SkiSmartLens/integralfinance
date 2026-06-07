@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, GraduationCap, Clock, Newspaper } from "lucide-react";
+import { ArrowRight, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, GraduationCap, Clock, Newspaper, Share2, Check } from "lucide-react";
 import { HomeHeader } from "@/components/HomeHeader";
 import { SEO } from "@/components/SEO";
 import { SiteFooter } from "@/components/SiteFooter";
 import { fetchNews, fetchScreener, formatNumber, NewsItem, ScreenerQuote } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 function timeAgo(ts: number) {
   const s = Math.floor(Date.now() / 1000 - ts);
@@ -78,6 +79,32 @@ const MarketBrief = () => {
   const [gainers, setGainers] = useState<ScreenerQuote[]>([]);
   const [losers, setLosers] = useState<ScreenerQuote[]>([]);
   const [loading, setLoading] = useState(true);
+  const [shared, setShared] = useState(false);
+
+  const handleShare = async () => {
+    const url = typeof window !== "undefined" ? window.location.href : "https://integralstocks.com/market-brief";
+    const shareData = {
+      title: "Daily Market Brief — Integral Stocks",
+      text: "Today's top market news, biggest movers, and a beginner lesson of the day.",
+      url,
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        return;
+      }
+    } catch {
+      /* user cancelled or unsupported — fall through to copy */
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setShared(true);
+      toast.success("Link copied — share today's brief!");
+      setTimeout(() => setShared(false), 2000);
+    } catch {
+      toast.error("Couldn't copy the link.");
+    }
+  };
 
   useEffect(() => {
     let alive = true;
@@ -137,6 +164,13 @@ const MarketBrief = () => {
           <p className="text-base sm:text-lg text-muted-foreground mt-4 max-w-2xl">
             {todayLabel()} — the top stories, the biggest winners and losers, and one lesson to help it all make sense.
           </p>
+          <button
+            onClick={handleShare}
+            className="inline-flex items-center gap-2 mt-6 px-5 py-2.5 rounded-full bg-primary text-primary-foreground font-extrabold hover:opacity-90 transition-opacity"
+          >
+            {shared ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+            {shared ? "Copied!" : "Share today's brief"}
+          </button>
         </div>
       </section>
 
