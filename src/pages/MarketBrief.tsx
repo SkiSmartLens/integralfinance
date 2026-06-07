@@ -79,6 +79,32 @@ const MarketBrief = () => {
   const [gainers, setGainers] = useState<ScreenerQuote[]>([]);
   const [losers, setLosers] = useState<ScreenerQuote[]>([]);
   const [loading, setLoading] = useState(true);
+  const [shared, setShared] = useState(false);
+
+  const handleShare = async () => {
+    const url = typeof window !== "undefined" ? window.location.href : "https://integralstocks.com/market-brief";
+    const shareData = {
+      title: "Daily Market Brief — Integral Stocks",
+      text: "Today's top market news, biggest movers, and a beginner lesson of the day.",
+      url,
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        return;
+      }
+    } catch {
+      /* user cancelled or unsupported — fall through to copy */
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setShared(true);
+      toast.success("Link copied — share today's brief!");
+      setTimeout(() => setShared(false), 2000);
+    } catch {
+      toast.error("Couldn't copy the link.");
+    }
+  };
 
   useEffect(() => {
     let alive = true;
