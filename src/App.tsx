@@ -52,6 +52,7 @@ const App = () => (
             <Route path="/stocks/:ticker" element={<StockTicker />} />
             <Route path="/news" element={<Index />} />
             <Route path="/start" element={<StartHere />} />
+            <Route path="/market-brief" element={<MarketBrief />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/sim" element={<Sim />} />
             <Route path="/simulator" element={<Sim />} />
