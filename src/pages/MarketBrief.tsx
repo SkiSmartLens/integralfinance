@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, GraduationCap, Clock, Newspaper } from "lucide-react";
+import { ArrowRight, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, GraduationCap, Clock, Newspaper, Share2, Check } from "lucide-react";
 import { HomeHeader } from "@/components/HomeHeader";
 import { SEO } from "@/components/SEO";
 import { SiteFooter } from "@/components/SiteFooter";
 import { fetchNews, fetchScreener, formatNumber, NewsItem, ScreenerQuote } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 function timeAgo(ts: number) {
   const s = Math.floor(Date.now() / 1000 - ts);
