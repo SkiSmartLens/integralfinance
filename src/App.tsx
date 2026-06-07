@@ -28,6 +28,7 @@ const LearnPortfolio = lazy(() => import("./pages/LearnPortfolio.tsx"));
 const LearnAdvanced = lazy(() => import("./pages/LearnAdvanced.tsx"));
 const StockTicker = lazy(() => import("./pages/StockTicker.tsx"));
 const StartHere = lazy(() => import("./pages/StartHere.tsx"));
+const MarketBrief = lazy(() => import("./pages/MarketBrief.tsx"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
