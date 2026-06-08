@@ -150,6 +150,26 @@ const HomeContent = () => {
           <p className="text-sm font-semibold text-muted-foreground mt-5">
             Joined by <span className="text-foreground">2,400+ beginners.</span>
           </p>
+
+          {/* Today's Lesson — elevated daily lesson card */}
+          <Link
+            to="/learn/basics"
+            className="group block max-w-xl mx-auto mt-10 text-left rounded-3xl border-2 border-primary/30 bg-accent/60 p-6 sm:p-7 hover:border-primary hover:shadow-lg transition-all"
+          >
+            <span className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-primary bg-background/80 px-3 py-1 rounded-full mb-3">
+              <GraduationCap className="w-3.5 h-3.5" /> Today's Lesson
+            </span>
+            <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight leading-snug">
+              What is a stock, really?
+            </h2>
+            <p className="text-muted-foreground mt-2 leading-relaxed">
+              A stock is a tiny slice of ownership in a real company. Learn what you're actually
+              buying — in plain English, no jargon — in just 4 minutes.
+            </p>
+            <span className="inline-flex items-center gap-1.5 font-extrabold text-primary mt-4 group-hover:gap-2.5 transition-all">
+              Read more <ArrowRight className="w-4 h-4" />
+            </span>
+          </Link>
         </div>
       </section>
 
