@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Sparkles, Clock, Search, Share2 } from "lucide-react";
+import { ArrowRight, Sparkles, Clock, Search, Share2, GraduationCap } from "lucide-react";
 import { toast } from "sonner";
 import { HomeHeader } from "@/components/HomeHeader";
 import { SEO } from "@/components/SEO";
