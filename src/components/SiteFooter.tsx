@@ -13,7 +13,7 @@ export const SiteFooter = () => (
         <h3 className="font-semibold mb-2">Markets</h3>
         <ul className="space-y-1 text-muted-foreground">
           <li><Link to="/stocks" className="hover:text-foreground">Stocks</Link></li>
-          <li><Link to="/news" className="hover:text-foreground">News</Link></li>
+          <li><Link to="/market-brief" className="hover:text-foreground">Market Brief</Link></li>
           <li><Link to="/screener" className="hover:text-foreground">Screener</Link></li>
           <li><Link to="/calendar" className="hover:text-foreground">Economic Calendar</Link></li>
           <li><Link to="/watchlist" className="hover:text-foreground">Watchlist</Link></li>
