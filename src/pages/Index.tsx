@@ -40,7 +40,7 @@ const FEATURES = [
 
 const Index = () => {
   const navigate = useNavigate();
-  const [symbol, setSymbol] = useState("^GSPC");
+  const symbol = "^GSPC";
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
