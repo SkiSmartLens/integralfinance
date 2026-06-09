@@ -9,6 +9,7 @@ interface Summary {
   whyMoved?: string;
   positives: string[];
   negatives: string[];
+  predictedRevenue?: string;
   revenueGrowth?: string;
   earningsGrowth?: string;
   margins?: string;
