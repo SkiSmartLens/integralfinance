@@ -182,7 +182,7 @@ Return strict JSON with shape:
         forecast: { type: "string" },
         outlook: { type: "string" },
       },
-      required: ["whyMoved", "positives", "negatives", "revenueGrowth", "earningsGrowth", "margins", "balanceSheet", "moat", "earnings", "forecast", "outlook"],
+      required: ["whyMoved", "positives", "negatives", "predictedRevenue", "revenueGrowth", "earningsGrowth", "margins", "balanceSheet", "moat", "earnings", "forecast", "outlook"],
     };
 
 
