@@ -146,6 +146,7 @@ Return strict JSON with shape:
   "whyMoved": string,              // 2-4 sentences explaining specifically WHY ${companyName} (${sym}) moved ${q.regularMarketChangePercent?.toFixed?.(2)}% today. Base this ONLY on the "Web search results (Google)" and headlines provided above — summarize the actual reported reason, do NOT invent or speculate a catalyst that is not in those sources. Quote the concrete catalyst (earnings, guidance, analyst rating change, product/legal/macro news) reported there in plain English a beginner understands. If the provided sources do not give a clear company-specific reason, say the move appears to be driven by broad market or sector action rather than guessing a specific cause.
   "positives": [string],           // 4-6 detailed bullets, each 1-2 sentences with specifics
   "negatives": [string],           // 4-6 detailed bullets, each 1-2 sentences with specifics
+  "predictedRevenue": string,      // a CONCRETE estimated next-fiscal-year TOTAL revenue figure as a dollar amount (e.g. "~$412B" or "~$8.5B"). Base it on the latest reported revenue and the expected growth rate. ALWAYS give a specific number, not a range of words. If genuinely unknown, give your best quantitative estimate and note it is approximate.
   "revenueGrowth": string,         // 2-3 sentences on historical + expected revenue growth trajectory, cite YoY % if known
   "earningsGrowth": string,        // 2-3 sentences on EPS trend, beat/miss history, forward growth expectations
   "margins": string,               // 2-3 sentences on gross/operating/net margin quality vs peers
@@ -171,6 +172,7 @@ Return strict JSON with shape:
         whyMoved: { type: "string" },
         positives: { type: "array", items: { type: "string" } },
         negatives: { type: "array", items: { type: "string" } },
+        predictedRevenue: { type: "string" },
         revenueGrowth: { type: "string" },
         earningsGrowth: { type: "string" },
         margins: { type: "string" },
@@ -180,7 +182,7 @@ Return strict JSON with shape:
         forecast: { type: "string" },
         outlook: { type: "string" },
       },
-      required: ["whyMoved", "positives", "negatives", "revenueGrowth", "earningsGrowth", "margins", "balanceSheet", "moat", "earnings", "forecast", "outlook"],
+      required: ["whyMoved", "positives", "negatives", "predictedRevenue", "revenueGrowth", "earningsGrowth", "margins", "balanceSheet", "moat", "earnings", "forecast", "outlook"],
     };
 
 
@@ -247,7 +249,7 @@ Return strict JSON with shape:
     try { parsed = JSON.parse(args ?? "{}"); } catch { parsed = {}; }
     if (!isBeginner) {
       const fallback = `No specific data available for ${companyName}. This may apply more to individual operating companies than to indices, ETFs, or funds.`;
-      for (const f of ["whyMoved", "revenueGrowth", "earningsGrowth", "margins", "balanceSheet", "moat", "earnings", "forecast", "outlook"]) {
+      for (const f of ["whyMoved", "predictedRevenue", "revenueGrowth", "earningsGrowth", "margins", "balanceSheet", "moat", "earnings", "forecast", "outlook"]) {
         if (!parsed[f] || typeof parsed[f] !== "string" || !parsed[f].trim()) parsed[f] = fallback;
       }
       if (!Array.isArray(parsed.positives) || !parsed.positives.length) parsed.positives = ["Analysis unavailable right now."];

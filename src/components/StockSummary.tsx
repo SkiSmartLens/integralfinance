@@ -9,6 +9,7 @@ interface Summary {
   whyMoved?: string;
   positives: string[];
   negatives: string[];
+  predictedRevenue?: string;
   revenueGrowth?: string;
   earningsGrowth?: string;
   margins?: string;
@@ -160,6 +161,12 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
               {data.negatives?.map((p, i) => <li key={i}>{p}</li>)}
             </ul>
           </CollapsibleRow>
+          {data.predictedRevenue && (
+            <CollapsibleRow icon={<DollarSign className="w-4 h-4 text-primary" />} title="Predicted revenue (estimate)">
+              <p className="text-2xl font-extrabold text-primary">{data.predictedRevenue}</p>
+              <p className="text-xs text-muted-foreground mt-1">Estimated next-year total revenue · AI approximation, not a guarantee.</p>
+            </CollapsibleRow>
+          )}
           {data.revenueGrowth && (
             <CollapsibleRow icon={<BarChart3 className="w-4 h-4 text-primary" />} title="Revenue growth">
               <p className="text-sm">{data.revenueGrowth}</p>

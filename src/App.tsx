@@ -5,7 +5,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index.tsx";
-import Home from "./pages/Home.tsx";
 import { DevMenu } from "@/components/DevMenu";
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 const Auth = lazy(() => import("./pages/Auth.tsx"));
@@ -47,7 +46,7 @@ const App = () => (
       <BrowserRouter>
         <Suspense fallback={null}>
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={<Index />} />
             <Route path="/stocks" element={<Index />} />
             <Route path="/stocks/:ticker" element={<StockTicker />} />
             <Route path="/news" element={<MarketBrief />} />

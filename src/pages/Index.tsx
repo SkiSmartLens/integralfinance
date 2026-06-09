@@ -1,22 +1,26 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { StockChart } from "@/components/StockChart";
 import { SEO } from "@/components/SEO";
 import { SiteFooter } from "@/components/SiteFooter";
-import { Newspaper, GraduationCap, BookOpen, Rocket, ArrowRight } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  Newspaper,
+  GraduationCap,
+  BookOpen,
+  Rocket,
+  ArrowRight,
+  ChevronDown,
+  LineChart,
+  Info,
+} from "lucide-react";
 
 const StockSummary = lazy(() =>
   import("@/components/StockSummary").then((m) => ({ default: m.StockSummary }))
 );
 
-const FEATURES = [
-  {
-    to: "/market-brief",
-    icon: Newspaper,
-    title: "Market Brief",
-    desc: "Today's biggest stories and market movers, explained in plain English.",
-  },
+const QUICK_LINKS = [
   {
     to: "/learn/basics",
     icon: GraduationCap,
@@ -38,6 +42,43 @@ const FEATURES = [
   },
 ];
 
+const Section = ({
+  icon,
+  title,
+  subtitle,
+  defaultOpen = false,
+  children,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  subtitle?: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) => {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <section className="border-2 border-border rounded-2xl bg-card overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-3 p-5 text-left"
+      >
+        <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-accent text-primary shrink-0">
+          {icon}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-extrabold text-lg leading-tight">{title}</span>
+          {subtitle && <span className="block text-sm text-muted-foreground mt-0.5">{subtitle}</span>}
+        </span>
+        <ChevronDown
+          className={cn("w-5 h-5 text-muted-foreground transition-transform shrink-0", open && "rotate-180")}
+        />
+      </button>
+      {open && <div className="px-5 pb-5">{children}</div>}
+    </section>
+  );
+};
+
 const Index = () => {
   const navigate = useNavigate();
   const symbol = "^GSPC";
@@ -45,79 +86,104 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SEO
-        title="IntegralStocks — Beginner Stock News, Lessons & Simulator"
-        description="A simple, beginner-friendly hub: a daily market brief, a lesson of the day, easy learning guides, and a free paper-trading simulator."
-        path="/stocks"
+        title="IntegralStocks — Beginner Stock Brief, Lessons & Simulator"
+        description="A simple beginner dashboard: a daily market brief, the S&P 500 with AI signals, easy lessons, and a free paper-trading simulator."
+        path="/"
         jsonLd={{
           "@context": "https://schema.org",
           "@type": "WebPage",
           name: "IntegralStocks",
-          description: "Beginner-friendly stock learning hub with a market brief, daily lessons, and a free simulator.",
-          url: "https://integralstocks.com/stocks",
+          description: "Beginner-friendly stock dashboard with a market brief, AI signals, and a free simulator.",
+          url: "https://integralstocks.com/",
         }}
       />
-      <h1 className="sr-only">IntegralStocks — Beginner stock news, lessons, and a free simulator</h1>
+      <h1 className="sr-only">IntegralStocks — Beginner stock dashboard, lessons, and a free simulator</h1>
       <Header onSearch={(s) => navigate(`/stocks/${encodeURIComponent(s.toLowerCase())}`)} />
 
-      <main className="flex-1 px-4 sm:px-6 py-8 sm:py-12 max-w-5xl mx-auto w-full space-y-10">
-        {/* Intro */}
-        <section className="text-center max-w-2xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-            Everything you need to start, in one place
-          </h2>
-          <p className="text-muted-foreground mt-3 text-lg">
-            {"\n"}
+      <main className="flex-1 px-4 sm:px-6 py-6 sm:py-10 max-w-5xl mx-auto w-full space-y-6">
+        {/* Market Brief — top, most prominent */}
+        <Link
+          to="/market-brief"
+          className="group block rounded-2xl border-2 border-primary bg-primary/5 p-6 hover:bg-primary/10 transition-colors"
+        >
+          <span className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-primary text-primary-foreground mb-3">
+            <Newspaper className="w-5 h-5" />
+          </span>
+          <div className="font-extrabold text-xl flex items-center gap-1.5">
+            Market Brief
+            <ArrowRight className="w-4 h-4 text-primary group-hover:translate-x-1 transition-transform" />
+          </div>
+          <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+            Today's biggest stories, the largest movers, and a lesson of the day — explained in plain English.
           </p>
-        </section>
+        </Link>
 
-        {/* Four beginner features */}
-        <section className="grid sm:grid-cols-2 gap-4">
-          {FEATURES.map((f) => (
+        {/* Quick links */}
+        <section className="grid sm:grid-cols-3 gap-4">
+          {QUICK_LINKS.map((f) => (
             <Link
               key={f.to}
               to={f.to}
-              className={
-                "group rounded-2xl border-2 p-6 transition-colors flex flex-col gap-3 " +
-                (f.accent
+              className={cn(
+                "group rounded-2xl border-2 p-5 transition-colors flex flex-col gap-2",
+                f.accent
                   ? "border-primary bg-primary/5 hover:bg-primary/10"
-                  : "border-border bg-card hover:border-primary")
-              }
+                  : "border-border bg-card hover:border-primary"
+              )}
             >
               <span
-                className={
-                  "inline-flex items-center justify-center w-11 h-11 rounded-xl " +
-                  (f.accent ? "bg-primary text-primary-foreground" : "bg-accent text-primary")
-                }
+                className={cn(
+                  "inline-flex items-center justify-center w-10 h-10 rounded-xl",
+                  f.accent ? "bg-primary text-primary-foreground" : "bg-accent text-primary"
+                )}
               >
                 <f.icon className="w-5 h-5" />
               </span>
-              <div>
-                <div className="font-extrabold text-lg flex items-center gap-1.5">
-                  {f.title}
-                  <ArrowRight className="w-4 h-4 text-primary opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
-                </div>
-                <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{f.desc}</p>
+              <div className="font-extrabold flex items-center gap-1.5">
+                {f.title}
+                <ArrowRight className="w-4 h-4 text-primary opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
               </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
             </Link>
           ))}
         </section>
 
-        {/* One simple market snapshot */}
-        <section className="space-y-4">
-          <div>
-            <h2 className="text-2xl font-extrabold tracking-tight">Today's market</h2>
-            <p className="text-muted-foreground text-sm mt-1">
-              A quick look at the S&amp;P 500 — a basket of 500 big US companies, often used to gauge how the
-              market is doing.
-            </p>
-          </div>
+        {/* S&P 500 + AI signals — starts compressed */}
+        <Section
+          icon={<LineChart className="w-5 h-5" />}
+          title="S&P 500 & AI signals"
+          subtitle="A quick look at the market, with AI insights you can expand."
+        >
           <div className="grid lg:grid-cols-[minmax(0,360px)_1fr] gap-6 items-start">
             <Suspense fallback={<div className="h-32" />}>
               <StockSummary symbol={symbol} />
             </Suspense>
             <StockChart symbol={symbol} />
           </div>
-        </section>
+        </Section>
+
+        {/* What is IntegralStocks — starts compressed */}
+        <Section
+          icon={<Info className="w-5 h-5" />}
+          title="What is IntegralStocks?"
+          subtitle="New here? Start with the basics."
+        >
+          <div className="space-y-3 text-sm text-muted-foreground leading-relaxed">
+            <p>
+              IntegralStocks is a beginner-friendly place to understand the stock market. We turn confusing
+              market news into plain English, explain <span className="font-semibold text-foreground">why</span>{" "}
+              stocks move with AI insights, and let you practice trading risk-free.
+            </p>
+            <p>
+              Start with the <Link to="/market-brief" className="text-primary font-semibold underline-offset-2 hover:underline">Market Brief</Link>{" "}
+              for today's news, read a{" "}
+              <Link to="/learn/basics" className="text-primary font-semibold underline-offset-2 hover:underline">Daily Lesson</Link>, then
+              try the{" "}
+              <Link to="/sim" className="text-primary font-semibold underline-offset-2 hover:underline">Simulator</Link>{" "}
+              with $100,000 of fake money.
+            </p>
+          </div>
+        </Section>
       </main>
 
       <SiteFooter />
