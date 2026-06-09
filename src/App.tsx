@@ -46,7 +46,7 @@ const App = () => (
       <BrowserRouter>
         <Suspense fallback={null}>
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={<Index />} />
             <Route path="/stocks" element={<Index />} />
             <Route path="/stocks/:ticker" element={<StockTicker />} />
             <Route path="/news" element={<MarketBrief />} />
