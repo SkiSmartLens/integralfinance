@@ -249,7 +249,7 @@ Return strict JSON with shape:
     try { parsed = JSON.parse(args ?? "{}"); } catch { parsed = {}; }
     if (!isBeginner) {
       const fallback = `No specific data available for ${companyName}. This may apply more to individual operating companies than to indices, ETFs, or funds.`;
-      for (const f of ["whyMoved", "revenueGrowth", "earningsGrowth", "margins", "balanceSheet", "moat", "earnings", "forecast", "outlook"]) {
+      for (const f of ["whyMoved", "predictedRevenue", "revenueGrowth", "earningsGrowth", "margins", "balanceSheet", "moat", "earnings", "forecast", "outlook"]) {
         if (!parsed[f] || typeof parsed[f] !== "string" || !parsed[f].trim()) parsed[f] = fallback;
       }
       if (!Array.isArray(parsed.positives) || !parsed.positives.length) parsed.positives = ["Analysis unavailable right now."];
