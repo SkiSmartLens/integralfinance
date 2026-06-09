@@ -151,8 +151,8 @@ const Index = () => {
         {/* S&P 500 + AI signals — starts compressed */}
         <Section
           icon={<LineChart className="w-5 h-5" />}
-          title="S&P 500 & AI signals"
-          subtitle="A quick look at the market, with AI insights you can expand."
+          title="Stocks & AI signals"
+          subtitle="A quick look at the market, with AI insights."
         >
           <div className="grid lg:grid-cols-[minmax(0,360px)_1fr] gap-6 items-start">
             <Suspense fallback={<div className="h-32" />}>
