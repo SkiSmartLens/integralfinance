@@ -66,7 +66,7 @@ const Index = () => {
             Everything you need to start, in one place
           </h2>
           <p className="text-muted-foreground mt-3 text-lg">
-            No jargon, no clutter. Just the four things that matter for beginners.
+            {"\n"}
           </p>
         </section>
 
