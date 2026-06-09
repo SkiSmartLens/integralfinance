@@ -172,6 +172,7 @@ Return strict JSON with shape:
         whyMoved: { type: "string" },
         positives: { type: "array", items: { type: "string" } },
         negatives: { type: "array", items: { type: "string" } },
+        predictedRevenue: { type: "string" },
         revenueGrowth: { type: "string" },
         earningsGrowth: { type: "string" },
         margins: { type: "string" },
