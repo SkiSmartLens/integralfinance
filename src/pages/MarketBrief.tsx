@@ -80,6 +80,7 @@ const MarketBrief = () => {
   const [losers, setLosers] = useState<ScreenerQuote[]>([]);
   const [loading, setLoading] = useState(true);
   const [shared, setShared] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(6);
 
   const handleShare = async () => {
     const url = typeof window !== "undefined" ? window.location.href : "https://integralstocks.com/market-brief";
