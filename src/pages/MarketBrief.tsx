@@ -115,7 +115,7 @@ const MarketBrief = () => {
       fetchScreener("day_losers", 6).catch(() => []),
     ]).then(([n, g, l]) => {
       if (!alive) return;
-      setNews(n.slice(0, 6));
+      setNews(n);
       setGainers(g.slice(0, 5));
       setLosers(l.slice(0, 5));
       setLoading(false);
