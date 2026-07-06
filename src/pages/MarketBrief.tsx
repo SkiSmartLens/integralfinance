@@ -255,9 +255,20 @@ const MarketBrief = () => {
                   </a>
                 ))}
               </div>
+              {hasMore && (
+                <div className="flex justify-center pt-2">
+                  <button
+                    onClick={() => setVisibleCount((c) => c + 6)}
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-full border-2 border-primary text-primary font-extrabold hover:bg-primary hover:text-primary-foreground transition-colors"
+                  >
+                    More stories <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </section>
+
 
         {/* Gainers & losers */}
         <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
