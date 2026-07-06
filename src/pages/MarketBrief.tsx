@@ -80,6 +80,7 @@ const MarketBrief = () => {
   const [losers, setLosers] = useState<ScreenerQuote[]>([]);
   const [loading, setLoading] = useState(true);
   const [shared, setShared] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(6);
 
   const handleShare = async () => {
     const url = typeof window !== "undefined" ? window.location.href : "https://integralstocks.com/market-brief";
@@ -114,7 +115,7 @@ const MarketBrief = () => {
       fetchScreener("day_losers", 6).catch(() => []),
     ]).then(([n, g, l]) => {
       if (!alive) return;
-      setNews(n.slice(0, 6));
+      setNews(n);
       setGainers(g.slice(0, 5));
       setLosers(l.slice(0, 5));
       setLoading(false);
@@ -134,7 +135,9 @@ const MarketBrief = () => {
     return LESSONS.mixed;
   }, [gainers, losers]);
 
-  const [hero, ...rest] = news;
+  const visibleNews = news.slice(0, visibleCount);
+  const [hero, ...rest] = visibleNews;
+  const hasMore = news.length > visibleCount;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -175,6 +178,26 @@ const MarketBrief = () => {
       </section>
 
       <main className="max-w-5xl mx-auto w-full px-4 sm:px-6 py-12 space-y-16">
+        {/* Lesson of the day — top */}
+        <section>
+          <div className="rounded-2xl border-2 border-primary/30 bg-accent/50 p-6 sm:p-8">
+            <span className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-primary bg-accent px-3 py-1 rounded-full mb-4">
+              <GraduationCap className="w-3.5 h-3.5" /> Lesson of the day
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-3">{lesson.concept}</h2>
+            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-3xl">{lesson.body}</p>
+            <Link
+              to={lesson.url}
+              className="inline-flex items-center gap-2 mt-6 px-6 py-3 rounded-full bg-primary text-primary-foreground font-extrabold hover:opacity-90 transition-opacity"
+            >
+              {lesson.cta} <ArrowRight className="w-4 h-4" />
+            </Link>
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-4">
+              <Clock className="w-3.5 h-3.5" /> Updated every day with the market
+            </p>
+          </div>
+        </section>
+
         {/* Top news */}
         <section>
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-1">Top stories</h2>
@@ -232,9 +255,20 @@ const MarketBrief = () => {
                   </a>
                 ))}
               </div>
+              {hasMore && (
+                <div className="flex justify-center pt-2">
+                  <button
+                    onClick={() => setVisibleCount((c) => c + 6)}
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-full border-2 border-primary text-primary font-extrabold hover:bg-primary hover:text-primary-foreground transition-colors"
+                  >
+                    More stories <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </section>
+
 
         {/* Gainers & losers */}
         <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -274,27 +308,8 @@ const MarketBrief = () => {
             )}
           </div>
         </section>
-
-        {/* Lesson of the day */}
-        <section>
-          <div className="rounded-2xl border-2 border-primary/30 bg-accent/50 p-6 sm:p-8">
-            <span className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-primary bg-accent px-3 py-1 rounded-full mb-4">
-              <GraduationCap className="w-3.5 h-3.5" /> Lesson of the day
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-3">{lesson.concept}</h2>
-            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-3xl">{lesson.body}</p>
-            <Link
-              to={lesson.url}
-              className="inline-flex items-center gap-2 mt-6 px-6 py-3 rounded-full bg-primary text-primary-foreground font-extrabold hover:opacity-90 transition-opacity"
-            >
-              {lesson.cta} <ArrowRight className="w-4 h-4" />
-            </Link>
-            <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-4">
-              <Clock className="w-3.5 h-3.5" /> Updated every day with the market
-            </p>
-          </div>
-        </section>
       </main>
+
 
       <SiteFooter />
     </div>
