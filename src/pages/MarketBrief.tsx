@@ -178,6 +178,26 @@ const MarketBrief = () => {
       </section>
 
       <main className="max-w-5xl mx-auto w-full px-4 sm:px-6 py-12 space-y-16">
+        {/* Lesson of the day — top */}
+        <section>
+          <div className="rounded-2xl border-2 border-primary/30 bg-accent/50 p-6 sm:p-8">
+            <span className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-primary bg-accent px-3 py-1 rounded-full mb-4">
+              <GraduationCap className="w-3.5 h-3.5" /> Lesson of the day
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-3">{lesson.concept}</h2>
+            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-3xl">{lesson.body}</p>
+            <Link
+              to={lesson.url}
+              className="inline-flex items-center gap-2 mt-6 px-6 py-3 rounded-full bg-primary text-primary-foreground font-extrabold hover:opacity-90 transition-opacity"
+            >
+              {lesson.cta} <ArrowRight className="w-4 h-4" />
+            </Link>
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-4">
+              <Clock className="w-3.5 h-3.5" /> Updated every day with the market
+            </p>
+          </div>
+        </section>
+
         {/* Top news */}
         <section>
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-1">Top stories</h2>
