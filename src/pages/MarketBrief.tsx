@@ -135,7 +135,9 @@ const MarketBrief = () => {
     return LESSONS.mixed;
   }, [gainers, losers]);
 
-  const [hero, ...rest] = news;
+  const visibleNews = news.slice(0, visibleCount);
+  const [hero, ...rest] = visibleNews;
+  const hasMore = news.length > visibleCount;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
