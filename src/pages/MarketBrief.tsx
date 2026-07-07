@@ -4,7 +4,7 @@ import { ArrowRight, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, Gra
 import { HomeHeader } from "@/components/HomeHeader";
 import { SEO } from "@/components/SEO";
 import { SiteFooter } from "@/components/SiteFooter";
-import { fetchNews, fetchScreener, formatNumber, NewsItem, ScreenerQuote } from "@/lib/yahoo";
+import { fetchNews, fetchScreener, filterMeaningfulMovers, formatNumber, NewsItem, ScreenerQuote } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
