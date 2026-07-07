@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { fetchScreener, formatNumber, ScreenerQuote } from "@/lib/yahoo";
+import { fetchScreener, filterMeaningfulMovers, formatNumber, ScreenerQuote } from "@/lib/yahoo";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { INDEX_TICKERS, SECTORS, TRENDING } from "@/lib/categories";
 import { useWatchlist } from "@/hooks/useWatchlist";
