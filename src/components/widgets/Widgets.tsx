@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { fetchScreener, formatNumber, ScreenerQuote } from "@/lib/yahoo";
+import { fetchScreener, filterMeaningfulMovers, formatNumber, ScreenerQuote } from "@/lib/yahoo";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { INDEX_TICKERS, SECTORS, TRENDING } from "@/lib/categories";
 import { useWatchlist } from "@/hooks/useWatchlist";
@@ -39,7 +39,10 @@ function useScreener(scrId: string) {
   const [items, setItems] = useState<ScreenerQuote[]>([]);
   useEffect(() => {
     let alive = true;
-    const load = () => fetchScreener(scrId, 8).then((r) => { if (alive) setItems(r.slice(0, 6)); }).catch(() => {});
+    const load = () =>
+      fetchScreener(scrId, 50)
+        .then((r) => { if (alive) setItems(filterMeaningfulMovers(r).slice(0, 6)); })
+        .catch(() => {});
     load();
     const t = window.setInterval(load, 30000);
     return () => { alive = false; clearInterval(t); };

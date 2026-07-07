@@ -211,6 +211,22 @@ export async function fetchScreener(scrId: string, count = 25): Promise<Screener
   return data?.finance?.result?.[0]?.quotes ?? [];
 }
 
+/**
+ * Filters out tiny, illiquid small-caps so "top movers" reflect meaningful,
+ * well-known companies rather than low-volume penny/micro-cap spikes.
+ */
+export function filterMeaningfulMovers(
+  quotes: ScreenerQuote[],
+  { minMarketCap = 2e9, minPrice = 5, minVolume = 500_000 } = {},
+): ScreenerQuote[] {
+  return quotes.filter(
+    (q) =>
+      (q.marketCap ?? 0) >= minMarketCap &&
+      (q.regularMarketPrice ?? 0) >= minPrice &&
+      (q.regularMarketVolume ?? 0) >= minVolume,
+  );
+}
+
 export function formatNumber(n?: number, opts?: Intl.NumberFormatOptions) {
   if (n == null || isNaN(n)) return "—";
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2, ...opts }).format(n);
