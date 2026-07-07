@@ -111,13 +111,13 @@ const MarketBrief = () => {
     let alive = true;
     Promise.all([
       fetchNews("stock market today").catch(() => []),
-      fetchScreener("day_gainers", 6).catch(() => []),
-      fetchScreener("day_losers", 6).catch(() => []),
+      fetchScreener("day_gainers", 50).catch(() => []),
+      fetchScreener("day_losers", 50).catch(() => []),
     ]).then(([n, g, l]) => {
       if (!alive) return;
       setNews(n);
-      setGainers(g.slice(0, 5));
-      setLosers(l.slice(0, 5));
+      setGainers(filterMeaningfulMovers(g).slice(0, 5));
+      setLosers(filterMeaningfulMovers(l).slice(0, 5));
       setLoading(false);
     });
     return () => {
