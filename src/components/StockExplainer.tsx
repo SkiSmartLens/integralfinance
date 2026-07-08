@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/backend";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { formatLargeNumber, formatNumber } from "@/lib/yahoo";
 import { BookOpen } from "lucide-react";

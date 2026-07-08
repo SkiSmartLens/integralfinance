@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/backend";
 import { cn } from "@/lib/utils";
 import { Sparkles, ChevronDown, Loader2 } from "lucide-react";
 

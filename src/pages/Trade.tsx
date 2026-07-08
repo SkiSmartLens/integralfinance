@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/backend";
 import { Header } from "@/components/Header";
 import { SEO } from "@/components/SEO";
 import { StockChart } from "@/components/StockChart";

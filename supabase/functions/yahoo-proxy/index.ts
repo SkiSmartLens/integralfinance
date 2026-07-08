@@ -251,6 +251,22 @@ Deno.serve(async (req) => {
       return new Response(body, { ...jsonHeaders(), status: r.ok ? 200 : r.status });
     }
 
+    if (kind === "options") {
+      const symbol = url.searchParams.get("symbol");
+      if (!symbol) return json({ error: "symbol required" }, 400);
+      const date = url.searchParams.get("date");
+      const cacheKey = `opt:${symbol}:${date ?? "next"}`;
+      const cached = getCache(cacheKey);
+      if (cached) return new Response(cached, jsonHeaders());
+      const upstream =
+        `https://query2.finance.yahoo.com/v7/finance/options/${encodeURIComponent(symbol)}` +
+        (date ? `?date=${encodeURIComponent(date)}` : "");
+      const r = await yahooFetch(upstream);
+      const body = await r.text();
+      if (r.ok) setCache(cacheKey, body, 30000);
+      return new Response(body, { ...jsonHeaders(), status: r.ok ? 200 : r.status });
+    }
+
     return json({ error: "invalid kind" }, 400);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "unknown";

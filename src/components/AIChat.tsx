@@ -6,14 +6,22 @@ import { cn } from "@/lib/utils";
 import { dispatchAction, AppAction } from "@/lib/actions";
 import { useWidgets } from "@/lib/widgets";
 import { useWatchlist } from "@/hooks/useWatchlist";
+import { supabase } from "@/lib/backend";
 
+const env = import.meta.env as Record<string, string | undefined>;
+const normalizeUrl = (value?: string) => {
+  if (!value) return undefined;
+  return value.startsWith("http") ? value : `https://${value}`;
+};
 const SUPABASE_URL =
-  (import.meta.env.VITE_SUPABASE_URL as string | undefined) ??
-  "https://oadtpipsbeqiadoluxnq.supabase.co";
+  normalizeUrl(env.VITE_SUPABASE_URL) ??
+  normalizeUrl(env.VITE_SUPABASE_HOST) ??
+  (env.VITE_SUPABASE_PROJECT_ID ? `https://${env.VITE_SUPABASE_PROJECT_ID}.supabase.co` : undefined) ??
+  "https://dssfjjgjvmjqnxpsbftf.supabase.co";
 const ANON =
-  (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ??
-  (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined) ??
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9hZHRwaXBzYmVxaWFkb2x1eG5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMDUyNDYsImV4cCI6MjA5MzU4MTI0Nn0.k7_W04vpl9Sctg1XhNlSz9abWI--VPk82jD5r-0hFvk";
+  env.VITE_SUPABASE_PUBLISHABLE_KEY ??
+  env.VITE_SUPABASE_ANON_KEY ??
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzc2Zqamdqdm1qcW54cHNiZnRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMzNjgzMzIsImV4cCI6MjA5ODk0NDMzMn0.eLsOUOoum6LoMddP5UGqsWgZuxvyjWA4MxVykWu9YCc";
 
 interface Msg { role: "user" | "assistant"; content: string }
 
@@ -116,9 +124,19 @@ export const AIChat = () => {
     const assistantIndex = next.length - 1;
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setMessages((prev) => {
+          const cp = [...prev];
+          cp[assistantIndex] = { role: "assistant", content: "Please sign in to chat with Integral." };
+          return cp;
+        });
+        setStreaming(false);
+        return;
+      }
       const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", apikey: ANON, Authorization: `Bearer ${ANON}` },
+        headers: { "Content-Type": "application/json", apikey: ANON, Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify({
           messages: next.slice(0, -1).map((m) => ({ role: m.role, content: m.content })),
           context: {

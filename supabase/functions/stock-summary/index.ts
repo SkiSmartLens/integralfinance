@@ -1,3 +1,5 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -9,6 +11,23 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    // Require authenticated user
+    const auth = req.headers.get("Authorization");
+    if (!auth?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const SB_URL = Deno.env.get("SUPABASE_URL")!;
+    const SB_ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const userClient = createClient(SB_URL, SB_ANON, { global: { headers: { Authorization: auth } } });
+    const { data: uData, error: uErr } = await userClient.auth.getUser();
+    if (uErr || !uData?.user) {
+      return new Response(JSON.stringify({ error: "unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { symbol, mode } = await req.json();
     if (!symbol || typeof symbol !== "string") {
       return new Response(JSON.stringify({ error: "symbol required" }), {
@@ -58,13 +77,20 @@ Deno.serve(async (req) => {
       .map((w) => w.trim())
       .filter((w) => w.length >= 4 && !/^(inc|corp|corporation|company|the|and|group|holdings|ltd|plc|index|fund|etf|trust)$/i.test(w));
     const needles = [sym.toLowerCase(), ...nameWords.map((w) => w.toLowerCase())];
-    const headlines: string[] = (newsJson?.news ?? [])
-      .filter((n: any) => {
-        const t = `${n.title ?? ""} ${n.summary ?? ""}`.toLowerCase();
-        return needles.some((n) => t.includes(n));
-      })
+    // Keep the raw filtered news items so we can build a sources array to send
+    // to the client for citation UI, alongside the plain-text list for the prompt.
+    const filteredNews = (newsJson?.news ?? []).filter((n: any) => {
+      const t = `${n.title ?? ""} ${n.summary ?? ""}`.toLowerCase();
+      return needles.some((n) => t.includes(n));
+    });
+    const headlines: string[] = filteredNews
       .slice(0, 10)
       .map((n: any) => `- ${n.title} (${n.publisher})`);
+    const sources = filteredNews.slice(0, 6).map((n: any) => ({
+      title: n.title as string,
+      publisher: n.publisher as string,
+      url: (n.link as string) ?? (n.url as string) ?? "",
+    }));
 
     // 3) Google the actual reason the stock moved today via Firecrawl web search.
     //    We feed these real, dated results to the model so the "why moved"
@@ -255,6 +281,8 @@ Return strict JSON with shape:
       if (!Array.isArray(parsed.positives) || !parsed.positives.length) parsed.positives = ["Analysis unavailable right now."];
       if (!Array.isArray(parsed.negatives) || !parsed.negatives.length) parsed.negatives = ["Analysis unavailable right now."];
     }
+    // Attach real headline sources so the UI can render citations.
+    parsed.sources = sources;
     const body = JSON.stringify(parsed);
     cache.set(key, { body, exp: Date.now() + 1000 * 60 * 30 });
     return new Response(body, {

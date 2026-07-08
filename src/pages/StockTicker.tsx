@@ -16,6 +16,9 @@ const StockSummary = lazy(() =>
 const NewsList = lazy(() =>
   import("@/components/NewsList").then((m) => ({ default: m.NewsList }))
 );
+const OptionsChain = lazy(() =>
+  import("@/components/OptionsChain").then((m) => ({ default: m.OptionsChain }))
+);
 
 const StockTicker = () => {
   const { ticker = "AAPL" } = useParams();
@@ -71,6 +74,9 @@ const StockTicker = () => {
         <StockExplainer symbol={symbol} />
         <Suspense fallback={<div className="h-32" />}>
           <StockSummary symbol={symbol} />
+        </Suspense>
+        <Suspense fallback={<div className="h-24" />}>
+          <OptionsChain symbol={symbol} />
         </Suspense>
         <section>
           <h2 className="text-2xl font-bold mb-4">
