@@ -1,11 +1,21 @@
 // Yahoo Finance fetch helpers via our own backend edge function (no flaky public proxies).
-import { supabase } from "@/integrations/supabase/client";
+// Important: do not import the generated backend client here. This module is loaded
+// by the public home page, and the generated client throws before React mounts when
+// a published build is missing Vite env vars, leaving users on the static loader.
+
+const env = import.meta.env as Record<string, string | undefined>;
+const normalizeUrl = (value?: string) => {
+  if (!value) return undefined;
+  return value.startsWith("http") ? value : `https://${value}`;
+};
 
 const SUPABASE_URL =
-  (import.meta.env.VITE_SUPABASE_URL as string | undefined) ??
+  normalizeUrl(env.VITE_SUPABASE_URL) ??
+  normalizeUrl(env.VITE_SUPABASE_HOST) ??
+  (env.VITE_SUPABASE_PROJECT_ID ? `https://${env.VITE_SUPABASE_PROJECT_ID}.supabase.co` : undefined) ??
   "https://oadtpipsbeqiadoluxnq.supabase.co";
-const ANON = ((import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ??
-  (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined) ??
+const ANON = (env.VITE_SUPABASE_PUBLISHABLE_KEY ??
+  env.VITE_SUPABASE_ANON_KEY ??
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9hZHRwaXBzYmVxaWFkb2x1eG5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMDUyNDYsImV4cCI6MjA5MzU4MTI0Nn0.k7_W04vpl9Sctg1XhNlSz9abWI--VPk82jD5r-0hFvk") as string;
 const FN_URL = `${SUPABASE_URL}/functions/v1/yahoo-proxy`;
 
@@ -211,22 +221,6 @@ export async function fetchScreener(scrId: string, count = 25): Promise<Screener
   return data?.finance?.result?.[0]?.quotes ?? [];
 }
 
-/**
- * Filters out tiny, illiquid small-caps so "top movers" reflect meaningful,
- * well-known companies rather than low-volume penny/micro-cap spikes.
- */
-export function filterMeaningfulMovers(
-  quotes: ScreenerQuote[],
-  { minMarketCap = 2e9, minPrice = 5, minVolume = 500_000 } = {},
-): ScreenerQuote[] {
-  return quotes.filter(
-    (q) =>
-      (q.marketCap ?? 0) >= minMarketCap &&
-      (q.regularMarketPrice ?? 0) >= minPrice &&
-      (q.regularMarketVolume ?? 0) >= minVolume,
-  );
-}
-
 export function formatNumber(n?: number, opts?: Intl.NumberFormatOptions) {
   if (n == null || isNaN(n)) return "—";
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2, ...opts }).format(n);
@@ -242,5 +236,3 @@ export function formatLargeNumber(n?: number) {
   return n.toString();
 }
 
-// Keep import to ensure the supabase client is initialized in the bundle
-void supabase;

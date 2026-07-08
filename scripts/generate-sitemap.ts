@@ -50,6 +50,7 @@ const staticEntries: SitemapEntry[] = [
   { path: "/faq", lastmod: staticLastmod, changefreq: "monthly", priority: "0.5" },
   { path: "/auth", lastmod: staticLastmod, changefreq: "yearly", priority: "0.4" },
   { path: "/market-brief", lastmod: dynamicLastmod, changefreq: "daily", priority: "0.8" },
+  { path: "/translate", lastmod: staticLastmod, changefreq: "monthly", priority: "0.7" },
   { path: "/learn", lastmod: staticLastmod, changefreq: "monthly", priority: "0.8" },
   { path: "/learn/basics", lastmod: staticLastmod, changefreq: "monthly", priority: "0.7" },
   { path: "/learn/reading", lastmod: staticLastmod, changefreq: "monthly", priority: "0.7" },

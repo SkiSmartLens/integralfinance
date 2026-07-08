@@ -5,7 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index.tsx";
-import { DevMenu } from "@/components/DevMenu";
+const Academy = lazy(() => import("./pages/Academy.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 const Auth = lazy(() => import("./pages/Auth.tsx"));
 const Sim = lazy(() => import("./pages/Sim.tsx"));
@@ -28,6 +28,7 @@ const LearnAdvanced = lazy(() => import("./pages/LearnAdvanced.tsx"));
 const StockTicker = lazy(() => import("./pages/StockTicker.tsx"));
 const StartHere = lazy(() => import("./pages/StartHere.tsx"));
 const MarketBrief = lazy(() => import("./pages/MarketBrief.tsx"));
+const JargonTranslator = lazy(() => import("./pages/JargonTranslator.tsx"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -51,7 +52,9 @@ const App = () => (
             <Route path="/stocks/:ticker" element={<StockTicker />} />
             <Route path="/news" element={<MarketBrief />} />
             <Route path="/start" element={<StartHere />} />
+            <Route path="/academy" element={<Academy />} />
             <Route path="/market-brief" element={<MarketBrief />} />
+            <Route path="/translate" element={<JargonTranslator />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/sim" element={<Sim />} />
             <Route path="/simulator" element={<Sim />} />
@@ -75,7 +78,6 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
-        <DevMenu />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

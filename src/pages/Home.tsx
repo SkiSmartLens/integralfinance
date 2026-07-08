@@ -7,6 +7,7 @@ import { SEO } from "@/components/SEO";
 import { SiteFooter } from "@/components/SiteFooter";
 import { IntroSplash, hasSeenIntro } from "@/components/IntroSplash";
 import { GLOSSARY } from "@/components/Glossary";
+import { PriorityTiles } from "@/components/PriorityTiles";
 import { cn } from "@/lib/utils";
 
 
@@ -174,6 +175,9 @@ const HomeContent = () => {
       </section>
 
       <main className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-14 space-y-20">
+        {/* Primary priority tiles — Simulator, Learn, Watchlist */}
+        <PriorityTiles />
+
         {/* Learning path */}
         <section>
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-1">Your learning path</h2>

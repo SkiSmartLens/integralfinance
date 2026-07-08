@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/backend";
 import { SEO } from "@/components/SEO";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ import { SimSearch } from "@/components/sim/SimSearch";
 import { TradeTicket } from "@/components/sim/TradeTicket";
 import { HoldingsPanel, Holding } from "@/components/sim/HoldingsPanel";
 import { WhyItMoved } from "@/components/sim/WhyItMoved";
+import { SimCopilot } from "@/components/sim/SimCopilot";
 import { ArrowLeft, LogOut, RefreshCw, Trophy } from "lucide-react";
 
 interface Member { id: string; game_id: string; user_id: string; cash: number }
@@ -277,6 +278,16 @@ const Sim = () => {
                 You start with <span className="font-semibold text-foreground">${formatNumber(startingCash)}</span> in virtual cash.
                 Buy low, sell high, and watch your P/L update live — zero real risk.
               </p>
+            </div>
+            <div className="mt-3">
+              <SimCopilot
+                cash={cash}
+                startingCash={startingCash}
+                equity={equity}
+                holdings={holdings}
+                selected={selected}
+                selectedChangePct={selChange}
+              />
             </div>
           </aside>
         </div>

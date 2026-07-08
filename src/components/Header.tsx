@@ -1,16 +1,18 @@
-import { Search, Sparkles } from "lucide-react";
+import { Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { fetchSearchQuotes, SearchQuote } from "@/lib/yahoo";
+import { fetchSearchQuotes, fetchQuotes, formatNumber, SearchQuote } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/logo.png";
 
+type EnrichedResult = SearchQuote & { price?: number; changePct?: number };
+
 const NAV_LINKS = [
+  { to: "/academy", label: "Academy" },
   { to: "/stocks", label: "Stocks" },
-  { to: "/market-brief", label: "Market Brief" },
-  { to: "/learn", label: "Learn" },
+  { to: "/market-brief", label: "News" },
+  { to: "/translate", label: "Translate" },
   { to: "/sim", label: "Simulator", accent: true },
-  { to: "/start", label: "Start Here" },
 ];
 
 interface Props {
@@ -19,29 +21,48 @@ interface Props {
 
 export const Header = ({ onSearch }: Props) => {
   const [q, setQ] = useState("");
-  const [results, setResults] = useState<SearchQuote[]>([]);
+  const [results, setResults] = useState<EnrichedResult[]>([]);
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
   const nav = useNavigate();
   const boxRef = useRef<HTMLDivElement>(null);
 
-  // Debounced autocomplete
+  // Debounced autocomplete + live % move enrichment.
   useEffect(() => {
     const term = q.trim();
     if (!term) {
       setResults([]);
       return;
     }
+    let alive = true;
     const handle = setTimeout(async () => {
       try {
         const r = await fetchSearchQuotes(term, 8);
-        setResults(r.filter((x) => x.symbol));
+        const base = r.filter((x) => x.symbol);
+        if (!alive) return;
+        setResults(base);
         setHighlight(0);
+        // Enrich with live quotes so users see % moves in the dropdown.
+        const syms = base.map((b) => b.symbol);
+        if (syms.length) {
+          const quotes = await fetchQuotes(syms);
+          if (!alive) return;
+          const map = new Map(quotes.map((qt) => [qt.symbol, qt]));
+          setResults((prev) =>
+            prev.map((row) => {
+              const qt = map.get(row.symbol);
+              return { ...row, price: qt?.regularMarketPrice, changePct: qt?.regularMarketChangePercent };
+            }),
+          );
+        }
       } catch {
         /* ignore */
       }
-    }, 180);
-    return () => clearTimeout(handle);
+    }, 200);
+    return () => {
+      alive = false;
+      clearTimeout(handle);
+    };
   }, [q]);
 
   // Click outside closes
@@ -103,28 +124,42 @@ export const Header = ({ onSearch }: Props) => {
           </form>
           {open && results.length > 0 && (
             <div className="absolute left-0 right-0 top-full mt-1 bg-popover border rounded-md shadow-lg z-50 max-h-80 overflow-y-auto">
-              {results.map((r, i) => (
-                <button
-                  key={`${r.symbol}-${i}`}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    pick(r.symbol);
-                  }}
-                  onMouseEnter={() => setHighlight(i)}
-                  className={cn(
-                    "w-full text-left px-3 py-2 flex items-center justify-between gap-3 text-sm",
-                    i === highlight ? "bg-accent" : "hover:bg-accent/60",
-                  )}
-                >
-                  <div className="min-w-0">
-                    <div className="font-semibold">{r.symbol}</div>
-                    <div className="text-xs text-muted-foreground truncate">
-                      {r.longname || r.shortname || r.typeDisp || ""}
+              {results.map((r, i) => {
+                const up = (r.changePct ?? 0) >= 0;
+                return (
+                  <button
+                    key={`${r.symbol}-${i}`}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      pick(r.symbol);
+                    }}
+                    onMouseEnter={() => setHighlight(i)}
+                    className={cn(
+                      "w-full text-left px-3 py-2 flex items-center justify-between gap-3 text-sm",
+                      i === highlight ? "bg-accent" : "hover:bg-accent/60",
+                    )}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold">{r.symbol}</div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {r.longname || r.shortname || r.typeDisp || ""}
+                      </div>
                     </div>
-                  </div>
-                  <span className="text-[10px] text-muted-foreground shrink-0">{r.exchDisp || r.quoteType || ""}</span>
-                </button>
-              ))}
+                    {r.price != null ? (
+                      <span className="text-right tabular-nums shrink-0">
+                        <span className="block text-sm font-semibold">${formatNumber(r.price)}</span>
+                        {r.changePct != null && (
+                          <span className={cn("block text-[11px] font-semibold", up ? "text-up" : "text-down")}>
+                            {up ? "+" : ""}{formatNumber(r.changePct)}%
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground shrink-0">{r.exchDisp || r.quoteType || ""}</span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
@@ -144,7 +179,6 @@ export const Header = ({ onSearch }: Props) => {
                 )
               }
             >
-              {l.label === "Start Here" && <Sparkles className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />}
               {l.label}
             </NavLink>
           ))}

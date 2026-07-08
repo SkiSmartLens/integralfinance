@@ -4,7 +4,7 @@ import { ArrowRight, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, Gra
 import { HomeHeader } from "@/components/HomeHeader";
 import { SEO } from "@/components/SEO";
 import { SiteFooter } from "@/components/SiteFooter";
-import { fetchNews, fetchScreener, filterMeaningfulMovers, formatNumber, NewsItem, ScreenerQuote } from "@/lib/yahoo";
+import { fetchNews, fetchScreener, formatNumber, NewsItem, ScreenerQuote } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -111,13 +111,13 @@ const MarketBrief = () => {
     let alive = true;
     Promise.all([
       fetchNews("stock market today").catch(() => []),
-      fetchScreener("day_gainers", 50).catch(() => []),
-      fetchScreener("day_losers", 50).catch(() => []),
+      fetchScreener("day_gainers", 6).catch(() => []),
+      fetchScreener("day_losers", 6).catch(() => []),
     ]).then(([n, g, l]) => {
       if (!alive) return;
       setNews(n);
-      setGainers(filterMeaningfulMovers(g).slice(0, 5));
-      setLosers(filterMeaningfulMovers(l).slice(0, 5));
+      setGainers(g.slice(0, 5));
+      setLosers(l.slice(0, 5));
       setLoading(false);
     });
     return () => {

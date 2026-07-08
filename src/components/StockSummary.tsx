@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/backend";
 import { fetchQuotes } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
-import { Sparkles, TrendingUp, TrendingDown, Calendar, Eye, BarChart3, DollarSign, Percent, Landmark, Shield, LineChart, ChevronDown, Zap } from "lucide-react";
+import { Sparkles, TrendingUp, TrendingDown, Calendar, Eye, BarChart3, DollarSign, Percent, Landmark, Shield, LineChart, ChevronDown, Zap, Newspaper, ExternalLink } from "lucide-react";
 
 
+interface Source { title: string; publisher: string; url: string }
 interface Summary {
   whyMoved?: string;
   positives: string[];
@@ -18,6 +19,7 @@ interface Summary {
   earnings: string;
   forecast?: string;
   outlook: string;
+  sources?: Source[];
 }
 
 
@@ -147,15 +149,16 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
       {data && (
         <div className="space-y-2">
           {data.whyMoved && (
-            <CollapsibleRow icon={<Zap className="w-4 h-4 text-primary" />} title="Why did this stock move today?" defaultOpen>
+            <CollapsibleRow icon={<Zap className="w-4 h-4 text-primary" />} title="Why did this stock move today?">
               <p className="text-sm leading-relaxed">{data.whyMoved}</p>
             </CollapsibleRow>
           )}
-          <CollapsibleRow icon={<TrendingUp className="w-4 h-4 text-up" />} title="Positives" defaultOpen>
+          <CollapsibleRow icon={<TrendingUp className="w-4 h-4 text-up" />} title="Positives">
             <ul className="text-sm space-y-1.5 list-disc pl-5">
               {data.positives?.map((p, i) => <li key={i}>{p}</li>)}
             </ul>
           </CollapsibleRow>
+
           <CollapsibleRow icon={<TrendingDown className="w-4 h-4 text-down" />} title="Risks">
             <ul className="text-sm space-y-1.5 list-disc pl-5">
               {data.negatives?.map((p, i) => <li key={i}>{p}</li>)}
@@ -208,6 +211,31 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
           <CollapsibleRow icon={<Eye className="w-4 h-4 text-primary" />} title="Outlook">
             <p className="text-sm">{data.outlook}</p>
           </CollapsibleRow>
+          {data.sources && data.sources.length > 0 && (
+            <CollapsibleRow icon={<Newspaper className="w-4 h-4 text-primary" />} title={`Sources (${data.sources.length})`}>
+              <ul className="space-y-2 text-sm">
+                {data.sources.map((s, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <ExternalLink className="w-3.5 h-3.5 mt-1 text-muted-foreground shrink-0" />
+                    <div className="min-w-0">
+                      <a
+                        href={s.url}
+                        target="_blank"
+                        rel="noopener noreferrer nofollow"
+                        className="font-semibold hover:underline break-words"
+                      >
+                        {s.title}
+                      </a>
+                      <div className="text-xs text-muted-foreground">{s.publisher}</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-[11px] text-muted-foreground mt-3">
+                AI insights above are grounded in these real, recently published headlines about the company.
+              </p>
+            </CollapsibleRow>
+          )}
         </div>
       )}
     </section>
