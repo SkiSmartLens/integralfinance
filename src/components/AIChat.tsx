@@ -17,7 +17,7 @@ const SUPABASE_URL =
   normalizeUrl(env.VITE_SUPABASE_URL) ??
   normalizeUrl(env.VITE_SUPABASE_HOST) ??
   (env.VITE_SUPABASE_PROJECT_ID ? `https://${env.VITE_SUPABASE_PROJECT_ID}.supabase.co` : undefined) ??
-  "https://dssfjjgjvmjqnxpsbftf.supabase.co";
+  "https://oadtpipsbeqiadoluxnq.supabase.co";
 const ANON =
   env.VITE_SUPABASE_PUBLISHABLE_KEY ??
   env.VITE_SUPABASE_ANON_KEY ??

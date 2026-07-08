@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.stock-summary]
 verify_jwt = false
+
+[functions.jargon-translate]
+verify_jwt = false
