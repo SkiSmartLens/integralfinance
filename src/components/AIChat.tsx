@@ -21,7 +21,7 @@ const SUPABASE_URL =
 const ANON =
   env.VITE_SUPABASE_PUBLISHABLE_KEY ??
   env.VITE_SUPABASE_ANON_KEY ??
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzc2Zqamdqdm1qcW54cHNiZnRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMzNjgzMzIsImV4cCI6MjA5ODk0NDMzMn0.eLsOUOoum6LoMddP5UGqsWgZuxvyjWA4MxVykWu9YCc";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9hZHRwaXBzYmVxaWFkb2x1eG5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMDUyNDYsImV4cCI6MjA5MzU4MTI0Nn0.k7_W04vpl9Sctg1XhNlSz9abWI--VPk82jD5r-0hFvk";
 
 interface Msg { role: "user" | "assistant"; content: string }
 
