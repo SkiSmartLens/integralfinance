@@ -9,6 +9,12 @@ const Academy = lazy(() => import("./pages/Academy.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 const Auth = lazy(() => import("./pages/Auth.tsx"));
 const Sim = lazy(() => import("./pages/Sim.tsx"));
+const GameLobby = lazy(() => import("./pages/GameLobby.tsx"));
+const CreateGame = lazy(() => import("./pages/CreateGame.tsx"));
+const AcademyModule = lazy(() => import("./pages/AcademyModule.tsx"));
+const Privacy = lazy(() => import("./pages/legal/Privacy.tsx"));
+const Terms = lazy(() => import("./pages/legal/Terms.tsx"));
+const AffiliateDisclosure = lazy(() => import("./pages/legal/AffiliateDisclosure.tsx"));
 const Trade = lazy(() => import("./pages/Trade.tsx"));
 const Screener = lazy(() => import("./pages/Screener.tsx"));
 const Calendar = lazy(() => import("./pages/Calendar.tsx"));
@@ -53,12 +59,18 @@ const App = () => (
             <Route path="/news" element={<MarketBrief />} />
             <Route path="/start" element={<StartHere />} />
             <Route path="/academy" element={<Academy />} />
+            <Route path="/academy/:id" element={<AcademyModule />} />
             <Route path="/market-brief" element={<MarketBrief />} />
             <Route path="/translate" element={<JargonTranslator />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/sim" element={<Sim />} />
-            <Route path="/simulator" element={<Sim />} />
+            <Route path="/sim/lobby" element={<GameLobby />} />
+            <Route path="/sim/create" element={<CreateGame />} />
+            <Route path="/simulator" element={<GameLobby />} />
             <Route path="/sim/trade/:symbol" element={<Trade />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/affiliate-disclosure" element={<AffiliateDisclosure />} />
             <Route path="/screener" element={<Screener />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/watchlist" element={<Watchlist />} />

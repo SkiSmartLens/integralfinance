@@ -15,9 +15,9 @@ const Auth = () => {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (session) nav("/sim");
+      if (session) nav("/sim/lobby");
     });
-    supabase.auth.getSession().then(({ data }) => { if (data.session) nav("/sim"); });
+    supabase.auth.getSession().then(({ data }) => { if (data.session) nav("/sim/lobby"); });
     return () => subscription.unsubscribe();
   }, [nav]);
 
@@ -28,7 +28,7 @@ const Auth = () => {
       const { error } = await supabase.auth.signUp({
         email, password,
         options: {
-          emailRedirectTo: `${window.location.origin}/sim`,
+          emailRedirectTo: `${window.location.origin}/sim/lobby`,
           data: { display_name: name || email.split("@")[0] },
         },
       });
