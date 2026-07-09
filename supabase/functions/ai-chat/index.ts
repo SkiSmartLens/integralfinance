@@ -220,7 +220,8 @@ Deno.serve(async (req) => {
     }
     if (!aiRes.ok || !aiRes.body) {
       const t = await aiRes.text();
-      return new Response(JSON.stringify({ error: "AI gateway error", detail: t }), {
+      console.error("AI gateway error", aiRes.status, t);
+      return new Response(JSON.stringify({ error: "AI service is temporarily unavailable." }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
