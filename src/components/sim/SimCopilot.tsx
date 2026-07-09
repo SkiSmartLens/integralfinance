@@ -108,11 +108,11 @@ export const SimCopilot = ({ cash, startingCash, equity, holdings, selected, sel
   }, [cash, startingCash, equity, holdings, selected, selectedChangePct]);
 
   return (
-    <section aria-label="Simulator co-pilot" className="rounded-2xl border bg-card shadow-sm overflow-hidden">
-      <header className="flex items-center gap-2 px-4 py-2.5 border-b bg-muted/30">
-        <Sparkles className="w-4 h-4 text-primary" />
-        <h3 className="font-extrabold text-sm">Co-Pilot</h3>
-        <span className="text-[10px] uppercase tracking-wider text-muted-foreground ml-auto">Educational tips</span>
+    <section aria-label="Educational tips" className="rounded-3xl border-2 bg-card shadow-sm overflow-hidden">
+      <header className="flex items-center gap-2 px-4 py-3 border-b bg-muted/30">
+        <GraduationCap className="w-4 h-4 text-primary" />
+        <h3 className="font-extrabold text-sm">Educational Tips</h3>
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground ml-auto">Learn while you play</span>
       </header>
       <ul className="divide-y">
         {tips.map((t) => (

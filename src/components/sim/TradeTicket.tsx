@@ -1,23 +1,32 @@
 import { useEffect, useMemo, useState } from "react";
 import { formatNumber } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
-import { Loader2, TrendingUp, TrendingDown, Wallet } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, Wallet, ChevronDown, Info } from "lucide-react";
 
 interface Props {
   symbol: string;
   price?: number;
   cash: number;
-  /** Shares currently held of this symbol (0 if none). */
+  /** Shares currently held of this symbol (0 if none). Negative = short. */
   heldShares: number;
+  allowShort?: boolean;
   placing: boolean;
-  onExecute: (side: "buy" | "sell", shares: number) => void;
+  onExecute: (side: "buy" | "sell" | "short" | "cover", shares: number) => void;
 }
 
-export const TradeTicket = ({ symbol, price, cash, heldShares, placing, onExecute }: Props) => {
+export const TradeTicket = ({
+  symbol,
+  price,
+  cash,
+  heldShares,
+  allowShort = false,
+  placing,
+  onExecute,
+}: Props) => {
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [qty, setQty] = useState(1);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // If you hold nothing, force Buy.
   useEffect(() => {
     if (heldShares <= 0 && side === "sell") setSide("buy");
   }, [heldShares, side]);
@@ -32,7 +41,8 @@ export const TradeTicket = ({ symbol, price, cash, heldShares, placing, onExecut
   const insufficient = side === "buy" && estCost > cash;
   const overSell = side === "sell" && qty > heldShares;
   const invalidQty = !Number.isFinite(qty) || qty < 1;
-  const disabled = placing || invalidQty || insufficient || overSell || !price || (side === "sell" && heldShares <= 0);
+  const disabled =
+    placing || invalidQty || insufficient || overSell || !price || (side === "sell" && heldShares <= 0);
 
   const validationMsg = invalidQty
     ? "Enter a whole number of shares."
@@ -43,16 +53,19 @@ export const TradeTicket = ({ symbol, price, cash, heldShares, placing, onExecut
     : null;
 
   return (
-    <div className="rounded-2xl border bg-card p-4 shadow-sm">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-bold">Trade {symbol}</h3>
+    <div className="rounded-3xl border-2 bg-card p-5 shadow-sm">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className="font-extrabold text-lg">Trade {symbol}</h3>
+          <p className="text-xs text-muted-foreground">Simple market order — nothing scary.</p>
+        </div>
         <span className="text-xs text-muted-foreground inline-flex items-center gap-1 tabular-nums">
           <Wallet className="w-3.5 h-3.5" /> ${formatNumber(cash)}
         </span>
       </div>
 
-      {/* Buy / Sell toggle */}
-      <div className="grid grid-cols-2 gap-1 p-1 bg-muted/60 rounded-xl mb-3">
+      {/* Buy / Sell toggle — brighter, friendlier */}
+      <div className="grid grid-cols-2 gap-2 p-1.5 bg-muted/50 rounded-2xl mb-4">
         {(["buy", "sell"] as const).map((s) => {
           const isSellDisabled = s === "sell" && heldShares <= 0;
           return (
@@ -62,24 +75,24 @@ export const TradeTicket = ({ symbol, price, cash, heldShares, placing, onExecut
               disabled={isSellDisabled}
               onClick={() => setSide(s)}
               className={cn(
-                "py-2 rounded-lg text-sm font-bold capitalize transition-all",
+                "py-2.5 rounded-xl text-sm font-extrabold capitalize transition-all",
                 side === s
                   ? s === "buy"
-                    ? "bg-up text-white shadow"
-                    : "bg-down text-white shadow"
+                    ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/30"
+                    : "bg-rose-300 text-rose-900 shadow-md shadow-rose-300/40"
                   : "text-muted-foreground hover:text-foreground",
-                isSellDisabled && "opacity-40 cursor-not-allowed"
+                isSellDisabled && "opacity-40 cursor-not-allowed",
               )}
             >
-              {s}
+              {s === "buy" ? "Buy" : "Sell"}
             </button>
           );
         })}
       </div>
 
       {/* Quantity */}
-      <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
-        Quantity
+      <label className="block text-xs font-extrabold text-muted-foreground uppercase tracking-wider mb-2">
+        How many shares?
       </label>
       <div className="flex items-center gap-2 mb-2">
         <input
@@ -88,27 +101,27 @@ export const TradeTicket = ({ symbol, price, cash, heldShares, placing, onExecut
           value={qty}
           onChange={(e) => setQty(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
           className={cn(
-            "flex-1 h-10 px-3 rounded-lg bg-muted/60 border outline-none text-sm font-semibold tabular-nums transition-colors focus:bg-card",
-            validationMsg ? "border-down/50 focus:border-down" : "border-transparent focus:border-primary/40"
+            "flex-1 h-12 px-4 rounded-2xl bg-muted/60 border-2 outline-none text-base font-bold tabular-nums transition-colors focus:bg-card",
+            validationMsg ? "border-rose-400 focus:border-rose-500" : "border-transparent focus:border-primary/50",
           )}
         />
         <button
           type="button"
           onClick={() => setQty(Math.max(1, maxShares))}
           disabled={maxShares < 1}
-          className="h-10 px-3 rounded-lg bg-muted text-xs font-bold uppercase hover:bg-accent transition-colors disabled:opacity-40"
+          className="h-12 px-4 rounded-2xl bg-muted text-xs font-extrabold uppercase hover:bg-accent transition-colors disabled:opacity-40"
         >
           Max
         </button>
       </div>
-      <div className="flex gap-1 mb-3">
+      <div className="flex gap-1.5 mb-4">
         {[0.25, 0.5, 0.75].map((f) => (
           <button
             key={f}
             type="button"
             onClick={() => setQty(Math.max(1, Math.floor(maxShares * f)))}
             disabled={maxShares < 1}
-            className="flex-1 py-1 rounded-md bg-muted/60 text-[11px] font-bold hover:bg-accent transition-colors disabled:opacity-40"
+            className="flex-1 py-1.5 rounded-lg bg-muted/60 text-[11px] font-extrabold hover:bg-accent transition-colors disabled:opacity-40"
           >
             {f * 100}%
           </button>
@@ -116,32 +129,29 @@ export const TradeTicket = ({ symbol, price, cash, heldShares, placing, onExecut
       </div>
 
       {/* Estimate */}
-      <div className="rounded-xl bg-muted/40 border p-3 space-y-1.5 text-sm mb-3">
-        <Row label="Market price" value={price ? `$${formatNumber(price)}` : "—"} />
+      <div className="rounded-2xl bg-muted/40 border p-3.5 space-y-2 text-sm mb-4">
+        <Row label="Price per share" value={price ? `$${formatNumber(price)}` : "—"} />
         <Row label="Shares" value={qty.toLocaleString()} />
         <Row
-          label={side === "buy" ? "Estimated cost" : "Estimated proceeds"}
+          label={side === "buy" ? "Total cost" : "You'll receive"}
           value={price ? `$${formatNumber(estCost)}` : "—"}
           bold
-        />
-        <Row
-          label="Cash after"
-          value={`$${formatNumber(side === "buy" ? cash - estCost : cash + estCost)}`}
-          className={side === "buy" && cash - estCost < 0 ? "text-down" : undefined}
         />
       </div>
 
       {validationMsg && (
-        <p className="text-xs font-semibold text-down mb-2 animate-fade-in">{validationMsg}</p>
+        <p className="text-xs font-bold text-rose-600 mb-3 animate-fade-in">{validationMsg}</p>
       )}
 
       <button
         onClick={() => onExecute(side, qty)}
         disabled={disabled}
         className={cn(
-          "w-full h-12 rounded-xl font-extrabold text-white shadow-sm transition-all flex items-center justify-center gap-2",
-          "hover:brightness-110 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:hover:translate-y-0",
-          side === "buy" ? "bg-up" : "bg-down"
+          "w-full h-14 rounded-2xl font-extrabold text-base shadow-sm transition-all flex items-center justify-center gap-2",
+          "hover:brightness-105 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:hover:translate-y-0",
+          side === "buy"
+            ? "bg-emerald-500 text-white shadow-emerald-500/30"
+            : "bg-rose-300 text-rose-900 shadow-rose-300/40",
         )}
       >
         {placing ? (
@@ -151,15 +161,71 @@ export const TradeTicket = ({ symbol, price, cash, heldShares, placing, onExecut
         ) : (
           <TrendingDown className="w-5 h-5" />
         )}
-        {placing ? "Placing…" : `${side === "buy" ? "Buy" : "Sell"} ${qty} ${symbol}`}
+        {placing
+          ? "Placing…"
+          : `${side === "buy" ? "Buy" : "Sell"} ${qty} ${qty === 1 ? "share" : "shares"}`}
       </button>
+
+      {/* Advanced options — hidden by default */}
+      <button
+        type="button"
+        onClick={() => setShowAdvanced((v) => !v)}
+        className="mt-4 w-full flex items-center justify-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", showAdvanced && "rotate-180")} />
+        {showAdvanced ? "Hide advanced options" : "Show advanced options"}
+      </button>
+      {showAdvanced && (
+        <div className="mt-3 rounded-2xl bg-muted/30 border p-3.5 space-y-3 animate-fade-in">
+          <div className="flex items-start gap-2 text-xs text-muted-foreground leading-relaxed">
+            <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+            <p>
+              You're placing a <span className="font-bold text-foreground">market order</span> — it fills instantly at the
+              current price. Limit and stop orders let you set a specific price to trigger at.
+            </p>
+          </div>
+          {allowShort && (
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                disabled={placing || !price}
+                onClick={() => onExecute("short", qty)}
+                className="py-2.5 rounded-xl bg-rose-100 text-rose-800 text-xs font-extrabold hover:bg-rose-200 disabled:opacity-40 transition-colors"
+              >
+                Short {qty}
+              </button>
+              <button
+                type="button"
+                disabled={placing || !price || heldShares >= 0}
+                onClick={() => onExecute("cover", qty)}
+                className="py-2.5 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-extrabold hover:bg-emerald-200 disabled:opacity-40 transition-colors"
+              >
+                Cover {qty}
+              </button>
+            </div>
+          )}
+          <div className="text-[11px] text-muted-foreground">
+            Limit / stop orders coming soon in Trader Mode.
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-const Row = ({ label, value, bold, className }: { label: string; value: string; bold?: boolean; className?: string }) => (
+const Row = ({
+  label,
+  value,
+  bold,
+  className,
+}: {
+  label: string;
+  value: string;
+  bold?: boolean;
+  className?: string;
+}) => (
   <div className="flex items-center justify-between">
     <span className="text-muted-foreground">{label}</span>
-    <span className={cn("tabular-nums", bold ? "font-bold" : "font-medium", className)}>{value}</span>
+    <span className={cn("tabular-nums", bold ? "font-extrabold text-base" : "font-semibold", className)}>{value}</span>
   </div>
 );

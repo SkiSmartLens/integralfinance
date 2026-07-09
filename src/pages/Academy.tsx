@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { SEO } from "@/components/SEO";
@@ -8,8 +7,7 @@ import { CheckCircle2, Lock, GraduationCap, ArrowRight, Circle } from "lucide-re
 import { cn } from "@/lib/utils";
 
 const Academy = () => {
-  const { isCompleted, isUnlocked, complete, currentModule, allComplete } = useAcademy();
-  const [openId, setOpenId] = useState<number>(currentModule.id);
+  const { isCompleted, isUnlocked, allComplete } = useAcademy();
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -36,7 +34,7 @@ const Academy = () => {
           {ACADEMY_MODULES.map((m) => {
             const done = isCompleted(m.id);
             const unlocked = isUnlocked(m.id);
-            const isOpen = openId === m.id && unlocked;
+            
             return (
               <li
                 key={m.id}
@@ -45,12 +43,7 @@ const Academy = () => {
                   done ? "border-primary/40" : unlocked ? "border-border" : "border-border/50 opacity-60"
                 )}
               >
-                <button
-                  type="button"
-                  disabled={!unlocked}
-                  onClick={() => setOpenId((cur) => (cur === m.id ? -1 : m.id))}
-                  className="w-full flex items-center gap-4 p-5 text-left disabled:cursor-not-allowed"
-                >
+                <div className="flex items-center gap-4 p-5">
                   <span className="shrink-0">
                     {done ? (
                       <CheckCircle2 className="w-7 h-7 text-primary" />
@@ -60,47 +53,22 @@ const Academy = () => {
                       <Lock className="w-7 h-7 text-muted-foreground" />
                     )}
                   </span>
-                  <span className="flex-1 min-w-0">
-                    <span className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                       Module {m.id} · {m.duration}
-                    </span>
-                    <span className="block font-extrabold text-lg leading-tight mt-0.5">{m.title}</span>
-                    <span className="block text-sm text-muted-foreground mt-1">{m.blurb}</span>
-                  </span>
-                </button>
-
-                {isOpen && (
-                  <div className="px-5 pb-6 space-y-5 border-t pt-5">
-                    {m.content.map((c) => (
-                      <div key={c.heading}>
-                        <h3 className="font-extrabold text-base mb-1.5">{c.heading}</h3>
-                        <p className="text-muted-foreground leading-relaxed">{c.body}</p>
-                      </div>
-                    ))}
-                    <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                      {!done && (
-                        <button
-                          onClick={() => {
-                            complete(m.id);
-                            const next = ACADEMY_MODULES.find((x) => x.id === m.id + 1);
-                            if (next) setOpenId(next.id);
-                          }}
-                          className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full bg-primary text-primary-foreground font-extrabold hover:opacity-90 transition-opacity"
-                        >
-                          Mark complete <CheckCircle2 className="w-4 h-4" />
-                        </button>
-                      )}
-                      {m.id === 3 && (
-                        <Link
-                          to="/sim"
-                          className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full border-2 border-primary text-primary font-extrabold hover:bg-accent transition-colors"
-                        >
-                          Open the Simulator <ArrowRight className="w-4 h-4" />
-                        </Link>
-                      )}
                     </div>
+                    <div className="font-extrabold text-lg leading-tight mt-0.5">{m.title}</div>
+                    <p className="text-sm text-muted-foreground mt-1">{m.blurb}</p>
                   </div>
-                )}
+                  {unlocked && (
+                    <Link
+                      to={`/academy/${m.id}`}
+                      className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-extrabold hover:opacity-90"
+                    >
+                      {done ? "Review" : "Open"} <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  )}
+                </div>
               </li>
             );
           })}

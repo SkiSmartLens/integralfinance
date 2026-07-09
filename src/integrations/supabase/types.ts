@@ -52,10 +52,12 @@ export type Database = {
           commission: number
           created_at: string
           created_by: string
+          duration_days: number | null
           ends_at: string | null
           id: string
           is_public: boolean
           join_code: string
+          leverage: number
           name: string
           starting_cash: number
         }
@@ -64,10 +66,12 @@ export type Database = {
           commission?: number
           created_at?: string
           created_by: string
+          duration_days?: number | null
           ends_at?: string | null
           id?: string
           is_public?: boolean
           join_code?: string
+          leverage?: number
           name: string
           starting_cash?: number
         }
@@ -76,10 +80,12 @@ export type Database = {
           commission?: number
           created_at?: string
           created_by?: string
+          duration_days?: number | null
           ends_at?: string | null
           id?: string
           is_public?: boolean
           join_code?: string
+          leverage?: number
           name?: string
           starting_cash?: number
         }
