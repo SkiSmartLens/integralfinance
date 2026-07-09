@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
     return json({ ok: true, order: ord, filled: true, price: fillPrice });
   } catch (e) {
     console.error(e);
-    return json({ error: e instanceof Error ? e.message : "error" }, 500);
+    return json({ error: "Something went wrong processing your order." }, 500);
   }
 });
 
