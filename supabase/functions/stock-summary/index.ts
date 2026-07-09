@@ -290,7 +290,7 @@ Return strict JSON with shape:
     });
   } catch (e) {
     console.error(e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "error" }), {
+    return new Response(JSON.stringify({ error: "Could not generate summary. Please try again." }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

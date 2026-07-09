@@ -81,7 +81,10 @@ Deno.serve(async (req) => {
       filled_price: willFill ? fillPrice : null,
       filled_at: willFill ? new Date().toISOString() : null,
     }).select().single();
-    if (oErr) return json({ error: oErr.message }, 400);
+    if (oErr) {
+      console.error("order insert failed", oErr);
+      return json({ error: "Could not place order. Please try again." }, 400);
+    }
     if (!willFill) return json({ ok: true, order: ord, queued: true });
 
     const cost = fillPrice * Number(shares);
@@ -135,7 +138,7 @@ Deno.serve(async (req) => {
     return json({ ok: true, order: ord, filled: true, price: fillPrice });
   } catch (e) {
     console.error(e);
-    return json({ error: e instanceof Error ? e.message : "error" }, 500);
+    return json({ error: "Something went wrong processing your order." }, 500);
   }
 });
 
