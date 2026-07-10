@@ -122,50 +122,110 @@ const CreateGame = () => {
 
           {/* Starting cash */}
           <Field label="Starting cash" icon={<Wallet className="w-4 h-4" />}>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-4 gap-2">
               {CASH_OPTIONS.map((c) => (
                 <Toggle
                   key={c}
-                  active={startingCash === c}
-                  onClick={() => setStartingCash(c)}
+                  active={!customCash && startingCash === c}
+                  onClick={() => { setCustomCash(false); setStartingCash(c); }}
                   title={`$${(c / 1000).toLocaleString()}k`}
                   desc={c === 100_000 ? "Standard" : c === 10_000 ? "Beginner" : "Whale mode"}
                 />
               ))}
+              <Toggle
+                active={customCash}
+                onClick={() => setCustomCash(true)}
+                title="Custom"
+                desc="Set your own"
+              />
             </div>
+            {customCash && (
+              <div className="relative mt-2">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-muted-foreground">$</span>
+                <input
+                  type="number"
+                  min={1}
+                  value={startingCash}
+                  onChange={(e) => setStartingCash(Math.max(1, Number(e.target.value) || 0))}
+                  placeholder="Enter starting cash"
+                  className="w-full h-12 pl-8 pr-4 rounded-2xl bg-muted/60 border-2 border-transparent focus:border-primary/50 outline-none font-bold tabular-nums"
+                />
+              </div>
+            )}
           </Field>
 
           {/* Duration */}
           <Field label="Game length" icon={<Clock className="w-4 h-4" />}>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {DURATIONS.map((d) => (
                 <Toggle
                   key={d.label}
-                  active={durationDays === d.days}
-                  onClick={() => setDurationDays(d.days)}
+                  active={!customDuration && durationDays === d.days}
+                  onClick={() => { setCustomDuration(false); setDurationDays(d.days); }}
                   title={d.label}
                 />
               ))}
+              <Toggle
+                active={customDuration}
+                onClick={() => { setCustomDuration(true); setDurationDays(durationDays ?? 14); }}
+                title="Custom"
+                desc="Set days"
+              />
             </div>
+            {customDuration && (
+              <div className="relative mt-2">
+                <input
+                  type="number"
+                  min={1}
+                  max={3650}
+                  value={durationDays ?? ""}
+                  onChange={(e) => setDurationDays(Math.max(1, Number(e.target.value) || 0))}
+                  placeholder="Number of days"
+                  className="w-full h-12 pl-4 pr-14 rounded-2xl bg-muted/60 border-2 border-transparent focus:border-primary/50 outline-none font-bold tabular-nums"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-muted-foreground">days</span>
+              </div>
+            )}
           </Field>
 
           {/* Leverage */}
           <Field label="Leverage" icon={<Zap className="w-4 h-4" />}>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-5 gap-2">
               {LEVERAGES.map((l) => (
                 <Toggle
                   key={l}
-                  active={leverage === l}
-                  onClick={() => setLeverage(l)}
+                  active={!customLeverage && leverage === l}
+                  onClick={() => { setCustomLeverage(false); setLeverage(l); }}
                   title={`${l}×`}
                   desc={l === 1 ? "Safe" : l >= 3 ? "Spicy" : "Boosted"}
                 />
               ))}
+              <Toggle
+                active={customLeverage}
+                onClick={() => setCustomLeverage(true)}
+                title="Custom"
+              />
             </div>
+            {customLeverage && (
+              <div className="relative mt-2">
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  step={0.5}
+                  value={leverage}
+                  onChange={(e) => setLeverage(Math.max(1, Number(e.target.value) || 1))}
+                  placeholder="Leverage multiplier"
+                  className="w-full h-12 pl-4 pr-10 rounded-2xl bg-muted/60 border-2 border-transparent focus:border-primary/50 outline-none font-bold tabular-nums"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-muted-foreground">×</span>
+              </div>
+            )}
             <p className="text-xs text-muted-foreground mt-2">
               Leverage multiplies both wins and losses — beginners should keep this at 1×.
             </p>
           </Field>
+
 
           {/* Shorting */}
           <Field label="Advanced features">
