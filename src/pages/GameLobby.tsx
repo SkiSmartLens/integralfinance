@@ -105,11 +105,12 @@ const GameLobby = () => {
     const c = code.trim().toUpperCase();
     if (!c) return;
     setJoining(true);
-    const { data, error } = await supabase.rpc("join_game_by_code", { _code: c });
+    const { data, error } = await supabase.functions.invoke("join-game", { body: { code: c } });
     setJoining(false);
     if (error) return toast({ title: "Join failed", description: error.message, variant: "destructive" });
-    const g = (data as any[])?.[0];
-    if (!g) return toast({ title: "Game not found", description: "Double-check the code.", variant: "destructive" });
+    if ((data as any)?.error) return toast({ title: "Join failed", description: (data as any).error, variant: "destructive" });
+    const g = data as { id?: string } | null;
+    if (!g?.id) return toast({ title: "Game not found", description: "Double-check the code.", variant: "destructive" });
     enterGame(g.id);
   };
 
