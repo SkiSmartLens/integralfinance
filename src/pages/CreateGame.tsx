@@ -26,9 +26,12 @@ const CreateGame = () => {
   const [name, setName] = useState(isFriends ? "Friends League" : "My Practice Portfolio");
   const [isPublic, setIsPublic] = useState(false);
   const [startingCash, setStartingCash] = useState(100_000);
+  const [customCash, setCustomCash] = useState(false);
   const [allowShort, setAllowShort] = useState(false);
   const [leverage, setLeverage] = useState(1);
+  const [customLeverage, setCustomLeverage] = useState(false);
   const [durationDays, setDurationDays] = useState<number | null>(isFriends ? 30 : null);
+  const [customDuration, setCustomDuration] = useState(false);
   const [commission, setCommission] = useState(0);
   const [saving, setSaving] = useState(false);
 
