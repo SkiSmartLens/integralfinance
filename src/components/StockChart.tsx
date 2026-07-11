@@ -150,7 +150,7 @@ export const StockChart = ({ symbol }: Props) => {
     : (rawLast ?? quote?.regularMarketPrice);
 
   const prevClose = showPrevSession
-    ? (data?.previousClose ?? quote?.regularMarketPreviousClose ?? sessionPts?.[0]?.price)
+    ? (quote?.regularMarketPreviousClose ?? data?.previousClose ?? sessionPts?.[0]?.price)
     : is1D
       ? (data?.previousClose ?? quote?.regularMarketPreviousClose)
       : firstPrice;
