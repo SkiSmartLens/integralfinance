@@ -149,6 +149,7 @@ Return strict JSON: {"whatItDoes": string, "whyPeopleBuy": string, "whatToWatch"
 No disclaimers, no markdown, no jargon.`;
 
     const analystPrompt = `Stock: ${companyName} (${sym})
+Sector: ${q.sector ?? "?"}  Industry: ${q.industry ?? "?"}
 Price: ${q.regularMarketPrice} ${q.currency ?? ""}
 Change: ${q.regularMarketChangePercent?.toFixed?.(2)}%
 Day range: ${q.regularMarketDayLow}-${q.regularMarketDayHigh}
@@ -156,6 +157,11 @@ Day range: ${q.regularMarketDayLow}-${q.regularMarketDayHigh}
 Mkt cap: ${q.marketCap}
 Trailing P/E: ${q.trailingPE ?? "?"}  Forward P/E: ${q.forwardPE ?? "?"}
 EPS (ttm): ${q.epsTrailingTwelveMonths ?? "?"}  EPS fwd: ${q.epsForward ?? "?"}
+Profit margin: ${q.profitMargins ?? q.netMargins ?? "?"}  Operating margin: ${q.operatingMargins ?? "?"}
+Debt/Equity: ${q.debtToEquity ?? "?"}  Total debt: ${q.totalDebt ?? "?"}
+Beta: ${q.beta ?? "?"}  Avg vol: ${q.averageDailyVolume10Day ?? q.averageVolume ?? "?"}
+Held by institutions %: ${q.heldPercentInstitutions ?? "?"}
+52w change vs price: low ${q.fiftyTwoWeekLow ?? "?"} / high ${q.fiftyTwoWeekHigh ?? "?"}
 Dividend yield: ${q.trailingAnnualDividendYield ?? q.dividendYield ?? "?"}
 Avg analyst target: ${q.targetMeanPrice ?? "?"}  (low ${q.targetLowPrice ?? "?"} / high ${q.targetHighPrice ?? "?"})
 Recommendation: ${q.averageAnalystRating ?? q.recommendationKey ?? "?"}
@@ -165,18 +171,25 @@ ${headlines.join("\n") || "(no recent headlines)"}
 ${webBlock}
 CRITICAL: ONLY analyze ${companyName} (${sym}). Do NOT discuss any other ticker or company. Ignore any headline above that is not directly about ${companyName}.
 
-Produce a DETAILED, in-depth analyst-grade summary. Be specific and quantitative where possible (cite numbers, % growth, margins, multiples). Avoid generic filler. Plain English, no disclaimers.
+Produce a DETAILED, in-depth analyst-grade summary. Be specific and quantitative — cite the actual numbers above (% change, margins, P/E, EPS, debt levels, beta, institutional ownership). Plain English, no disclaimers.
+
+HARD RULES for whyMoved (violating these is a failure):
+- NEVER say "broad market action", "no recent headlines", "no news", "market sentiment", "general market conditions", or any similar filler.
+- If the web search / headlines above give a concrete company-specific catalyst, summarize it in plain English (earnings, guidance, analyst rating change, product/legal/macro news) with the reported number.
+- If they do NOT give a concrete catalyst, explain the move from the STRUCTURAL data above. Call out whichever apply and cite the numbers: extreme under- or over-performance vs the 52-week range, severe unprofitability (negative EPS, negative operating/profit margins), lack of institutional backing (low heldPercentInstitutions), heavy debt load (high debtToEquity / totalDebt), or high volatility (beta well above 1, wide day range). Tie those structural facts to why the price is reacting the way it is today.
+- 3-5 sentences. Concrete numbers, not adjectives.
 
 Return strict JSON with shape:
 {
-  "whyMoved": string,              // 2-4 sentences explaining specifically WHY ${companyName} (${sym}) moved ${q.regularMarketChangePercent?.toFixed?.(2)}% today. Base this ONLY on the "Web search results (Google)" and headlines provided above — summarize the actual reported reason, do NOT invent or speculate a catalyst that is not in those sources. Quote the concrete catalyst (earnings, guidance, analyst rating change, product/legal/macro news) reported there in plain English a beginner understands. If the provided sources do not give a clear company-specific reason, say the move appears to be driven by broad market or sector action rather than guessing a specific cause.
+  "whyMoved": string,              // 3-5 sentences, follow the HARD RULES above.
+  "whatItDoes": string,            // 1-2 sentences on the company's business — what they actually sell/do and where their revenue comes from. Required.
   "positives": [string],           // 4-6 detailed bullets, each 1-2 sentences with specifics
   "negatives": [string],           // 4-6 detailed bullets, each 1-2 sentences with specifics
   "predictedRevenue": string,      // a CONCRETE estimated next-fiscal-year TOTAL revenue figure as a dollar amount (e.g. "~$412B" or "~$8.5B"). Base it on the latest reported revenue and the expected growth rate. ALWAYS give a specific number, not a range of words. If genuinely unknown, give your best quantitative estimate and note it is approximate.
   "revenueGrowth": string,         // 2-3 sentences on historical + expected revenue growth trajectory, cite YoY % if known
   "earningsGrowth": string,        // 2-3 sentences on EPS trend, beat/miss history, forward growth expectations
   "margins": string,               // 2-3 sentences on gross/operating/net margin quality vs peers
-  "balanceSheet": string,          // 2-3 sentences on debt levels, cash position, leverage manageability
+  "balanceSheet": string,          // 2-3 sentences on debt levels (cite debtToEquity / totalDebt above), cash position, and leverage manageability. Do not hand-wave — mention the actual debt figure.
   "moat": string,                  // 2-3 sentences on competitive edge: brand, scale, network effects, switching costs, IP
   "earnings": string,              // 2-3 sentences on most recent + upcoming earnings event
   "forecast": string,              // 3-4 sentences: 12-month price/business outlook, analyst consensus, key catalysts to watch
@@ -196,6 +209,7 @@ Return strict JSON with shape:
       type: "object",
       properties: {
         whyMoved: { type: "string" },
+        whatItDoes: { type: "string" },
         positives: { type: "array", items: { type: "string" } },
         negatives: { type: "array", items: { type: "string" } },
         predictedRevenue: { type: "string" },
@@ -208,7 +222,7 @@ Return strict JSON with shape:
         forecast: { type: "string" },
         outlook: { type: "string" },
       },
-      required: ["whyMoved", "positives", "negatives", "predictedRevenue", "revenueGrowth", "earningsGrowth", "margins", "balanceSheet", "moat", "earnings", "forecast", "outlook"],
+      required: ["whyMoved", "whatItDoes", "positives", "negatives", "predictedRevenue", "revenueGrowth", "earningsGrowth", "margins", "balanceSheet", "moat", "earnings", "forecast", "outlook"],
     };
 
 
@@ -275,7 +289,7 @@ Return strict JSON with shape:
     try { parsed = JSON.parse(args ?? "{}"); } catch { parsed = {}; }
     if (!isBeginner) {
       const fallback = `No specific data available for ${companyName}. This may apply more to individual operating companies than to indices, ETFs, or funds.`;
-      for (const f of ["whyMoved", "predictedRevenue", "revenueGrowth", "earningsGrowth", "margins", "balanceSheet", "moat", "earnings", "forecast", "outlook"]) {
+      for (const f of ["whyMoved", "whatItDoes", "predictedRevenue", "revenueGrowth", "earningsGrowth", "margins", "balanceSheet", "moat", "earnings", "forecast", "outlook"]) {
         if (!parsed[f] || typeof parsed[f] !== "string" || !parsed[f].trim()) parsed[f] = fallback;
       }
       if (!Array.isArray(parsed.positives) || !parsed.positives.length) parsed.positives = ["Analysis unavailable right now."];

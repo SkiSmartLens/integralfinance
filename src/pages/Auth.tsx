@@ -33,7 +33,11 @@ const Auth = () => {
         },
       });
       if (error) toast({ title: "Sign up failed", description: error.message, variant: "destructive" });
-      else toast({ title: "Check your email", description: "Confirm your address to finish sign up." });
+      else {
+        // Auto-confirm is on — sign the user in immediately so they land in the lobby.
+        const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+        if (signInErr) toast({ title: "Sign in failed", description: signInErr.message, variant: "destructive" });
+      }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) toast({ title: "Sign in failed", description: error.message, variant: "destructive" });

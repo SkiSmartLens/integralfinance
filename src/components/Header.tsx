@@ -8,7 +8,8 @@ import logo from "@/assets/logo.png";
 type EnrichedResult = SearchQuote & { price?: number; changePct?: number };
 
 const NAV_LINKS = [
-  { to: "/academy", label: "Academy" },
+  { to: "/dashboard", label: "Dashboard" },
+  { to: "/academy", label: "Learn" },
   { to: "/stocks", label: "Stocks" },
   { to: "/market-brief", label: "News" },
   { to: "/translate", label: "Translate" },

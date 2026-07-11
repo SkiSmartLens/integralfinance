@@ -4,7 +4,8 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Index from "./pages/Index.tsx";
+import SpyLanding from "./pages/SpyLanding.tsx";
+const Index = lazy(() => import("./pages/Index.tsx"));
 const Academy = lazy(() => import("./pages/Academy.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 const Auth = lazy(() => import("./pages/Auth.tsx"));
@@ -53,7 +54,8 @@ const App = () => (
       <BrowserRouter>
         <Suspense fallback={null}>
           <Routes>
-            <Route path="/" element={<Index />} />
+            <Route path="/" element={<SpyLanding />} />
+            <Route path="/dashboard" element={<Index />} />
             <Route path="/stocks" element={<Index />} />
             <Route path="/stocks/:ticker" element={<StockTicker />} />
             <Route path="/news" element={<MarketBrief />} />

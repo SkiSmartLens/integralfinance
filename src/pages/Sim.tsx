@@ -14,6 +14,7 @@ import { HoldingsPanel, Holding } from "@/components/sim/HoldingsPanel";
 import { WhyItMoved } from "@/components/sim/WhyItMoved";
 import { SimCopilot } from "@/components/sim/SimCopilot";
 import { SafetyMeter } from "@/components/sim/SafetyMeter";
+import { Leaderboard } from "@/components/sim/Leaderboard";
 import { ArrowLeft, LogOut, RefreshCw, Trophy, Copy, LogIn, Users, Lock, Globe, DoorOpen } from "lucide-react";
 
 interface Member { id: string; game_id: string; user_id: string; cash: number }
@@ -174,7 +175,7 @@ const Sim = () => {
       <SEO
         title="Trading Simulator — Practice Investing Risk-Free | Integral Stocks"
         description="A clean, modern paper-trading simulator. Search stocks, view live charts, trade with virtual cash, and track your profit and loss in real time."
-        path="/simulator"
+        path="/sim"
       />
       <h1 className="sr-only">Trading Simulator</h1>
 
@@ -289,6 +290,9 @@ const Sim = () => {
             <WhyItMoved symbol={selected} changePct={selChange} />
 
             <HoldingsPanel holdings={holdings} onSelect={setSelected} />
+            {member && game && userId && (
+              <Leaderboard gameId={game.id} meUserId={userId} startingCash={startingCash} />
+            )}
           </section>
 
           {/* Trade */}
