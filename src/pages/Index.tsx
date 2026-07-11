@@ -30,7 +30,7 @@ const Index = () => {
       <SEO
         title="IntegralStocks — Learn Investing with Lessons & a Free Simulator"
         description="A calm, beginner-friendly home for learning stocks. Follow the Investor Academy, track your watchlist, and practice trading with $100,000 of virtual cash."
-        path="/"
+        path="/dashboard"
       />
       <h1 className="sr-only">IntegralStocks — Beginner investing home</h1>
       <Header onSearch={(s) => navigate(`/stocks/${encodeURIComponent(s.toLowerCase())}`)} />

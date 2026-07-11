@@ -201,6 +201,15 @@ export default function LearnBasics() {
 
   useEffect(() => { saveStats(stats); }, [stats]);
 
+  // Legacy /learn/basics?lesson=... links: normalize to the clean canonical URL
+  // so crawlers don't index duplicate query-string variants.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.search.includes("lesson=")) {
+      window.history.replaceState({}, "", "/learn/basics");
+    }
+  }, []);
+
   const lesson = LESSONS[idx];
 
   const start = (from = 0) => {
