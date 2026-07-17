@@ -21,6 +21,7 @@ const Screener = lazy(() => import("./pages/Screener.tsx"));
 const Calendar = lazy(() => import("./pages/Calendar.tsx"));
 const Watchlist = lazy(() => import("./pages/Watchlist.tsx"));
 const About = lazy(() => import("./pages/About.tsx"));
+const Blog = lazy(() => import("./pages/Blog.tsx"));
 const Contact = lazy(() => import("./pages/Contact.tsx"));
 const Disclaimer = lazy(() => import("./pages/Disclaimer.tsx"));
 const DataSources = lazy(() => import("./pages/DataSources.tsx"));
