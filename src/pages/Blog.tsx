@@ -1933,14 +1933,11 @@ setSelectedArticleId(null);
 window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
-return (
-<div className="min-h-screen bg-background text-foreground antialiased selection:bg-primary/20">
-<SEO
-title={
-activeArticle
-? ${activeArticle.title} | IntegralStocks Blog
-: "IntegralStocks Blog — Beginner Investing Education, Stock Market Basics, and Risk Management"
-}
+ return (
+    <div className="min-h-screen bg-background text-foreground antialiased selection:bg-primary/20">
+      <SEO 
+        title={ activeArticle ? `${activeArticle.title} | IntegralStocks Blog` : "IntegralStocks Blog — Beginner Investing Education, Stock Market Basics, and Risk Management" }
+
 description={
 activeArticle
 ? activeArticle.description
