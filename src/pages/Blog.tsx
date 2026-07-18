@@ -1943,6 +1943,7 @@ activeArticle
 ? activeArticle.description
 : "Read beginner-friendly investing articles from IntegralStocks covering stock market basics, ETFs, diversification, financial literacy, risk management, technical analysis, and market psychology."
 }
+
 path={activeArticle ? /blog?id=${activeArticle.id} : "/blog"}
 jsonLd={{
 "@context": "https://schema.org",
