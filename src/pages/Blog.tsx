@@ -1933,19 +1933,14 @@ setSelectedArticleId(null);
 window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
- return (
+  return (
     <div className="min-h-screen bg-background text-foreground antialiased selection:bg-primary/20">
       <SEO 
-        title={ activeArticle ? `${activeArticle.title} | IntegralStocks Blog` : "IntegralStocks Blog — Beginner Investing Education, Stock Market Basics, and Risk Management" }
+        title={ activeArticle ? `${activeArticle.title} | IntegralStocks Blog` : "IntegralStocks Blog — Beginner Investing Education, Stock Market Basics, and Risk Management" } 
+        description={ activeArticle ? activeArticle.description : "Read beginner-friendly investing articles from IntegralStocks covering stock market basics, ETFs, diversification, financial literacy, risk management, technical analysis, and market psychology." } 
+        path={activeArticle ? `/blog?id=${activeArticle.id}` : "/blog"} 
+        jsonLd={{
 
-description={
-activeArticle
-? activeArticle.description
-: "Read beginner-friendly investing articles from IntegralStocks covering stock market basics, ETFs, diversification, financial literacy, risk management, technical analysis, and market psychology."
-}
-
-path={activeArticle ? /blog?id=${activeArticle.id} : "/blog"}
-jsonLd={{
 "@context": "https://schema.org",
 "@type": activeArticle ? "BlogPosting" : "Blog",
 headline: activeArticle ? activeArticle.title : "IntegralStocks Educational Blog",
