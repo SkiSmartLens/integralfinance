@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/backend";
 import { Header } from "@/components/Header";
+import { PracticeNav } from "@/components/PracticeNav";
 import { SEO } from "@/components/SEO";
 import { SiteFooter } from "@/components/SiteFooter";
 import { toast } from "@/hooks/use-toast";
@@ -124,6 +125,8 @@ const GameLobby = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <SEO title="Play — Choose or Create a Game | Integral Stocks" description="Play the stock simulator solo or with friends. Create a private game, share your join code, or browse public games." path="/sim/lobby" />
       <Header />
+      <PracticeNav />
+
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-12 space-y-10">
         <header className="space-y-3">
           <div className="inline-flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-primary bg-accent px-3 py-1 rounded-full">

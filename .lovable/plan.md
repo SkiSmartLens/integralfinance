@@ -1,35 +1,46 @@
-This is a large build. I'll ship it in two phases so you get a working app fast and the heavy simulator second.
+This is a large batch. I'll do it in phases so you can review each. Please confirm before I start.
 
-## Phase 1 — Chart, news split, analytics, pinch-compare (this turn)
+## Phase A — Quick fixes (news + ticker header)
+- Ticker/SPY header: fix duplicate/conflicting % move vs chart number (single source of truth from live quote; chart shows range change separately or is labeled).
+- News feed on `/` (SPY) and every `/stocks/:ticker` page: load a wider window (~5 min to 2 days old), add a **Show more stories** button (paginate `useLiveNews`), and add a **Read the blog →** button at the bottom of the news section.
+- Fix empty `alt=""` in `NewsList.tsx` and `MarketBrief.tsx` (use headline as alt).
 
-**Chart upgrades (`StockChart.tsx`)**
-- Replace smoothed `monotone` area with sharp `linear` interpolation (spiky, Yahoo-style).
-- Add chart type toggle: **Mountain** (area), **Bar** (OHLC bars), **Candle** (candlesticks).
-  - Bar/Candle pulled from chart endpoint's `indicators.quote[0]` (open/high/low/close already returned by the proxy — I'll surface them).
-  - Built with recharts `ComposedChart` + custom `Bar`/`shape` for OHLC and candles.
-- **Two-finger pinch-to-compare**: touch handlers on the chart container. When 2 touches are active, project both X positions to data points and overlay two vertical guides + a small badge showing `Δ$ / Δ%` between them. Releases reset.
+## Phase B — Image optimization
+- Recompress `public/favicon.png` → ~32×32/64×64 PNG, few KB. Delete oversized version.
+- Convert `src/assets/logo.png` + `src/assets/stocks-hero.jpg` to WebP (with `<picture>` fallback where used).
+- Audit remaining `<img>` alts; add descriptive text or `alt=""` + `aria-hidden` for purely decorative.
 
-**News split (`NewsList` + `Index.tsx`)**
-- Tabs: **My News** | **General**.
-- "My News" = OR-query of all watchlist symbols (`AAPL OR MSFT OR …`) sent to the existing news proxy.
-- "General" = current category query (unchanged).
+## Phase C — Titles & meta descriptions
+- Rewrite homepage `SEO` (SpyLanding) to beginner-AI + simulator positioning.
+- Rewrite `StockTicker` meta to include company, ticker, sector/one live-ish detail (sector from `assetProfile` if available, else "stock analysis for beginners").
+- Rewrite Jargon Translator meta for "stock market jargon explained" cluster.
+- Rewrite Sim page meta for "stock market simulator for beginners" cluster.
+- Sweep every other page using `SEO` — enforce unique title ≤60, description ≤155.
 
-**Analytics**
-- Install `@vercel/analytics` (the React build, not `/next`).
-- Mount `<Analytics />` in `App.tsx`. Note: only reports when deployed to Vercel; harmless elsewhere.
+## Phase D — Heading structure
+- Audit each page for exactly one `<h1>`, logical `h2`/`h3` nesting. Fix violators.
 
-## Phase 2 — Trading simulator (next turn, after Phase 1 ships)
+## Phase E — Blog + internal linking
+- New content system: `src/content/blog/*.mdx` (or TS objects) + `/blog` index + `/blog/:slug` route with `SEO`, JSON-LD `Article`, related-stocks and related-jargon links.
+- Seed 10 posts matching the exact queries you listed.
+- Add reusable "Why did [ticker] stock move today" template (auto-generated page pattern at `/blog/why-did-:ticker-move-today` reading from the existing `WhyItMoved`/`stock-summary` logic).
+- Add **Related articles** section on every `/stocks/:ticker` (filtered by ticker/sector tags in post frontmatter).
+- Add **Related stocks** section on every blog post (linking `/stocks/:ticker`).
+- Add `/blog` to `Header` nav (replaces or joins existing) and to `SiteFooter`.
 
-Scope to match MarketWatch Virtual Stock Exchange:
-- Auth (email + Google) — required for portfolios.
-- Tables: `games`, `game_members`, `portfolios`, `positions`, `orders`, `transactions` with RLS so members only see their game.
-- $100k starting cash, market/limit/stop orders, after-hours window (orders queued, filled at next session price via cron edge function).
-- Pages: `/sim` (dashboard: cash, positions, P&L), `/sim/trade/:symbol` (order ticket), `/sim/games` (create/join with code), `/sim/leaderboard/:gameId`.
-- Order fills via edge function using existing `yahoo-proxy` for live + post-market prices.
+## Phase F — Prerendering
+- Add `vite-plugin-prerender` or a custom `scripts/prerender.ts` (Puppeteer/`react-snap` style) that walks known routes post-build and writes static HTML per route with the correct `<head>` from `react-helmet-async`.
+- Update `scripts/generate-sitemap.ts` to enumerate all static routes + every blog slug + every seeded ticker so the sitemap matches prerendered output.
 
-I'll confirm Phase 2 details (game settings, commissions, short selling on/off) when we start it — building it all in one shot would be unstable.
+## Notes / risks
+- Prerendering (Phase F) is the highest-risk change — it touches the build pipeline and can regress preview. I'll ship it last, isolated, and verify with a headless fetch of a couple of routes to confirm the raw HTML contains route-specific meta.
+- "Live stat in ticker meta" is only reliable if we have static data at render time; since meta is client-side today, this will only become truly crawler-visible after Phase F. Until then the description will use sector/company text (still unique per ticker).
+- Blog posts will be authored as real content — I'll write beginner-focused drafts (~600-900 words each) rather than thin stubs.
 
-## Technical notes
-- Pinch handler uses `pointerdown/move/up` with `pointerType==='touch'`, tracking up to 2 active pointers; falls back gracefully on desktop (Shift+drag to measure).
-- Candlestick: custom `shape` prop on a `Bar` that draws wick line + body rect, green/red by close vs open.
-- No backend changes needed in Phase 1 — proxy already returns OHLC arrays.
+## Suggested order to ship
+1. Phase A (small, high-impact, unblocks your immediate UX complaints)
+2. Phase B + C + D together (all meta/asset polish, one review pass)
+3. Phase E (blog system + 10 posts + internal linking)
+4. Phase F (prerender + sitemap)
+
+Reply "go A" (or "go all") and I'll start.

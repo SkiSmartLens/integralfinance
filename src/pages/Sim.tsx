@@ -15,7 +15,9 @@ import { WhyItMoved } from "@/components/sim/WhyItMoved";
 import { SimCopilot } from "@/components/sim/SimCopilot";
 import { SafetyMeter } from "@/components/sim/SafetyMeter";
 import { Leaderboard } from "@/components/sim/Leaderboard";
-import { ArrowLeft, LogOut, RefreshCw, Trophy, Copy, LogIn, Users, Lock, Globe, DoorOpen } from "lucide-react";
+import { ArrowLeft, LogOut, RefreshCw, Trophy, Copy, LogIn, Users, Lock, Globe, DoorOpen, HelpCircle } from "lucide-react";
+import { SimWalkthrough, hasSeenSimWalkthrough } from "@/components/sim/SimWalkthrough";
+import { PostTradeCard } from "@/components/sim/PostTradeCard";
 
 interface Member { id: string; game_id: string; user_id: string; cash: number }
 interface Position { id: string; symbol: string; shares: number; avg_cost: number }
@@ -57,6 +59,19 @@ const Sim = () => {
   const [selected, setSelected] = useState("AAPL");
   const [placing, setPlacing] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
+  const [walkOpen, setWalkOpen] = useState(false);
+  const [lastTrade, setLastTrade] = useState<
+    | { symbol: string; side: "buy" | "sell" | "short" | "cover"; shares: number; price?: number }
+    | null
+  >(null);
+
+  // First-time walkthrough
+  useEffect(() => {
+    if (!hasSeenSimWalkthrough()) {
+      const t = setTimeout(() => setWalkOpen(true), 400);
+      return () => clearTimeout(t);
+    }
+  }, []);
 
   // ---- Auth ----
   useEffect(() => {
@@ -154,10 +169,12 @@ const Sim = () => {
     setPlacing(false);
     if (error) return toast({ title: "Order failed", description: error.message, variant: "destructive" });
     if ((data as any)?.error) return toast({ title: "Order failed", description: (data as any).error, variant: "destructive" });
+    const filledPrice = (data as any)?.price as number | undefined;
     toast({
-      title: (data as any)?.queued ? "Order queued (after-hours)" : `Filled @ $${formatNumber((data as any)?.price)}`,
+      title: (data as any)?.queued ? "Order queued (after-hours)" : `Filled @ $${formatNumber(filledPrice)}`,
       description: `${side} ${shares} ${selected}`,
     });
+    setLastTrade({ symbol: selected, side, shares, price: filledPrice });
     reloadPortfolio(member);
   };
 
@@ -173,8 +190,8 @@ const Sim = () => {
   return (
     <div className="min-h-screen bg-background">
       <SEO
-        title="Trading Simulator — Practice Investing Risk-Free | Integral Stocks"
-        description="A clean, modern paper-trading simulator. Search stocks, view live charts, trade with virtual cash, and track your profit and loss in real time."
+        title="Stock Market Simulator for Beginners — Free Virtual Trading"
+        description="Free stock market simulator for beginners. Practice paper trading with a virtual account and learn how real orders work — no risk, no signup needed."
         path="/sim"
       />
       <h1 className="sr-only">Trading Simulator</h1>
@@ -218,6 +235,14 @@ const Sim = () => {
               title="Refresh"
             >
               <RefreshCw className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setWalkOpen(true)}
+              className="h-9 w-9 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors flex items-center justify-center"
+              title="Show simulator tour"
+              aria-label="Show simulator tour"
+            >
+              <HelpCircle className="w-4 h-4" />
             </button>
             <button onClick={signOut} className="h-9 w-9 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors flex items-center justify-center" title="Sign out">
               <LogOut className="w-4 h-4" />
@@ -314,6 +339,18 @@ const Sim = () => {
                 </button>
               </div>
             )}
+            {lastTrade && (
+              <PostTradeCard
+                symbol={lastTrade.symbol}
+                side={lastTrade.side}
+                shares={lastTrade.shares}
+                price={lastTrade.price}
+                holdings={holdings}
+                equity={equity}
+                changePct={selChange}
+                onDismiss={() => setLastTrade(null)}
+              />
+            )}
             <div className="rounded-2xl border bg-muted/30 p-3 flex items-start gap-2.5">
               <Trophy className="w-4 h-4 text-primary shrink-0 mt-0.5" />
               <p className="text-xs text-muted-foreground leading-relaxed">
@@ -335,6 +372,7 @@ const Sim = () => {
           </aside>
         </div>
       </main>
+      <SimWalkthrough open={walkOpen} onClose={() => setWalkOpen(false)} />
     </div>
   );
 };

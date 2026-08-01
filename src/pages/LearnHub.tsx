@@ -144,7 +144,7 @@ export default function LearnHub() {
         </div>
 
         {/* Hero */}
-        <div className="mb-8">
+        <div className="mb-6">
           <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-2">
             The Stock Market, Finally Explained Simply
           </h1>
@@ -157,6 +157,26 @@ export default function LearnHub() {
             <span className="text-muted-foreground"><span className="text-foreground text-xl font-extrabold">~9</span> Min Avg</span>
           </div>
         </div>
+
+        {/* Extra learning surfaces — everything beginner lives under Learn */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-8">
+          {[
+            { to: "/start", label: "Start Here", desc: "2-question onboarding" },
+            { to: "/academy", label: "Academy", desc: "Guided modules" },
+            { to: "/translate", label: "Glossary", desc: "Jargon → plain English" },
+            { to: "/market-brief", label: "Market Brief", desc: "Today's news, explained" },
+          ].map((x) => (
+            <Link
+              key={x.to}
+              to={x.to}
+              className="p-3 rounded-lg border bg-card hover:border-primary/60 transition-colors"
+            >
+              <div className="font-bold text-sm">{x.label}</div>
+              <div className="text-xs text-muted-foreground">{x.desc}</div>
+            </Link>
+          ))}
+        </div>
+
 
         {/* Filter tabs + search */}
         <div className="flex flex-col sm:flex-row gap-3 mb-8">

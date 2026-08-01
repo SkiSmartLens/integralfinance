@@ -61,8 +61,8 @@ const StartHere = () => {
   return (
     <div className="min-h-screen bg-background">
       <SEO
-        title="Start Here — Learn to Invest as a Teen | IntegralStocks"
-        description="New to investing? Pick your level and goal to get a personalized starting path. Learn the basics, practice with fake money, or follow the market — all free."
+        title="Start Here — Learn to Invest for Beginners | IntegralStocks"
+        description="New to investing? Pick your level and goal in 2 taps to get a personalized starting path — lessons, a free simulator, or live market news."
         path="/start"
       />
       <Header />

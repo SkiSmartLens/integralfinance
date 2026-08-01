@@ -1,5 +1,3 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -11,6 +9,9 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    // Public endpoint: AI insights are readable by anyone (no sign-in required).
+
+
     const { symbol, mode } = await req.json();
     if (!symbol || typeof symbol !== "string") {
       return new Response(JSON.stringify({ error: "symbol required" }), {
@@ -24,9 +25,10 @@ Deno.serve(async (req) => {
     const hit = cache.get(key);
     if (hit && hit.exp > Date.now()) {
       return new Response(hit.body, {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "hit" },
       });
     }
+
 
     const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
     if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY missing");
@@ -34,23 +36,35 @@ Deno.serve(async (req) => {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const anon = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 
-    // 1) Get the quote first so we have the real company name.
-    const quoteRes = await fetch(
+    const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
+
+    // Fire the quote, the ticker news search and the web search all at once —
+    // they don't depend on each other, so this cuts ~2 round trips of latency.
+    const quotePromise = fetch(
       `${SUPABASE_URL}/functions/v1/yahoo-proxy?kind=quote&symbols=${sym}`,
       { headers: { apikey: anon } },
-    );
-    const quoteJson = await quoteRes.json().catch(() => ({}));
+    ).then((r) => r.json()).catch(() => ({}));
+
+    const newsPromise = fetch(
+      `${SUPABASE_URL}/functions/v1/yahoo-proxy?kind=search&q=${encodeURIComponent(sym)}`,
+      { headers: { apikey: anon } },
+    ).then((r) => r.json()).catch(() => ({}));
+
+    const firecrawlPromise = FIRECRAWL_API_KEY
+      ? fetch("https://api.firecrawl.dev/v2/search", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ query: `Why did ${sym} stock move today`, limit: 6 }),
+        }).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+      : Promise.resolve(null);
+
+    const quoteJson: any = await quotePromise;
     const q = quoteJson?.quoteResponse?.result?.[0] ?? {};
     const companyName: string = q.longName || q.shortName || sym;
 
-    // 2) Search news using the actual company name (much more relevant
-    //    than searching by ticker, especially for indices/ETFs).
-    const newsQuery = `${companyName} ${sym}`;
-    const newsRes = await fetch(
-      `${SUPABASE_URL}/functions/v1/yahoo-proxy?kind=search&q=${encodeURIComponent(newsQuery)}`,
-      { headers: { apikey: anon } },
-    );
-    const newsJson = await newsRes.json().catch(() => ({}));
+    const newsJson: any = await newsPromise;
+
+
 
     // Filter headlines to ones that actually mention the ticker or a
     // distinctive word from the company name — drops unrelated noise.
@@ -75,41 +89,27 @@ Deno.serve(async (req) => {
       url: (n.link as string) ?? (n.url as string) ?? "",
     }));
 
-    // 3) Google the actual reason the stock moved today via Firecrawl web search.
-    //    We feed these real, dated results to the model so the "why moved"
-    //    explanation reflects what actually happened — not an invented reason.
+    // 3) Real web search results (started in parallel above) for why the stock
+    //    moved today, so "whyMoved" reflects what actually happened.
     let webContext = "";
-    const changePct = typeof q.regularMarketChangePercent === "number" ? q.regularMarketChangePercent : undefined;
-    const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
-    if (FIRECRAWL_API_KEY) {
-      try {
-        const dir = changePct == null ? "move" : changePct >= 0 ? "rise / go up" : "fall / drop";
-        const searchQuery = `Why did ${companyName} (${sym}) stock ${dir} today`;
-        const fcRes = await fetch("https://api.firecrawl.dev/v2/search", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ query: searchQuery, limit: 6 }),
-        });
-        if (fcRes.ok) {
-          const fc = await fcRes.json().catch(() => ({}));
-          const results: any[] = fc?.data?.web ?? fc?.web ?? (Array.isArray(fc?.data) ? fc.data : []) ?? [];
-          const lines = results
-            .map((r: any) => {
-              const title = r.title ?? "";
-              const snippet = (r.description ?? r.snippet ?? "").toString().slice(0, 300);
-              const src = r.url ? new URL(r.url).hostname.replace(/^www\./, "") : "";
-              return title ? `- ${title}${snippet ? `: ${snippet}` : ""}${src ? ` (${src})` : ""}` : "";
-            })
-            .filter(Boolean)
-            .slice(0, 6);
-          if (lines.length) webContext = lines.join("\n");
-        } else {
-          console.warn("firecrawl search failed", fcRes.status);
-        }
-      } catch (e) {
-        console.warn("firecrawl error", e instanceof Error ? e.message : e);
-      }
+    try {
+      const fc: any = await firecrawlPromise;
+      const results: any[] = fc?.data?.web ?? fc?.web ?? (Array.isArray(fc?.data) ? fc.data : []) ?? [];
+      const lines = results
+        .map((r: any) => {
+          const title = r.title ?? "";
+          const snippet = (r.description ?? r.snippet ?? "").toString().slice(0, 300);
+          let src = "";
+          try { src = r.url ? new URL(r.url).hostname.replace(/^www\./, "") : ""; } catch { /* ignore */ }
+          return title ? `- ${title}${snippet ? `: ${snippet}` : ""}${src ? ` (${src})` : ""}` : "";
+        })
+        .filter(Boolean)
+        .slice(0, 6);
+      if (lines.length) webContext = lines.join("\n");
+    } catch (e) {
+      console.warn("firecrawl error", e instanceof Error ? e.message : e);
     }
+
     const webBlock = webContext
       ? `\n\nWeb search results (Google) for why ${companyName} (${sym}) moved today — use these as the SOURCE OF TRUTH for the "whyMoved" field:\n${webContext}\n`
       : "";
@@ -240,7 +240,7 @@ Return strict JSON with shape:
 
     if ((aiRes.status === 429 || aiRes.status === 402 || aiRes.status >= 500) && LOVABLE_API_KEY) {
       console.warn("groq unavailable", aiRes.status, "— falling back to Lovable AI");
-      aiRes = await callProvider("https://ai.gateway.lovable.dev/v1/chat/completions", LOVABLE_API_KEY, "google/gemini-2.5-flash");
+      aiRes = await callProvider("https://ai.gateway.lovable.dev/v1/chat/completions", LOVABLE_API_KEY, "google/gemini-3.6-flash");
     }
 
     if (aiRes.status === 429) {

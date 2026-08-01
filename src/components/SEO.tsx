@@ -16,7 +16,7 @@ interface Props {
  */
 export const SEO = ({ title, description, path, image, jsonLd }: Props) => {
   const url = `${SITE}${path}`;
-  const ogImage = image ?? `${SITE}/stocks-hero.jpg`;
+  const ogImage = image ?? `${SITE}/stocks-hero.webp`;
   const ld = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
   return (
     <Helmet>

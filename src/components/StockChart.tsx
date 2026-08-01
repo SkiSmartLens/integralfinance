@@ -131,7 +131,7 @@ export const StockChart = ({ symbol }: Props) => {
   const showPrevSession = is1D && (marketStatus === "pre" || marketStatus === "closed");
   const fetchRange = showPrevSession ? "5d" : r.range;
   const fetchInterval = showPrevSession ? "5m" : r.interval;
-  const { data, loading } = useLiveChart(symbol, fetchRange, fetchInterval, 3000, is1D && !showPrevSession);
+  const { data, loading, error, refetch } = useLiveChart(symbol, fetchRange, fetchInterval, 3000, is1D && !showPrevSession);
   const { quotes } = useLiveQuotes([symbol], 2000);
   const quote = quotes[0];
 
@@ -346,6 +346,9 @@ export const StockChart = ({ symbol }: Props) => {
                 {displayChangePct != null && (
                   <> ({isUp ? "+" : ""}{formatNumber(displayChangePct)}%)</>
                 )}
+                <span className="ml-1 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  over {r.label.toLowerCase()}
+                </span>
               </span>
             )}
             {(() => {
@@ -410,6 +413,22 @@ export const StockChart = ({ symbol }: Props) => {
         {loading && !chartData.length ? (
           <div className="h-full flex items-center justify-center text-muted-foreground">
             Loading chart…
+          </div>
+        ) : error && !chartData.length ? (
+          <div className="h-full flex flex-col items-center justify-center text-center gap-3 px-6">
+            <div className="text-4xl">📉</div>
+            <div>
+              <div className="font-extrabold">Market data unavailable</div>
+              <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                We couldn't reach the market data provider. This usually clears up in a few seconds.
+              </p>
+            </div>
+            <button
+              onClick={refetch}
+              className="mt-1 px-4 h-10 rounded-full bg-primary text-primary-foreground text-sm font-extrabold hover:brightness-110"
+            >
+              Retry
+            </button>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">

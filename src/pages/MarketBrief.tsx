@@ -74,7 +74,43 @@ function MoverRow({ q, direction }: { q: ScreenerQuote; direction: "up" | "down"
   );
 }
 
+// Merge multiple news feeds and drop near-duplicate stories (same link, or
+// headlines that share most of their significant words).
+const STOP = new Set(["the", "a", "an", "of", "to", "in", "on", "for", "and", "as", "is", "are", "at", "by", "with", "from", "after", "amid", "its", "it", "this", "that"]);
+
+function keyWords(title: string): string[] {
+  return (title || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !STOP.has(w));
+}
+
+function similar(a: string[], b: string[]): boolean {
+  if (!a.length || !b.length) return false;
+  const setB = new Set(b);
+  const overlap = a.filter((w) => setB.has(w)).length;
+  return overlap / Math.min(a.length, b.length) >= 0.6;
+}
+
+function dedupeNews(items: NewsItem[]): NewsItem[] {
+  const out: NewsItem[] = [];
+  const seenLinks = new Set<string>();
+  const wordSets: string[][] = [];
+  for (const item of items) {
+    const link = (item.link || "").split("?")[0];
+    if (link && seenLinks.has(link)) continue;
+    const words = keyWords(item.title);
+    if (wordSets.some((w) => similar(words, w))) continue;
+    if (link) seenLinks.add(link);
+    wordSets.push(words);
+    out.push(item);
+  }
+  return out;
+}
+
 const MarketBrief = () => {
+
   const [news, setNews] = useState<NewsItem[]>([]);
   const [gainers, setGainers] = useState<ScreenerQuote[]>([]);
   const [losers, setLosers] = useState<ScreenerQuote[]>([]);
@@ -111,11 +147,12 @@ const MarketBrief = () => {
     let alive = true;
     Promise.all([
       fetchNews("stock market today").catch(() => []),
+      fetchNews("stocks earnings results").catch(() => []),
       fetchScreener("day_gainers", 6).catch(() => []),
       fetchScreener("day_losers", 6).catch(() => []),
-    ]).then(([n, g, l]) => {
+    ]).then(([n1, n2, g, l]) => {
       if (!alive) return;
-      setNews(n);
+      setNews(dedupeNews([...n1, ...n2]));
       setGainers(g.slice(0, 5));
       setLosers(l.slice(0, 5));
       setLoading(false);
@@ -124,6 +161,7 @@ const MarketBrief = () => {
       alive = false;
     };
   }, []);
+
 
   // Determine market mood from the average move of gainers vs losers.
   const lesson = useMemo(() => {
@@ -142,8 +180,8 @@ const MarketBrief = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SEO
-        title="Daily Market Brief — Top News, Gainers & Losers | Integral Stocks"
-        description="Your beginner-friendly daily market brief: today's top stock news, the biggest gainers and losers, and a lesson of the day that connects investing concepts to what's happening now."
+        title="Daily Market Brief — Top News, Gainers & Losers"
+        description="Beginner-friendly daily market brief: today's top stock news, biggest gainers and losers, and a lesson of the day tied to what's happening now."
         path="/market-brief"
         jsonLd={{
           "@context": "https://schema.org",
@@ -219,7 +257,7 @@ const MarketBrief = () => {
                     <div className="aspect-[16/8] overflow-hidden">
                       <img
                         src={hero.thumbnail.resolutions[0].url}
-                        alt=""
+                        alt={`Thumbnail for lead story: ${hero.title}`}
                         loading="lazy"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />

@@ -3,17 +3,17 @@ import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { fetchSearchQuotes, fetchQuotes, formatNumber, SearchQuote } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logo.webp";
 
 type EnrichedResult = SearchQuote & { price?: number; changePct?: number };
 
 const NAV_LINKS = [
   { to: "/dashboard", label: "Dashboard" },
-  { to: "/academy", label: "Learn" },
   { to: "/stocks", label: "Stocks" },
   { to: "/market-brief", label: "News" },
-  { to: "/translate", label: "Translate" },
-  { to: "/sim", label: "Simulator", accent: true },
+  { to: "/learn", label: "Learn" },
+  { to: "/watchlist", label: "Watchlist" },
+  { to: "/simulator", label: "Practice", accent: true },
 ];
 
 interface Props {

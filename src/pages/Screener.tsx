@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
+import { PracticeNav } from "@/components/PracticeNav";
 import { SEO } from "@/components/SEO";
 import { fetchScreener, formatNumber, formatLargeNumber, ScreenerQuote } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
@@ -82,6 +83,8 @@ export default function Screener() {
       />
       <h1 className="sr-only">Stock Screeners</h1>
       <Header />
+      <PracticeNav />
+
       <div className="border-b bg-card">
         <div className="container mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
           <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">← Markets</Link>

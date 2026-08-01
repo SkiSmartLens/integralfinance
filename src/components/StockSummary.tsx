@@ -1,40 +1,24 @@
 import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/lib/backend";
+import { fetchStockSummary, getCachedSummary, type StockSummaryData } from "@/lib/stockSummary";
 import { fetchQuotes } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
 import { Sparkles, TrendingUp, TrendingDown, Calendar, Eye, BarChart3, DollarSign, Percent, Landmark, Shield, LineChart, ChevronDown, Zap, Newspaper, ExternalLink } from "lucide-react";
 
 
 interface Source { title: string; publisher: string; url: string }
-interface Summary {
-  whyMoved?: string;
-  positives: string[];
-  negatives: string[];
-  predictedRevenue?: string;
-  revenueGrowth?: string;
-  earningsGrowth?: string;
-  margins?: string;
-  balanceSheet?: string;
-  moat?: string;
-  earnings: string;
-  forecast?: string;
-  outlook: string;
-  sources?: Source[];
-}
+type Summary = StockSummaryData & { positives: string[]; negatives: string[]; earnings: string; outlook: string };
 
 
-// Cache AI summaries by symbol so re-selecting is instant.
-const summaryCache = new Map<string, Summary>();
 const nameCache = new Map<string, string>();
 
 export const StockSummary = ({ symbol }: { symbol: string }) => {
-  const [data, setData] = useState<Summary | null>(summaryCache.get(symbol) ?? null);
+  const [data, setData] = useState<Summary | null>((getCachedSummary(symbol) as Summary) ?? null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [visible, setVisible] = useState(false);
   const [companyName, setCompanyName] = useState<string>(nameCache.get(symbol) ?? "");
   const [nextEarnings, setNextEarnings] = useState<string>("");
   const ref = useRef<HTMLElement | null>(null);
+
 
   // Look up the company name + next earnings.
   useEffect(() => {
@@ -61,57 +45,25 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
     return () => { alive = false; };
   }, [symbol]);
 
-  // Defer the AI fetch until the section is near the viewport.
+  // Fetch AI insights immediately (shared cache + request dedupe).
   useEffect(() => {
-    if (visible || !ref.current) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          setVisible(true);
-          io.disconnect();
-        }
-      },
-      { rootMargin: "200px" }
-    );
-    io.observe(ref.current);
-    return () => io.disconnect();
-  }, [visible]);
-
-  useEffect(() => {
-    if (!visible) return;
-    const cached = summaryCache.get(symbol);
+    let alive = true;
+    const cached = getCachedSummary(symbol) as Summary | null;
     if (cached) {
       setData(cached);
       setErr(null);
       return;
     }
-    let alive = true;
     setData(null);
     setErr(null);
     setLoading(true);
-    supabase.functions
-      .invoke("stock-summary", { body: { symbol } })
-      .then(async ({ data, error }) => {
-        if (!alive) return;
-        if (error) {
-          let msg = error.message;
-          // Read the real error body (e.g. 402 credits exhausted) when available.
-          const res = (error as any)?.context as Response | undefined;
-          if (res && typeof res.json === "function") {
-            try {
-              const body = await res.json();
-              if (body?.error) msg = body.error;
-            } catch { /* ignore */ }
-          }
-          setErr(msg);
-        } else {
-          summaryCache.set(symbol, data as Summary);
-          setData(data as Summary);
-        }
-      })
-      .finally(() => alive && setLoading(false));
+    fetchStockSummary(symbol)
+      .then((d) => { if (alive) setData(d as Summary); })
+      .catch((e: Error) => { if (alive) setErr(e.message); })
+      .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [symbol, visible]);
+  }, [symbol]);
+
 
   const askIntegral = (question?: string) => {
     const who = companyName ? `${companyName} (${symbol})` : symbol;
