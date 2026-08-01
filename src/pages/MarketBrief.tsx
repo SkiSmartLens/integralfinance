@@ -74,7 +74,43 @@ function MoverRow({ q, direction }: { q: ScreenerQuote; direction: "up" | "down"
   );
 }
 
+// Merge multiple news feeds and drop near-duplicate stories (same link, or
+// headlines that share most of their significant words).
+const STOP = new Set(["the", "a", "an", "of", "to", "in", "on", "for", "and", "as", "is", "are", "at", "by", "with", "from", "after", "amid", "its", "it", "this", "that"]);
+
+function keyWords(title: string): string[] {
+  return (title || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !STOP.has(w));
+}
+
+function similar(a: string[], b: string[]): boolean {
+  if (!a.length || !b.length) return false;
+  const setB = new Set(b);
+  const overlap = a.filter((w) => setB.has(w)).length;
+  return overlap / Math.min(a.length, b.length) >= 0.6;
+}
+
+function dedupeNews(items: NewsItem[]): NewsItem[] {
+  const out: NewsItem[] = [];
+  const seenLinks = new Set<string>();
+  const wordSets: string[][] = [];
+  for (const item of items) {
+    const link = (item.link || "").split("?")[0];
+    if (link && seenLinks.has(link)) continue;
+    const words = keyWords(item.title);
+    if (wordSets.some((w) => similar(words, w))) continue;
+    if (link) seenLinks.add(link);
+    wordSets.push(words);
+    out.push(item);
+  }
+  return out;
+}
+
 const MarketBrief = () => {
+
   const [news, setNews] = useState<NewsItem[]>([]);
   const [gainers, setGainers] = useState<ScreenerQuote[]>([]);
   const [losers, setLosers] = useState<ScreenerQuote[]>([]);
