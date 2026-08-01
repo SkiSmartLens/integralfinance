@@ -111,11 +111,12 @@ const MarketBrief = () => {
     let alive = true;
     Promise.all([
       fetchNews("stock market today").catch(() => []),
+      fetchNews("stocks earnings results").catch(() => []),
       fetchScreener("day_gainers", 6).catch(() => []),
       fetchScreener("day_losers", 6).catch(() => []),
-    ]).then(([n, g, l]) => {
+    ]).then(([n1, n2, g, l]) => {
       if (!alive) return;
-      setNews(n);
+      setNews(dedupeNews([...n1, ...n2]));
       setGainers(g.slice(0, 5));
       setLosers(l.slice(0, 5));
       setLoading(false);
@@ -124,6 +125,7 @@ const MarketBrief = () => {
       alive = false;
     };
   }, []);
+
 
   // Determine market mood from the average move of gainers vs losers.
   const lesson = useMemo(() => {
