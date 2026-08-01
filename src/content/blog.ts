@@ -814,7 +814,411 @@ Build the twelve, run one Sunday review, and test the candidates by buying them 
 `,
   },
 
+  {
+    slug: "stocks-vs-etfs",
+    title: "Stocks vs. ETFs: Which Should a Beginner Actually Buy?",
+    description:
+      "A side-by-side comparison with real numbers — what happens to $5,000 in one company versus 500, why diversification is not free, and the core-and-satellite structure most beginners should copy.",
+    publishedAt: "2026-07-26",
+    readMinutes: 9,
+    tickers: ["VOO", "VTI", "AAPL", "SPY"],
+    tags: ["investing-basics", "beginner", "etfs"],
+    category: "Investing Basics",
+    imageAlt:
+      "A basket holding many coloured blocks beside a single block, illustrating an ETF holding hundreds of companies versus one stock",
+    body: `
+Picture two people who each put $5,000 into the market on the same Monday. One buys a single company. The other buys an S&P 500 ETF. A year later, one of them has a story and the other has a return, and which is which depends entirely on luck.
+
+That is not a joke — it is the actual difference. One decision has a range of outcomes roughly five times wider than the other, and understanding that range is more important than the debate over which is "better."
+
+## What you are literally buying
+
+A **stock** is a fractional ownership claim on one business. Its price depends on that business's results and on what investors expect from it.
+
+An **ETF** is a single ticker that holds a basket. Buy one share of a broad-market fund like [VOO](/stocks/voo) or [VTI](/stocks/vti) and you own a proportional sliver of hundreds or thousands of companies, rebalanced for you, for a fee typically around 0.03% a year — three dollars annually per $10,000.
+
+## The outcome range, with numbers
+
+| Scenario over one year | $5,000 in one large-cap stock | $5,000 in a broad-market ETF |
+| --- | --- | --- |
+| Great year | +45% → $7,250 | +22% → $6,100 |
+| Typical year | +9% → $5,450 | +9% → $5,450 |
+| Bad year | −38% → $3,100 | −18% → $4,100 |
+| Worst realistic case | Company fails, near total loss | Market falls hard, then historically recovers |
+
+The middle row is the honest one: in an average year the two look similar. The value of the ETF shows up in the tails. A single company can go to zero from fraud, obsolescence, or a lost lawsuit. A diversified index cannot, because for it to reach zero every company in it would have to fail simultaneously.
+
+## Diversification is not free, and pretending otherwise is dishonest
+
+The cost of owning 500 companies is that you own the mediocre ones too. If one holding triples, it barely registers in a broad fund. Concentration is the only way to dramatically outperform — and also the main way people dramatically underperform.
+
+The other hidden cost: ETFs are boring, and boring things get abandoned. Plenty of beginners buy an index fund, feel nothing for four months, and drift into speculative names looking for something to happen.
+
+## The structure I'd actually recommend
+
+Core and satellite:
+
+1. **Core (80–90%)** — one broad-market ETF. This is your baseline and the thing you keep buying regardless of the news.
+2. **Satellite (10–20%)** — two to four individual companies you have researched properly, using the checklist in [how to pick your first stock](/blog/how-to-pick-your-first-stock).
+3. **No single satellite position above a quarter of the satellite sleeve.** On a $5,000 portfolio, that is a maximum of about $250 per company.
+
+This gets you the market's return as a floor, plus a real research education, and it caps the damage when one of your picks is wrong. And you will be wrong; the question is only how expensive it is.
+
+## The ETF traps beginners walk into
+
+- **Owning three funds that hold the same things.** An S&P 500 fund, a total-market fund, and a large-cap growth fund overlap enormously. That is one position wearing three hats.
+- **Thematic and leveraged ETFs.** A "3x daily" fund is not a leveraged version of the index over a year — daily rebalancing decays it. These are trading instruments, not holdings.
+- **Assuming an ETF is inherently safe.** A single-sector fund concentrated in one industry can fall 40%. Diversification within a sector is not diversification.
+- **Comparing your stock to nothing.** Keep a market ETF on your [watchlist](/watchlist) permanently. If your stock is down 4% on a day the market is down 3.5%, essentially nothing happened.
+
+## Test the difference before funding it
+
+Open the [simulator](/simulator), split the virtual balance evenly between one broad ETF and three individual companies, and leave it for a quarter. Then compare not just the returns but how often you felt the urge to do something about each. Most people discover the satellite sleeve consumed 95% of their attention for a fraction of the outcome — which is exactly the argument for keeping it small.
+`,
+  },
+  {
+    slug: "what-moves-stock-prices",
+    title: "What Actually Moves Stock Prices (It Isn't the News)",
+    description:
+      "Prices move on the gap between reality and expectation. Here's how earnings, interest rates, sector rotation and pure flow interact — and how to tell which one is behind today's move.",
+    publishedAt: "2026-07-20",
+    readMinutes: 9,
+    tickers: ["NVDA", "AAPL", "SPY"],
+    tags: ["market-education", "beginner", "earnings"],
+    category: "Market Education",
+    imageAlt:
+      "A stock exchange building with a wavy market line running through it, representing the forces that move share prices",
+    body: `
+Here is the sentence that took me longest to understand, and it explains almost every confusing day in the market:
+
+**Prices do not move on news. They move on the difference between the news and what was already expected.**
+
+A company can report record profits and fall 9%. Another can report a loss and rally 12%. Neither is irrational. In both cases the price already contained a forecast, and the report either exceeded or fell short of it.
+
+## The five forces, roughly in order of importance
+
+**1. Earnings versus expectations.** Every quarter, results land against a consensus forecast. Beating the forecast matters; the absolute number does not. This is why "great quarter, stock down" happens constantly — full walkthrough in [how to read an earnings report](/blog/how-to-read-earnings-report).
+
+**2. Guidance.** Management's forecast for the next quarter frequently moves the stock more than the results themselves, because markets price the future. A company can beat on revenue and EPS, guide slightly low, and drop hard.
+
+**3. Interest rates.** This is the one beginners underrate. A stock is worth today's value of its future profits. When rates rise, future profits are discounted more heavily, so the value falls — and it falls most for companies whose profits are furthest in the future. That is why a rate decision can knock 4% off a fast-growing tech name and barely touch a utility, on a day when neither company did anything.
+
+**4. Sector and market flow.** On many days your stock moves purely because money rotated into or out of its whole sector. Nothing company-specific happened at all.
+
+**5. Positioning and psychology.** Crowded trades unwind violently. When everyone already owns something, there is no one left to buy, and mild disappointment produces an outsized drop.
+
+## Diagnosing today's move in ninety seconds
+
+| What you observe | Most likely cause |
+| --- | --- |
+| Your stock −3%, market −3%, sector −3% | Market-wide. Your company is a passenger. |
+| Your stock −8%, sector −1%, market flat | Company-specific. Go find the news. |
+| Whole sector −5%, other sectors flat | Sector rotation or a policy/rate story |
+| Big move on tiny volume | Thin, low-conviction, often reverses |
+| Big move on 4x volume | Real repricing by large holders |
+
+Run this before you read a single headline and you will avoid the most common beginner error: attributing a market-wide move to your specific company and concluding your thesis is broken.
+
+## A worked example
+
+Say [NVDA](/stocks/nvda) drops 6% on a Wednesday. The panic reading is "something is wrong with the company."
+
+Check the market: [SPY](/stocks/spy) is down 1.8%. Check the sector: semiconductors are down 4.5%. Check the calendar: a central bank statement came out at 2pm that was more hawkish than expected.
+
+Now the move decomposes into roughly 1.8% market, another 2.7% sector-wide rate sensitivity, and about 1.5% specific to the company. The company-specific portion — the only part that reflects on your thesis — is small. Nothing about the business changed that afternoon; the discount rate applied to its future did.
+
+That decomposition is exactly what the explanation on each stock page and the [Market Brief](/market-brief) are built to do, grounded in what was actually reported rather than a guess.
+
+## What moves prices far less than people think
+
+- **Most headlines.** By the time an article is published, the information is usually priced.
+- **Analyst ratings.** Occasionally a catalyst, usually noise, often lagging the price.
+- **"The company is good."** Quality is not a catalyst. Everyone can see it, so it is already in the price. Change is what moves prices.
+- **Your entry price.** The market has no idea what you paid, and the stock has no obligation to return to it.
+
+## The mistakes this understanding prevents
+
+- Selling a good company because the sector had a bad week.
+- Buying before earnings hoping for a beat, when the beat is already expected.
+- Reading a bullish article and assuming you are early.
+- Judging a thesis on a five-day price move.
+
+Practise the decomposition. For two weeks, pick one mover a day from your [watchlist](/watchlist), split the move into market, sector, and company, and write down the split. It is the closest thing to a superpower a beginner can build cheaply — and you can test your conclusions in the [simulator](/simulator) without paying for the wrong ones.
+`,
+  },
+  {
+    slug: "beginner-investor-mistakes",
+    title: "The Nine Mistakes That Cost Beginner Investors the Most",
+    description:
+      "Ranked by how much damage they actually do, with the arithmetic behind each — oversizing, churning, stop-loss misuse, leverage, and the revenge trade that ends most beginner accounts.",
+    publishedAt: "2026-07-22",
+    readMinutes: 10,
+    tickers: ["SPY", "VOO", "NVDA"],
+    tags: ["risk-management", "beginner", "psychology"],
+    category: "Risk Management",
+    imageAlt:
+      "An umbrella and shield over a falling price chart, representing protecting a beginner portfolio from avoidable losses",
+    body: `
+Beginners rarely lose money because they picked the wrong company. They lose it because of position size, turnover, and timing — three things entirely within their control. Here are the nine mistakes ranked by the damage they actually do, with the arithmetic, because the numbers are more persuasive than the advice.
+
+## 1. Oversizing a single position
+
+The one that ends accounts. Put 50% of your money into one name and a 40% decline costs you 20% of everything. At 5% position size, the same disaster costs 2%.
+
+Losses are also asymmetric: down 50% requires +100% to recover; down 20% requires +25%. Small losses are survivable in a way large ones are not.
+
+**Fix:** no single company above 5–10% of the portfolio. Write the cap down before you start.
+
+## 2. Trading too often
+
+A study-worthy pattern: the more a beginner trades, the worse they do. Every round trip pays a spread, occasionally a fee, and — worst of all — replaces a considered thesis with a reaction.
+
+Ten unnecessary round trips a year at a 0.2% spread each is 2% of your account gone before you have made a single decision correctly.
+
+**Fix:** a minimum holding period. Two weeks in a simulator, three months for real money, unless your written sell trigger fires.
+
+## 3. The revenge trade
+
+You lose $300, and instead of stopping you double the next position to "make it back." This is the single fastest way to turn a bad week into a closed account. It converts an investing decision into an emotional one, at exactly the moment your judgement is worst.
+
+**Fix:** after any loss above 10% of a position, place no new trades for 48 hours. No exceptions.
+
+## 4. Leverage and short selling, too early
+
+I learned this in a competition. My simulated account was up around 80% and I was convinced I had figured something out, so I put on a leveraged short. The position moved against me, the leverage magnified it, and even with stop losses the damage was severe. On real money that would have been catastrophic.
+
+Leverage does not increase your edge. It multiplies whatever you already have — including a negative one. Shorting adds unlimited theoretical loss to the mix, since a stock can rise indefinitely.
+
+**Fix:** neither, in year one. Not even in a simulator until you have a year of boring results.
+
+## 5. Misusing stop-loss orders
+
+Stops are useful and widely misunderstood. Two specific failures:
+
+- **Too tight.** A 5% stop on a stock that routinely swings 4% a day will trigger on noise, repeatedly, each time locking in a loss.
+- **Assuming a guaranteed price.** A stop becomes a market order when triggered. If the stock gaps down overnight from $80 to $61, your $75 stop fills near $61.
+
+**Fix:** set stops relative to the stock's own volatility, not a round number, and treat them as a discipline tool rather than insurance.
+
+## 6. Confusing a low share price with value
+
+A $4 stock is not cheaper than a $400 stock. What matters is market cap and earnings — see [what P/E ratio means](/blog/what-does-pe-ratio-mean). Low-priced stocks feel accessible and are usually low-priced for a reason.
+
+## 7. Chasing what already moved
+
+If it is up 40% this month and it reached your feed, the expectation is already in the price. You are buying the enthusiasm of people who bought earlier.
+
+## 8. No written sell trigger
+
+Without one, every decline becomes an argument with yourself. Decide in advance: "I sell if revenue declines two quarters running," or "if the thesis I wrote is disproven." Not "if it goes down."
+
+## 9. Judging a decision by its outcome
+
+A reckless trade that made money is still a bad decision, and it is the most dangerous thing that can happen to a beginner, because it reinforces the behaviour. Grade your process: was the thesis sound, was the size right, did you follow your rules? Outcome and quality are only loosely related over short periods.
+
+## The damage, side by side
+
+| Mistake | Typical cost | How avoidable |
+| --- | --- | --- |
+| Oversizing | 20–50% of the account | Entirely — it is one rule |
+| Overtrading | 2–5% a year, plus worse decisions | Entirely |
+| Revenge trading | Often the rest of the account | Entirely, with a 48-hour rule |
+| Leverage | Total loss possible | Entirely — just don't |
+| Bad stops | Repeated small locked-in losses | Mostly |
+
+## Practise the rules where they are cheap
+
+Every one of these is a rule you can rehearse in the [simulator](/simulator) at zero cost — cap positions at 10%, hold for two weeks minimum, no leverage, write a sell trigger for every entry. Then keep a [watchlist](/watchlist) of names you did *not* buy and check in a quarter later. Watching the trades you avoided is a surprisingly effective way to learn patience.
+
+Compare everything to a baseline like [SPY](/stocks/spy). Most beginner losses are not losses to the market; they are losses relative to having simply held it.
+`,
+  },
+  {
+    slug: "investing-psychology",
+    title: "Investor Psychology: Why You Sell at the Bottom",
+    description:
+      "Loss aversion, recency bias and anchoring explained through what they feel like in a real drawdown — plus a written pre-commitment plan that works better than willpower.",
+    publishedAt: "2026-07-21",
+    readMinutes: 9,
+    tickers: ["SPY", "VOO"],
+    tags: ["psychology", "risk-management", "beginner"],
+    category: "Market Psychology",
+    imageAlt:
+      "A head silhouette containing a volatile market line, representing fear and greed driving investor decisions",
+    body: `
+The uncomfortable finding across decades of research is that the average investor earns meaningfully less than the average investment they own. The funds do fine. The people buy them after good years and sell them after bad ones.
+
+That gap is not an information problem. Everyone knows to buy low. It is a psychology problem, and the only reliable defence is a plan written down while you are calm.
+
+## Loss aversion, and why −10% feels like −25%
+
+Losing $1,000 hurts roughly twice as much as gaining $1,000 feels good. This asymmetry produces two contradictory behaviours in the same person:
+
+- **Selling winners too early**, to lock in a gain before it disappears.
+- **Holding losers too long**, because selling makes the loss real.
+
+The result is a portfolio that systematically keeps the worst positions and sells the best. If you have ever thought "I'll sell it when it gets back to what I paid," that is loss aversion talking — and the market has no idea what you paid.
+
+## Recency bias
+
+Whatever happened most recently feels like what will keep happening. After three green months, risk feels theoretical and people size up. After three red months, a recovery feels impossible and people go to cash — usually near the bottom, because that is when the feeling peaks.
+
+## Anchoring
+
+Your entry price becomes a reference point with no economic meaning. A stock you bought at $100 that is now $70 is not "cheap" — it is $70, and the only question is what it is worth from here. Someone who bought at $40 is looking at the identical company and feeling great.
+
+## What a drawdown actually feels like
+
+This is the part nobody prepares you for, and the reason simulated confidence is unreliable.
+
+- **Week 1, −6%:** mild interest. You check twice a day.
+- **Week 3, −14%:** you start reading bearish articles, and they are unusually persuasive.
+- **Week 5, −22%:** you have a story about why this time is different. You are checking hourly.
+- **Week 6:** you sell, and feel immediate relief. Relief is the tell. Relief is what selling at the bottom feels like from the inside.
+
+Historically, the market has recovered from every one of these. That fact is useless in week five, which is why the decision has to be made in week zero.
+
+## The pre-commitment plan
+
+Written rules beat willpower because they are made by a version of you who is not scared. Mine:
+
+1. **A maximum position size**, decided before any purchase. Nothing above 10% in one company.
+2. **A written thesis per position** — one sentence on why, one on what would disprove it.
+3. **A scheduled review day.** Once a week, not continuously. Notifications off.
+4. **A 48-hour rule** after any loss over 10%: no new trades.
+5. **A pre-planned response to a −20% market.** Mine is "buy the scheduled amount, change nothing." Deciding this in advance is the single highest-value thing on the list.
+6. **A trade journal** with the reason for every entry and exit. Reading your own panic from six months ago is remarkably effective inoculation.
+
+## Rehearse it where it's free
+
+You cannot fully simulate fear, and I would not claim otherwise — the honest limits are in [paper trading vs real trading](/blog/paper-trading-vs-real-trading). But you can rehearse the *procedure* until it is automatic: hold a position in the [simulator](/simulator) through an earnings report and a bad week without touching it, and note your reaction each time.
+
+Then make the real position small enough that week five is survivable. Size is the real emotional control; everything else is commentary.
+
+## Two sanity checks that defuse most panic
+
+- **Compare to the market.** Keep [SPY](/stocks/spy) or [VOO](/stocks/voo) on your [watchlist](/watchlist). If you are down 8% and the market is down 7%, nothing happened to your company.
+- **Find the actual cause.** Read the plain-English explanation of the move on the stock page or in the [Market Brief](/market-brief). "Rates repriced the whole sector" and "our main product is failing" both look like red numbers, and they demand opposite responses.
+
+Most panic is the absence of an explanation. Get the explanation, check your written rules, and the urge usually passes.
+`,
+  },
+  {
+    slug: "compound-growth",
+    title: "Compound Growth: Why the First Decade Feels Like Nothing",
+    description:
+      "The arithmetic of compounding worked out year by year, why the curve is flat for years before it bends, what fees and interruptions really cost, and how to survive the boring part.",
+    publishedAt: "2026-07-23",
+    readMinutes: 9,
+    tickers: ["VOO", "VTI", "MSFT"],
+    tags: ["wealth-building", "beginner", "long-term"],
+    category: "Wealth Building",
+    imageAlt:
+      "A seedling growing from stacked coins into a taller plant, representing investment returns compounding over decades",
+    body: `
+Everyone has heard that compounding is powerful. Almost nobody has looked at the year-by-year table, which is a shame, because the table explains why so many people quit: for the first several years, compounding looks broken.
+
+## The actual numbers
+
+Invest $200 a month at an assumed 8% annual return. Contributions and balance, year by year:
+
+| Year | Total contributed | Balance | Growth portion |
+| --- | --- | --- | --- |
+| 1 | $2,400 | $2,490 | $90 |
+| 5 | $12,000 | $14,700 | $2,700 |
+| 10 | $24,000 | $36,600 | $12,600 |
+| 20 | $48,000 | $118,600 | $70,600 |
+| 30 | $72,000 | $298,000 | $226,000 |
+| 40 | $96,000 | $700,000 | $604,000 |
+
+Look at year five: you have put in $12,000 and earned $2,700. That is a fine outcome and it feels like nothing, because $2,700 over five years is roughly the price of a used car. This is precisely where most people conclude investing does not work and go looking for something faster.
+
+Now look at year 30 to year 40. Contributions add $24,000. The balance grows by $402,000. Nothing changed about the strategy — the base simply got large enough for the percentage to matter.
+
+## Why the curve bends late
+
+8% of $2,000 is $160. 8% of $300,000 is $24,000. The rate is identical; the base is not. Compounding is not a strategy that improves over time, it is the same strategy applied to a bigger number. Which means the scarce resource is not skill or returns — it is **years**.
+
+A 22-year-old contributing $200/month who stops at 32 and never adds another dollar typically ends up ahead, at 65, of a 32-year-old who contributes $200/month for the next thirty-three years. Ten years of contributions beat thirty-three, purely on timing.
+
+## What interrupts it
+
+**Selling in a downturn.** The 30-year table assumes you were still invested during the worst quarters. Missing a handful of the best days — which cluster immediately after the worst ones — meaningfully reduces the final figure. Selling in week five of a drawdown is the most expensive habit in personal finance, which is why [investor psychology](/blog/investing-psychology) matters more than stock picking.
+
+**Fees.** A 1% annual fee versus 0.03% sounds trivial. Over 40 years on the schedule above, that difference costs roughly a fifth of the final balance. It is the easiest large win available to a beginner: check the expense ratio.
+
+**Withdrawing early.** Every dollar pulled out is not just that dollar; it is that dollar's next 30 years.
+
+## Surviving the boring part
+
+The strategy is not hard. Staying is hard. Three things that help:
+
+1. **Automate the contribution** so it is not a monthly decision requiring conviction.
+2. **Track contributions, not returns, for the first three years.** "I have invested for 14 straight months" is a metric you control. Returns are not.
+3. **Zoom out.** Open a ten-year chart of [VOO](/stocks/voo) or [MSFT](/stocks/msft). Then look at the 2020 crash and the 2022 drawdown on that same chart — at ten-year scale they are small notches. They did not feel small.
+
+## Where this leaves single-stock picking
+
+Compounding at a market rate for four decades is a genuinely good outcome available to anyone with patience. That is the argument for keeping the majority of your money in a broad fund, as laid out in [stocks vs ETFs](/blog/stocks-vs-etfs), and treating individual companies as the small, educational part of the portfolio.
+
+You can watch the mechanism in the [simulator](/simulator): buy a broad ETF, do nothing for a quarter, and compare it to whatever you actively traded in the same period. For most beginners — including me, the first time I ran that comparison — the untouched position wins, and the lesson lands harder than any table.
+`,
+  },
+  {
+    slug: "why-i-built-integralstocks",
+    title: "Why I Built IntegralStocks: The Story Behind the Platform",
+    description:
+      "The school trading competition, the short position that unravelled a simulated portfolio, and the specific product decisions that came out of it.",
+    publishedAt: "2026-07-28",
+    tickers: ["SPY", "AAPL"],
+    readMinutes: 8,
+    category: "Platform Story",
+    tags: ["platform", "beginner"],
+    imageAlt:
+      "A laptop showing the IntegralStocks dashboard with a green price chart and a plain-English explanation panel",
+    body: `
+IntegralStocks began with a simple idea: investing education should be easier to understand. When I first started learning about the stock market, most platforms seemed built for people who already spoke the language. Charts, ratios, order types, market news, risk warnings, and analyst opinions were everywhere. Beginner-friendly explanations were not.
+
+My name is William Wolenski, and I built this site to make the learning process clearer, safer, and more practical. The goal was never to tell anyone what to buy. It was to help beginners understand what they are looking at before they decide anything.
+
+## The competition that started it
+
+The original version came out of a school stock market competition. I wanted a tool that would help me understand companies faster and compare them more clearly, so I started building — AI-written summaries, bullish and bearish signals, portfolio tools, explanations of the jargon I kept tripping over.
+
+For a while it worked spectacularly. My simulated portfolio grew fast. I was near the top of the leaderboard and I had a full explanation ready for why that was skill.
+
+It was not skill. It was concentration and leverage in a market that happened to be going my way.
+
+## The trade that changed the product
+
+Eventually I entered a short position I was completely confident in. It moved against me. Leverage multiplied it, and even with stop losses in place — which filled far from where I expected, because a stop becomes a market order the moment it triggers — the position did enormous damage. What had looked like a winning strategy turned out to be a series of risks I had not understood well enough to name.
+
+Losing simulated money is the cheapest tuition available. But the specific thing I learned was not "don't short." It was that **I had no idea why any of my positions moved.** I could see the numbers. I could not explain them. That is not investing; it is reacting quickly.
+
+## The product decisions that came from it
+
+Every meaningful feature on this site traces back to that gap:
+
+1. **Every stock page explains the move in plain English**, grounded in actual reporting rather than a model's guess about what probably happened. Knowing a stock is down 3% is useless. Knowing the sector repriced on a rate decision while the company did nothing is the entire lesson.
+2. **The [simulator](/simulator) starts at $100,000, not $1,000,000.** A million-dollar practice account teaches you that a $50,000 position is nothing, which is exactly the instinct that hurt me.
+3. **Private games let you set starting cash, duration, and whether leverage is allowed.** Default settings teach default behaviour. A teacher running a 90-day, no-leverage game is teaching something completely different from a two-week free-for-all.
+4. **The [leaderboard](/simulator) ranks by return percentage**, so a small account competes fairly with a large one — and, I hope, so people notice that the lowest-turnover account often wins over a full quarter.
+5. **The [Jargon Translator](/translate) exists** because I spent months pretending to understand phrases like "sequential margin compression." Paste the paragraph in, get it back in plain English with the numbers intact.
+6. **There are no buy signals anywhere on this site.** The AI explains what already happened. Anything that claims to predict is selling confidence, and confidence is what got me into that short.
+
+## What it is not
+
+It is not a brokerage, it does not give financial advice, and it will not tell you what to buy. I am not a professional investor — I am someone who made a specific, memorable mistake early and cared enough to build the tool I wish had existed.
+
+## What comes next
+
+More depth in the [Learn hub](/learn), better research tooling, and a daily [Market Brief](/market-brief) that leads with why rather than what. The clearest expression of what I was going for is an ordinary stock page — pull up [AAPL](/stocks/aapl) or the market itself at [SPY](/stocks/spy) and see whether the explanation actually makes sense to you.
+
+If this site helps one beginner slow down, size a position properly, and understand a move before reacting to it, it is doing what it was built for.
+`,
+  },
 ];
+
 
 export function getPost(slug: string): BlogPost | undefined {
   return POSTS.find((p) => p.slug === slug);
