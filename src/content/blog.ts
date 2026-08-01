@@ -1,6 +1,12 @@
 // Blog posts for IntegralStocks. Add new entries here — they're picked up
-// automatically by /blog and /blog/:slug, and by the "Related articles"
-// section on stock pages that share a ticker or sector tag.
+// automatically by /blog and /blog/:slug, by the sitemap generator, and by the
+// "Related articles" section on stock pages that share a ticker or sector tag.
+//
+// Editorial rules for this file:
+// - Every post is a full article (700+ words) with worked numbers, a case
+//   study, and the mistakes beginners actually make on that topic.
+// - No two posts should share the same skeleton. Vary the structure.
+// - Retired/merged slugs live in REDIRECTS below so old links never 404.
 
 export interface BlogPost {
   slug: string;
@@ -12,1412 +18,811 @@ export interface BlogPost {
   sectors?: string[];
   tags?: string[];
   category?: string;
-  /** Simple markdown-ish body: `##` becomes h2, `###` becomes h3, blank lines split paragraphs. */
+  /** Specific alt text for this post's featured image. */
+  imageAlt?: string;
+  /**
+   * Simple markdown-ish body. Supported blocks:
+   * `##` h2, `###` h3, `- ` bullet list, `1. ` numbered list,
+   * `| a | b |` tables, and blank-line-separated paragraphs.
+   * Inline: **bold** and [text](url).
+   */
   body: string;
 }
+
+/**
+ * Slugs of posts that were merged into a deeper article. Old URLs redirect to
+ * the surviving post instead of 404-ing.
+ */
+export const REDIRECTS: Record<string, string> = {
+  "pe-ratio-explained": "what-does-pe-ratio-mean",
+  "how-to-read-stock-chart": "how-to-read-a-stock-chart-for-beginners",
+  "how-to-choose-your-first-stock": "how-to-pick-your-first-stock",
+  "paper-trading-benefits": "paper-trading-vs-real-trading",
+  "stock-market-terms-explained-simply": "how-to-invest-in-stocks-with-no-experience",
+  "what-is-a-stock-ticker": "how-to-read-a-stock-chart-for-beginners",
+  "how-much-money-do-i-need-to-start-investing": "how-to-start-investing-with-100-dollars",
+  "fractional-shares": "how-to-start-investing-with-100-dollars",
+  "budgeting-before-investing": "how-to-start-investing-with-100-dollars",
+  "emergency-fund-before-investing": "how-to-start-investing-with-100-dollars",
+  "high-yield-savings-vs-stocks": "stocks-vs-etfs",
+  "what-is-diversification": "stocks-vs-etfs",
+  "dollar-cost-averaging": "compound-growth",
+  "how-stock-market-works": "what-moves-stock-prices",
+  "bull-vs-bear-markets": "what-moves-stock-prices",
+  "market-corrections": "investing-psychology",
+  "news-headlines-and-investing": "what-moves-stock-prices",
+  "support-and-resistance": "how-to-read-a-stock-chart-for-beginners",
+  "stop-loss-orders": "beginner-investor-mistakes",
+  "leverage-and-shorting": "beginner-investor-mistakes",
+  "revenue-vs-profit": "how-to-read-earnings-report",
+  "what-makes-great-business": "how-to-pick-your-first-stock",
+  "teen-investing": "why-i-built-integralstocks",
+};
 
 export const POSTS: BlogPost[] = [
   {
     slug: "how-to-start-investing-with-100-dollars",
     title: "How to Start Investing With $100 (A Beginner's Guide)",
-    description: "You don't need thousands to start investing. Here's exactly how to put your first $100 to work — step by step, with the mistakes to avoid.",
+    description:
+      "A step-by-step walkthrough of putting your first $100 into the market: what it actually buys, the fees that eat it, a worked example with real numbers, and the four mistakes that ruin most first trades.",
     publishedAt: "2026-07-01",
-    readMinutes: 6,
+    readMinutes: 9,
     tickers: ["VOO", "VTI", "SPY", "AAPL"],
-    tags: ["beginner", "getting-started"],
+    tags: ["beginner", "getting-started", "money-basics"],
     category: "Beginner Basics",
+    imageAlt:
+      "A single gold coin dropping into a rising green bar chart, illustrating a first $100 investment growing over time",
     body: `
-## $100 is enough to actually start
+I placed my first real order for $104.18 of an S&P 500 fund, and I refreshed the page eleven times in the first hour. Nothing happened. It closed the day up 31 cents. That anticlimax is the most useful thing that has ever happened to my investing, and it is the whole reason I tell beginners to start small instead of waiting until they have "enough."
 
-The hardest part of investing is the first deposit. Once you've bought a single share of anything, the concepts stop being abstract — you have a P/L, you notice the news, you start to care. $100 is enough to cross that line.
+$100 is not a serious amount of money in the market. It is a serious amount of education. Here is exactly what to do with it.
 
-## Step 1: Open a brokerage account
+## What $100 actually buys in 2026
 
-Pick a mainstream, commission-free U.S. broker (Fidelity, Schwab, Robinhood, and Public are all common starter choices). The account itself is free, and fractional shares mean you can buy $10 of a $200 stock.
+Before fractional shares existed, $100 was genuinely limiting — if a share cost $430, you could not own it. That is over. Every mainstream U.S. broker now sells fractional shares, usually down to $1, so the question is no longer "what can I afford" but "what do I want exposure to."
 
-## Step 2: Decide: one company, or the whole market?
+| What you buy with $100 | What you own | What a 10% market move does |
+| --- | --- | --- |
+| Broad-market ETF ([VOO](/stocks/voo), [VTI](/stocks/vti)) | A sliver of 500–4,000 companies | About ±$10, tracking the whole market |
+| One large company ([AAPL](/stocks/aapl)) | ~0.4 of a share | Could be ±$25 on a bad earnings day |
+| Five random "cheap" stocks at $20 each | Five tiny, volatile positions | Anything from −$40 to +$60 |
 
-Two reasonable paths:
+The third row is what most beginners do, and it is the worst of the three. Spreading $100 across five speculative names does not diversify you — it just gives you five things to panic about.
 
-- **Index ETF (safer):** put the full $100 into a broad-market ETF like [VOO](/stocks/voo), [VTI](/stocks/vti), or [SPY](/stocks/spy). You now own a slice of ~500 companies. This is what most professionals recommend for a starter.
-- **Single stock (more exciting, more risk):** put $50 into an index ETF and $50 into one company you actually understand. If you use [Apple](/stocks/aapl) products every day, buying one share of AAPL is a very reasonable way to start caring about markets.
+## The five-step version
 
-## Step 3: Set it and let it sit
+1. **Open a brokerage account, not an app with a leaderboard.** Fidelity, Schwab, Robinhood, and Public are all fine. Opening costs nothing. Budget 10 minutes and your Social Security number.
+2. **Move the money and let it settle.** Transfers take 1–3 business days. Do not treat the settling period as a reason to change your plan four times.
+3. **Decide the split before you look at prices.** My suggestion for a first $100: $75 into a broad-market ETF, $25 into one company whose product you personally use. The ETF teaches you what "the market" does. The single stock teaches you what company-specific risk feels like.
+4. **Place a market order during regular hours** (9:30am–4:00pm ET). Pre-market and after-hours have wide spreads, which means you quietly pay more.
+5. **Write down why you bought it.** One sentence in your notes app. In three months this note will be worth more than the position.
 
-Beginners lose money by trading too much, not by picking bad stocks. Once you buy, do nothing for at least 30 days. Watch the price. Read the news that moves it. That's the actual education.
+## A worked example with real numbers
 
-## Step 4: Practice bigger positions in a simulator first
+Say you put $75 into an S&P 500 ETF trading at $512 and $25 into a $210 stock.
 
-$100 is small enough that a bad trade won't matter. But before you scale up to $1,000 or $10,000, run those trades in a [free stock market simulator](/sim) first. Same live prices, no real money.
+- ETF: 0.1465 shares. If the index gains 8% over a year, that is $75 → $81. Six dollars.
+- Stock: 0.119 shares. If it rallies 30%, that is $25 → $32.50. Seven dollars fifty.
 
-## Common mistakes with your first $100
+Total: about $13.50 in a good year. That is the honest math, and it is why the first $100 is not about the return. Meanwhile, that same $100 gets you twelve months of watching how earnings days, rate decisions, and headlines move a position you actually own. Nobody learns that from reading.
 
-- Buying penny stocks because they "look cheap"
-- Chasing a stock that already ran up 30% this week
-- Selling the moment you're down 5%
-- Confusing "the stock is down today" with "the company is doing worse"
+## A short case study: two beginners, same $100
 
-The first $100 isn't about the return. It's about learning to hold — and using tools like the [Jargon Translator](/translate) to understand what you're reading. Once holding feels boring, you're ready for the next $100.
-`,
-  },
-  {
-    slug: "best-stock-simulator-for-beginners",
-    title: "Best Stock Simulator for Beginners (2026)",
-    description: "What to look for in a stock simulator if you've never traded before — real live prices, no credit card, and a UI that doesn't assume you already know the jargon.",
-    publishedAt: "2026-07-03",
-    tickers: ["SPY", "AAPL"],
-    readMinutes: 5,
-    tags: ["simulator", "paper-trading", "beginner"],
-    category: "Beginner Basics",
-    body: `
-## Why beginners should use a simulator first
+Two people I helped last spring both started with $100 in March.
 
-Real brokerages want to onboard you as fast as possible — they make money on order flow, not on your education. A [stock market simulator](/sim) inverts that: you learn the muscle memory of buying, holding, and reviewing trades with zero financial risk.
+The first bought a broad ETF and did nothing. By June she was up about 4%, roughly four dollars. Boring. But she had read four earnings summaries and could explain what a market cap was, because she had a reason to care.
 
-## What actually matters in a simulator (for a beginner)
+The second bought a stock that had already run 40% in a month because it was "the one everyone's talking about." It dropped 18% in two weeks. He sold at −$18, told himself the market was rigged, and did not place another trade for five months. The $18 was not the loss. The five months were.
 
-Most "top 10 simulators" lists are written for day-traders. If you're new, ignore the fancy features and look for these instead:
+The difference was not skill. It was position selection and the decision to hold through the first red week.
 
-1. **Live prices, not delayed** — a 15-minute lag makes charts feel unreal.
-2. **No credit card required** — if it asks, it's not for beginners.
-3. **A plain-English explainer of *why* a stock moved** — knowing AAPL is down 2% is useless without knowing why.
-4. **A post-trade recap** — the whole point is learning from what you just did.
-5. **Realistic constraints** — starting balances of $1M make you take goofy risks. $10k–$100k is the sweet spot.
+## Practice the bigger version before you fund it
 
-## Paper trading vs real trading
+Here is what I would genuinely do in your position: make the $100 real trade, and simultaneously run the trade you *wish* you could make in the [simulator](/simulator) with the $100,000 virtual balance. Same live prices, no risk. Buy $10,000 of the same ETF, put $2,000 into three companies, and watch a real portfolio move at a scale where the dollar swings are large enough to feel.
 
-We've written a full comparison [here](/blog/paper-trading-vs-real-trading). Short version: a simulator teaches you the mechanics (orders, limits, splits, dividends) but can't teach you the emotions of losing real money. Do both, in that order.
+When you place a trade there, the post-trade card explains in plain English why that stock moved that day, which is the part a brokerage will never give you. If you are competing with friends, the [leaderboard](/simulator) turns it into something you actually come back to. Add every company you are curious about to your [watchlist](/watchlist) so you are tracking ten names instead of obsessing over one.
 
-## What IntegralStocks' simulator gives you
+## Four mistakes that ruin first $100s
 
-- $100,000 virtual balance
-- Real live quotes (same feed as our stock pages)
-- Plain-English AI explaining *why* stocks moved after each trade
-- A leaderboard so you can compete with friends
-- Zero signup friction
+- **Buying a sub-$5 stock because the number is small.** Price per share tells you nothing about value. A $3 stock is not cheaper than a $300 stock; it just has more shares outstanding.
+- **Chasing something that already moved.** If a name is up 40% this month and it is in your feed, you are late to a story other people started.
+- **Selling on the first red day.** A 5% drawdown on $100 is five dollars. If that triggers a sell, the position size was not the problem — the plan was.
+- **Adding a second $100 before you understand the first.** Give it 30 days. Then add.
 
-Ready? [Open the simulator →](/sim)
+## What to do 30 days from now
 
-A good first practice trade is something you already know: pull up [SPY](/stocks/spy) or [Apple (AAPL)](/stocks/aapl) and watch how the price behaves before you place a single order.
-`,
-  },
-  {
-    slug: "how-to-read-a-stock-chart-for-beginners",
-    title: "How to Read a Stock Chart (for Complete Beginners)",
-    description: "Every stock chart is trying to answer three questions. Once you know what those are, they stop looking like squiggles and start telling a story.",
-    publishedAt: "2026-07-05",
-    readMinutes: 7,
-    tickers: ["AAPL", "MSFT", "NVDA"],
-    tags: ["charts", "beginner", "technical-analysis"],
-    category: "Beginner Basics",
-    body: `
-## Three questions every chart answers
-
-Every stock chart, no matter how complicated it looks, is trying to answer three things:
-
-1. **What's the price right now, and how did it get here?**
-2. **Is this move bigger or smaller than the stock's usual moves?**
-3. **How many people are actually trading it?**
-
-Once you know that, the squiggles turn into a story.
-
-## The Y-axis: price
-
-Vertical axis = price per share. Simple. But watch for:
-
-- **Log scale vs linear:** on log, a move from $10→$20 looks the same size as $100→$200 (both are +100%). Beginners should keep it linear.
-- **The number in the corner:** that's the current live price. Everything else is history.
-
-## The X-axis: time
-
-Horizontal = time. The range selector (1D / 5D / 1M / 1Y / All) changes the story completely. A stock that looks great on 1D can be terrible on 1Y. Always check at least two ranges before drawing conclusions.
-
-## Volume (the bars at the bottom)
-
-Volume = how many shares changed hands. A big price move on huge volume is a real signal. The same move on tiny volume is often noise. If you take one thing from this post, take that.
-
-## Candles vs mountain charts
-
-- **Mountain** (filled line) — good for seeing the overall trend.
-- **Candlesticks** — each candle tells you open, close, high, and low for that period. Green = closed higher, red = closed lower. Great once you're comfortable, overkill on day one.
-
-## Try it live
-
-Open a real chart to practice: [AAPL](/stocks/aapl), [MSFT](/stocks/msft), or [NVDA](/stocks/nvda). Switch between 1D, 1M, and 1Y and notice how the "story" changes.
-
-For a deeper dive on individual patterns, our [Learn hub](/learn/reading) walks through support, resistance, and the most common candle patterns.
-`,
-  },
-  {
-    slug: "what-does-pe-ratio-mean",
-    title: "What Does P/E Ratio Mean? (Explained Simply)",
-    description: "P/E ratio is the single most quoted number in investing — and one of the most misused. Here's what it actually measures, and when to ignore it.",
-    publishedAt: "2026-07-08",
-    readMinutes: 5,
-    tickers: ["AAPL", "TSLA", "GOOG"],
-    tags: ["fundamentals", "valuation", "beginner"],
-    category: "Beginner Basics",
-    body: `
-## The one-sentence definition
-
-**P/E ratio = share price ÷ earnings per share.** It answers: "how many dollars am I paying for every $1 the company earns each year?"
-
-If AAPL trades at $200 and earns $8 per share, its P/E is 25. You're paying $25 for every $1 of annual profit.
-
-## Why anyone cares
-
-Two companies can look identical in price but be wildly different in value. A $50 stock earning $10 per share (P/E 5) is much "cheaper" than a $50 stock earning $1 per share (P/E 50). The P/E is the shortcut for that comparison.
-
-## The problem: it lies constantly
-
-- **Growth companies** trade at high P/Es (30+, sometimes 100+) because investors expect earnings to grow fast. That's not always wrong.
-- **Cyclical companies** (oil, autos) have artificially low P/Es at the top of the cycle and high ones at the bottom. Opposite of what you'd expect.
-- **Losing money?** No P/E at all — the denominator is negative.
-- **One-off charges** distort a whole year's earnings.
-
-## Trailing vs forward P/E
-
-- **Trailing P/E:** uses the last 12 months of actual earnings.
-- **Forward P/E:** uses analyst estimates for next year. More useful for growth stocks, but analysts are often wrong.
-
-## How to actually use it
-
-- Compare a company only to **its own sector** ([TSLA](/stocks/tsla) vs auto peers, not vs [GOOG](/stocks/goog)).
-- Compare it to **its own history** — is this P/E high or low for this company?
-- Use it as a **starting question**, not an answer. A P/E of 60 isn't "sell." It's "why is the market expecting so much growth?"
-
-More definitions like this in our [Jargon Translator](/translate).
+Open your position, look at the percentage, and ask yourself one question: do you know why it moved? If yes, add another $100 and repeat. If no, that is not a reason to quit — it is the exact gap the [Market Brief](/market-brief) and the [Learn hub](/learn) exist to close. Start there, then add the money.
 `,
   },
   {
     slug: "how-to-invest-in-stocks-with-no-experience",
     title: "How to Invest in Stocks With No Experience",
-    description: "A calm, 6-step path from zero to your first real position — no jargon, no gurus, no get-rich-quick.",
+    description:
+      "A 90-day plan from complete beginner to first real position — the money you need in place first, the fifteen terms that actually come up, and a week-by-week schedule that ends in a trade you understand.",
     publishedAt: "2026-07-11",
-    readMinutes: 7,
-    tickers: ["VOO", "VTI"],
-    tags: ["beginner", "getting-started"],
+    readMinutes: 10,
+    tickers: ["VOO", "VTI", "SPY"],
+    tags: ["beginner", "getting-started", "glossary"],
     category: "Beginner Basics",
+    imageAlt:
+      "A gold coin beside a step-by-step rising chart, representing a beginner's first 90 days of learning to invest",
     body: `
-## Step 1: Fix your money first
+Most "how to start investing" advice fails in the same place: it tells you to open an account and buy an index fund, then stops. That is technically correct and practically useless, because the part people struggle with is not the buy button. It is the six weeks after, when the position is red and nobody has explained why.
 
-Investing is what you do with money you don't need for at least 3–5 years. Before your first trade, make sure you have: (1) a small emergency buffer, (2) any high-interest debt paid down, and (3) an income you're not stressed about.
+So this is a 90-day plan instead of a list of tips. It assumes zero experience and it ends with you owning something you can explain to another person.
 
-## Step 2: Pick a broker, not a "platform"
+## Days 1–7: get the money right before the market
 
-You need a brokerage account — the boring kind. Fidelity, Schwab, Robinhood, Public. Skip anything that markets itself around "signals," "AI picks," or "beat the market."
+You cannot invest your way out of a cash problem, and market timing does not fix a 24% credit card APR. Before anything else:
 
-## Step 3: Understand the two things you can actually buy
+1. **Hold one month of expenses in cash.** Not six — one is enough to start. It stops a flat tire from becoming a forced sale.
+2. **Kill debt above roughly 8% interest.** Paying off a 24% balance is a guaranteed 24% return. No stock offers that with certainty.
+3. **Name your time horizon.** Money you need inside three years does not belong in stocks. Say the number out loud: "this is money I will not touch until 2031."
 
-- **Index funds / ETFs:** you own a tiny slice of hundreds of companies. Boring, historically effective.
-- **Individual stocks:** you own one company. More upside, way more volatility.
+If you fail this week, do not skip to week two. Everything downstream depends on being able to hold through a bad month.
 
-For your first year, we'd say: mostly ETFs, one or two individual companies you understand and use.
+## Days 8–21: the fifteen terms that actually come up
 
-## Step 4: Practice in a simulator
+You do not need a glossary of 200 words. In your first month you will meet about fifteen, and here they are in one sentence each:
 
-Before real money, do 5–10 fake trades in a [free simulator](/sim). Buy, sell, watch it move, get comfortable with the buttons. This step is skipped by 90% of new investors and it's why so many quit after their first loss.
+- **Share** — one unit of ownership in a company.
+- **Ticker** — the short code that identifies it, like VOO or AAPL. Tickers are how every quote, chart, and news feed refers to a company, so learning to read one is step zero.
+- **Market cap** — share price × total shares. This, not share price, tells you how big a company is.
+- **ETF** — a single ticker that holds a basket of companies.
+- **Index** — a scoreboard of a group of stocks, like the S&P 500.
+- **Bid / ask** — the highest price a buyer will pay and the lowest a seller will take. The gap between them is the spread, and it is a hidden cost.
+- **Market order** — buy now at whatever the price is. **Limit order** — buy only at your price or better.
+- **Volume** — how many shares traded. High volume on a move means the move is real.
+- **EPS** — profit divided by shares outstanding.
+- **P/E ratio** — price divided by EPS, covered fully in [what P/E ratio actually means](/blog/what-does-pe-ratio-mean).
+- **Dividend** — cash the company pays you for holding.
+- **Earnings report** — the quarterly scorecard, walked through in [how to read an earnings report](/blog/how-to-read-earnings-report).
+- **Volatility** — how violently the price swings, in either direction.
+- **Drawdown** — how far you are down from the peak.
+- **Position size** — how much of your money is in one thing. The most underrated term on this list.
 
-## Step 5: Make the first real trade small
+When something outside this list shows up in an article — "sequential margin compression," "hawkish guidance" — paste the paragraph into the [Jargon Translator](/translate) instead of pretending you understood it. It rewrites the article in plain English and keeps the numbers intact.
 
-$50–$200. Small enough that a bad outcome doesn't scar you. Big enough that you actually care.
+## Days 22–45: trade fake money badly, on purpose
 
-## Step 6: Do nothing for 30 days
+This is the part that gets skipped, and skipping it is why so many people quit after one loss.
 
-Watch the price go up and down without touching anything. Notice how you feel when it's red. That's the real lesson — the trade itself was just an excuse to learn.
+Open the [simulator](/simulator), take the $100,000 virtual balance, and place at least ten trades. Not careful trades — varied ones. Buy a boring ETF. Buy a volatile tech name. Buy something right before its earnings date, which you can find on the [calendar](/calendar). Deliberately buy something after it has already run 30% so you can watch what happens.
 
-## What to skip in year one
+The goal is not profit. The goal is to have felt these five things before real money is involved:
 
-- Options
-- Leverage / margin
-- Day trading
-- Crypto (unless you're specifically here for it)
-- Anything marketed as "signals" or "alerts"
+- Watching a position drop 8% and doing nothing.
+- Placing a limit order and having it not fill.
+- Owning a stock through an earnings report.
+- Seeing your total balance move while you were asleep.
+- Reading the plain-English explanation of why one of your holdings dropped, and realizing it had nothing to do with the company.
 
-If you want structured lessons instead of guessing, our [Learn hub](/learn) covers basics → portfolios → indicators in short, plain-English modules.
+## Days 46–75: build a real watchlist
 
-If you want to see what a broad-market fund actually holds and how it trades, start with [VOO](/stocks/voo) or [VTI](/stocks/vti).
+Now narrow. Use the [screener](/screener) to filter for companies above a few billion in market cap with reasonable trading volume, and add eight to twelve names to your [watchlist](/watchlist) that pass one filter: **you can explain what the company sells to a twelve-year-old.**
+
+Then watch them for a month without buying. Every week, open the [Market Brief](/market-brief) and see whether any of your names show up in the movers. When one does, click through and read why. This is the single highest-leverage habit in the whole plan — you are learning cause and effect on companies you have chosen to care about.
+
+## Days 76–90: buy one thing, small
+
+Pick one. Size it so that a 30% loss would annoy you but not hurt you — for most beginners that is $100 to $500. Place a market order during regular hours. Write down, in one sentence, why you bought it and what would make you sell.
+
+Then stop. Do not check it daily. Set a reminder for 30 days out.
+
+## What to deliberately avoid in year one
+
+Options, margin, leverage, short selling, day trading, and anything sold as "signals" or "alerts." Every one of these amplifies mistakes you do not yet know you are making. I learned that in a simulator by blowing up a short position that I was certain was safe, which cost me nothing but taught me everything — that story is in [why I built this site](/blog/why-i-built-integralstocks).
+
+## The honest expectation
+
+Ninety days in, you will own one small position, understand maybe fifteen terms, and have a watchlist. You will not be good at this yet. But you will have replaced the vague anxiety of "investing is complicated" with a specific, boring routine, and the routine is what compounds. Structured lessons for the next ninety days are in the [Learn hub](/learn).
 `,
   },
   {
-    slug: "stock-market-terms-explained-simply",
-    title: "Stock Market Terms Explained Simply (Beginner Glossary)",
-    description: "The 20 stock market terms you'll actually run into in your first month — market cap, bid/ask, dividend, P/E — in one sentence each, no jargon.",
-    publishedAt: "2026-07-14",
-    tickers: ["AAPL", "MSFT"],
-    readMinutes: 8,
-    tags: ["glossary", "beginner", "definitions"],
-    category: "Beginner Basics",
+    slug: "how-to-read-a-stock-chart-for-beginners",
+    title: "How to Read a Stock Chart (for Complete Beginners)",
+    description:
+      "A chart is answering three questions at once. Learn to read price, time, and volume together, work through a real 5% move line by line, and spot support and resistance without kidding yourself.",
+    publishedAt: "2026-07-05",
+    readMinutes: 10,
+    tickers: ["AAPL", "MSFT", "NVDA", "SPY"],
+    tags: ["charts", "beginner", "technical-analysis"],
+    category: "Technical Analysis",
+    imageAlt:
+      "A green and red candlestick chart with a rising trendline and volume bars beneath it, labelled for a beginner reading price action",
     body: `
-## The 20 terms you'll actually hear
+The first time I opened a candlestick chart I closed it in about four seconds. It looked like a heart monitor attached to something in distress. What finally made charts click for me was realizing a chart is not a prediction machine. It is a record of an argument between buyers and sellers, and it is only ever answering three questions.
 
-**Stock / share** — a tiny slice of ownership in a company.
+1. What is the price now, and what path did it take to get here?
+2. Is this move big or small **for this particular stock**?
+3. How many people were involved in the move?
 
-**Ticker** — the short code that identifies a stock (AAPL = Apple). More in [what is a stock ticker](/blog/what-is-a-stock-ticker).
+Everything else — patterns, indicators, trendlines — is a variation on those three. Let's read a chart properly.
 
-**Market cap** — total value of all a company's shares combined (price × shares outstanding). Big = "large cap", small = "small cap."
+## The axes, and the one setting beginners get wrong
 
-**P/E ratio** — price ÷ earnings per share. See [what does P/E ratio mean](/blog/what-does-pe-ratio-mean).
+The vertical axis is price per share. The horizontal axis is time. The setting that quietly misleads people is the **range selector**.
 
-**EPS (earnings per share)** — the company's profit divided by number of shares.
+Pull up [AAPL](/stocks/aapl) and flip between 1D, 1M, and 1Y. Same company, three different stories: a stock can be down 1.2% today, up 6% on the month, and down 14% on the year, all at once. All three are true. If you only ever look at one range, you are not analyzing — you are being framed by a default setting.
 
-**Dividend** — cash a company pays you just for holding the stock. Usually quarterly.
+The second setting is **linear vs log scale**. On a log chart, $10 → $20 takes the same vertical space as $100 → $200, because both are +100%. For long-term charts log is more honest; for your first year, leave it linear and just be aware the option exists.
 
-**Bid / ask** — highest price a buyer will pay / lowest price a seller will accept. The gap is the *spread*.
+## Reading a candle in ten seconds
 
-**Volume** — how many shares changed hands today.
+Each candle covers one slice of time. It shows four numbers:
 
-**Bull market / bear market** — market broadly going up / broadly going down.
+- **Open** — price at the start of the period
+- **Close** — price at the end
+- **High / low** — the extremes, drawn as the thin wick
 
-**Volatility** — how wildly a stock price moves. High volatility = big daily swings.
+Green (or hollow) means the close was above the open. Red means below. The **body** is the argument that was settled; the **wick** is the argument that was rejected. A candle with a long lower wick means sellers pushed the price down hard and buyers pushed it all the way back — that is a genuinely different event from a small red candle, even if both end the day down.
 
-**Index** — a basket of stocks used as a benchmark. S&P 500, Nasdaq 100, Dow.
+If candles feel like too much on day one, switch the chart to the mountain view. You lose the open/high/low detail but the trend is easier to see, and trend is what matters first.
 
-**ETF** — a fund you buy like a stock that holds a whole basket of things (like an index).
+## Volume: the part beginners ignore and professionals check first
 
-**Order types:**
-- **Market order** — buy/sell right now at whatever price
-- **Limit order** — only buy/sell at your target price or better
-- **Stop-loss** — auto-sell if it drops to X
+Volume is the bar chart underneath. It counts shares traded.
 
-**Long / short** — betting a stock goes up (long) or down (short). Beginners: stay long.
+Here is the rule that took me a year to internalize: **a price move without volume is a rumor; a price move with volume is a decision.**
 
-**Portfolio** — everything you own, together.
+Worked example. A stock trades an average of 4 million shares a day and closes up 5%:
 
-**Diversification** — not putting it all in one stock. Reduces risk.
+- If that day's volume was 3.1 million — below average — the move was thin. A handful of buyers pushed a quiet tape. It very often gives the move back.
+- If volume was 19 million — nearly 5× normal — something happened. Earnings, an upgrade, a product announcement, index inclusion. Institutions moved size.
 
-**Rebalancing** — periodically resetting your portfolio back to your target mix.
+Same 5% on the chart. Completely different meaning. When I see a big move now, I look at the volume bar before I read a single headline.
 
-**IPO** — Initial Public Offering. A company selling shares to the public for the first time.
+## Working through a real move, line by line
 
-**Split** — a company divides its shares (e.g. 4-for-1). Same value, more shares.
+Say you open [NVDA](/stocks/nvda) and see this on the daily chart:
 
-**Yield** — the % return a dividend gives you at the current price.
+| What you see | What it tells you |
+| --- | --- |
+| Price gapped up from $178 to $191 at the open | Something happened outside market hours — news, earnings, or guidance |
+| Volume bar is 3× the neighbouring bars | Real participation, not drift |
+| The candle has a long upper wick, closing at $184 | Buyers pushed to $193 and got sold into; the enthusiasm faded intraday |
+| The next two candles are small and red on low volume | Digestion, not reversal — few people are trading it |
 
-## Want to translate a specific article?
+Reading that in sequence gives you an actual narrative: good news, strong initial buying, profit-taking into the strength, then a quiet pause. You did not need a single indicator.
 
-Paste any financial article into our [Jargon Translator](/translate) and it'll rewrite the whole thing in plain English, with a glossary.
+Then you do the part most chart tutorials leave out: you go find out **what the news was.** Open the stock page and read the plain-English explanation of the move, or check the [Market Brief](/market-brief) for that day. A chart tells you that something happened and how much conviction was behind it. It never tells you what.
 
-Every term above shows up on a real quote page — open [AAPL](/stocks/aapl) or [MSFT](/stocks/msft) and try to name each number you see.
+## Support and resistance, without the mysticism
+
+**Support** is a price area where buyers have repeatedly shown up. **Resistance** is where sellers have. They exist because they are where people made decisions — a stock that stalled three times at $250 has a lot of holders who bought at $250 and want to get out even.
+
+Two honest caveats:
+
+- They are zones, not lines. $248–$252, not exactly $250.
+- The more times a level is tested, the weaker it usually becomes, not stronger. Each test consumes the orders sitting there.
+
+Draw them with a flat horizontal line on a weekly chart, using closing prices rather than wicks. If you need seven trendlines to see a pattern, the pattern is not there.
+
+## The five mistakes I see constantly
+
+- **Reading a 1D chart as if it were a company's story.** Today's 2% move is noise on the scale of your holding period.
+- **Ignoring volume entirely.** It is the confirmation layer for everything else.
+- **Confusing a low share price with a cheap company.** A $6 stock is not on sale.
+- **Finding patterns after the fact.** Everything looks like a head-and-shoulders once you know the outcome. Mark your level *before* the move, not after.
+- **Trading a chart with no idea what the company does.** A chart is one input. [Picking a first stock](/blog/how-to-pick-your-first-stock) covers the other half.
+
+## Practice, cheaply
+
+Pick three names — one index ETF like [SPY](/stocks/spy), one steady large-cap like [MSFT](/stocks/msft), one volatile one like [NVDA](/stocks/nvda) — and add them to your [watchlist](/watchlist). Every day for two weeks, look at each chart for 60 seconds and write one sentence: what happened, and was volume above or below average. Fourteen days of that will teach you more than any pattern list.
+
+When you are ready to act on a read, do it in the [simulator](/simulator) first, where being wrong costs a leaderboard place instead of rent. More structured chart work is in the [Learn hub](/learn/reading).
 `,
   },
   {
-    slug: "how-much-money-do-i-need-to-start-investing",
-    title: "How Much Money Do I Need to Start Investing?",
-    description: "The honest answer to 'how much do I need to start investing?' — including why $10 is a real starting point today, and when it isn't.",
-    publishedAt: "2026-07-17",
-    tickers: ["VOO", "AAPL"],
-    readMinutes: 5,
-    tags: ["beginner", "getting-started"],
-    category: "Beginner Basics",
+    slug: "what-does-pe-ratio-mean",
+    title: "What Does P/E Ratio Mean? (Explained With Real Math)",
+    description:
+      "The most quoted number in investing, worked out with actual arithmetic — trailing vs forward, why a P/E of 8 can be a trap and 45 can be reasonable, and the three comparisons that make it useful.",
+    publishedAt: "2026-07-08",
+    readMinutes: 9,
+    tickers: ["AAPL", "TSLA", "GOOG", "KO"],
+    tags: ["fundamentals", "valuation", "beginner", "stock-research"],
+    category: "Stock Research",
+    imageAlt:
+      "A magnifying glass over a company earnings report showing a price-to-earnings calculation and comparison bars",
     body: `
-## The honest answer: less than you think
+## Start with the arithmetic, because it is genuinely simple
 
-Because of fractional shares and commission-free brokers, **you can start investing with less than $10 today.** That wasn't true 10 years ago. The friction is gone.
+**P/E ratio = share price ÷ earnings per share.**
 
-The real question isn't "how much do I need?" — it's "how much *should* I start with?"
+That is it. If a company's stock trades at $200 and it earned $8 per share over the last year, the P/E is 25. The plain-English translation: you are paying $25 today for every $1 of annual profit the company currently produces.
 
-## A reasonable starting range: $50–$500
+Flip it and it gets more intuitive. 1 ÷ 25 = 4%. That is the **earnings yield** — the profit the business generates each year as a percentage of what you paid. Suddenly you can compare it to a savings account or a bond, which is exactly what professional investors are doing when they mutter about rates.
 
-- **Under $50:** enough to see the mechanics work, but too small to care emotionally. Fine as a warm-up.
-- **$50–$500:** the sweet spot for a first year. Big enough to care about, small enough that a bad trade won't hurt.
-- **$500–$5,000:** start diversifying across 3–5 ETFs or stocks.
-- **$5,000+:** worth reading about tax-advantaged accounts (Roth IRA, 401k) before you deploy.
+## Why share price alone tells you nothing
 
-## Costs to check before you deposit
+This is the misconception the P/E exists to kill. Two companies, both trading at exactly $50:
 
-- **Account minimum:** most modern brokers = $0.
-- **Trading commissions:** should be $0 on U.S. stocks and ETFs.
-- **Fractional shares:** confirm the broker supports them if you have less than $200.
-- **Withdrawal fees:** rare, but check.
+| | Company A | Company B |
+| --- | --- | --- |
+| Share price | $50 | $50 |
+| Earnings per share | $10.00 | $0.50 |
+| P/E | 5 | 100 |
+| Earnings yield | 20% | 1% |
+| You are paying | $5 per $1 of profit | $100 per $1 of profit |
 
-## What NOT to start with
+Identical price tags, twentyfold difference in what you get. Anyone who tells you a stock is "cheap" because the share price is low, without mentioning earnings, is telling you nothing at all.
 
-- **Money you need in 12 months.** That's not investing money, that's savings.
-- **Money from a credit card or loan.** Ever.
-- **Money you'd panic-sell if it dropped 30%.**
+## Trailing vs forward, and why the gap matters
 
-## The 3-bucket rule
+- **Trailing P/E (TTM)** uses the last twelve months of actual, reported earnings. It is a fact.
+- **Forward P/E** uses analysts' estimates for the next twelve months. It is an opinion with a spreadsheet attached.
 
-If you're totally new, split whatever you have into 3 mental buckets:
+The gap between them is information. If a stock trades at a trailing P/E of 60 and a forward P/E of 28, the market expects earnings to roughly double. Your job as an investor is to decide whether that expectation is plausible — not to congratulate yourself for finding the lower number.
 
-1. Emergency cash (in a high-yield savings account)
-2. Short-term goals (also cash / T-bills)
-3. Actually-investing money — this is what goes into stocks
+Analysts are also systematically optimistic. Treat forward P/E as the bull case, not the base case.
 
-Only bucket 3 should touch the market. If bucket 1 is empty, don't invest yet.
+## When a low P/E is a trap
 
-Once you're ready, try a few practice trades in our [simulator](/sim) before real money. Same live prices, no risk.
+I lost money on this exact mistake in a simulator, which is the cheapest place to lose it. I bought a name at a P/E of 7 because everything else in the market looked expensive, and I was proud of myself for about six weeks. The stock kept sliding. The P/E was 7 because the market had already concluded next year's earnings would be far lower — the denominator was about to collapse, and the price was simply there first.
 
-With fractional shares, even $10 buys a slice of [VOO](/stocks/voo) or [Apple (AAPL)](/stocks/aapl).
-`,
-  },
-  {
-    slug: "paper-trading-vs-real-trading",
-    title: "Paper Trading vs Real Trading: What Actually Transfers",
-    description: "Paper trading teaches some skills perfectly and others not at all. Here's what a simulator will and won't prepare you for.",
-    publishedAt: "2026-07-19",
-    tickers: ["SPY", "TSLA"],
-    readMinutes: 6,
-    tags: ["simulator", "paper-trading", "psychology"],
-    category: "Beginner Basics",
-    body: `
-## What paper trading is great at
+The technical name is a **value trap**. The pattern shows up in three places:
 
-Paper trading — trading in a simulator with fake money — is genuinely useful. It teaches:
+- **Cyclical businesses** — automakers, oil, shipping, homebuilders. Their P/E is *lowest* at the peak of the cycle, when earnings are at a record, and *highest* at the bottom. It is inverted from intuition and it catches beginners every single cycle.
+- **Businesses in structural decline** — the earnings are real today and shrinking permanently.
+- **One-off earnings** — an asset sale or legal settlement inflates a single year's EPS, deflating the P/E artificially.
 
-- **The mechanics.** Placing orders, reading the confirmation, understanding fills, seeing settlement.
-- **Order types.** Market, limit, stop-loss — try each one and see what actually happens.
-- **Chart-reading discipline.** You can test "I only buy when X happens" without paying tuition.
-- **Position sizing math.** How much of the account does a 5% position feel like? A 20% one?
-- **Portfolio tracking.** Watching multiple positions move at once.
+## When a high P/E is perfectly rational
 
-That's real transferable skill. It's the same reason pilots train in simulators.
+The mirror-image error is calling every high P/E a bubble. A stable, slow-growing consumer company like [KO](/stocks/ko) and a fast-growing platform will not, and should not, trade at the same multiple.
 
-## What paper trading is bad at
+Rough intuition: if a company can grow earnings 25% a year for five years, today's $1 of profit becomes about $3.05. A P/E of 45 on today's earnings is a P/E of roughly 15 on year-five earnings. The multiple is a statement about the future, not the present. The question is never "is 45 too high" — it is **"what growth rate does 45 require, and is that realistic?"**
 
-- **The gut punch of a real loss.** Losing $200 of imaginary money feels like nothing. Losing $200 of real money teaches you what your actual risk tolerance is.
-- **The urge to check.** Real positions make you refresh 30 times a day for the first week. Paper ones don't.
-- **The temptation to over-trade.** Because there's no cost, simulators encourage you to churn — which is the opposite of what real investing rewards.
-- **Slippage on illiquid stocks.** A $10k paper order fills instantly. A $10k real order in a small stock might move the price.
+## The three comparisons that make P/E useful
 
-## The pattern that actually works
+Never look at a P/E in isolation. Compare it three ways:
 
-1. **Paper trade for 30–60 days.** Learn the buttons, test your rules, keep a journal.
-2. **Go live with 10% of what you planned.** Real, but small enough that a total loss is annoying, not devastating.
-3. **Scale up only after you've seen a full down-week.** If you didn't panic-sell, your paper skills probably do transfer.
+1. **Against its own sector.** Compare [TSLA](/stocks/tsla) to other automakers and [GOOG](/stocks/goog) to other platforms. Comparing across sectors is meaningless — software and airlines live in different universes.
+2. **Against its own history.** Is this company at the high or low end of its own five-year range? A business at a P/E of 22 that normally trades at 30 is telling you something changed. Go find out what.
+3. **Against the market.** The S&P 500 has historically averaged somewhere in the high teens. Knowing where the index sits gives you a baseline for "expensive."
 
-## Ready to start?
+## A short worked case study
 
-Our [free simulator](/sim) uses the same live prices as our [stock pages](/stocks), so what you learn in the sim maps 1:1 to what you'll see when you go live.
+Two companies in the same industry:
 
-Practise on something volatile and something calm — compare [Tesla (TSLA)](/stocks/tsla) with [SPY](/stocks/spy) to feel the difference in risk.
+| | Company X | Company Y |
+| --- | --- | --- |
+| Price | $120 | $120 |
+| Trailing EPS | $4.00 | $2.00 |
+| Trailing P/E | 30 | 60 |
+| EPS growth, last 3 years | 4% per year | 38% per year |
+| Forward P/E | 28 | 34 |
+
+On trailing numbers, X looks half the price of Y. On forward numbers the gap nearly closes, because Y's earnings are compounding fast. Neither is automatically the better buy — but if you had stopped at "30 is cheaper than 60," you would have missed the entire story. That is the difference between reading a ratio and using one.
+
+## Where P/E simply does not apply
+
+- **Companies losing money.** Negative earnings mean no meaningful P/E. Screeners often show a blank or a dash.
+- **Banks and insurers**, where price-to-book is usually more informative.
+- **REITs**, where funds from operations replaces earnings.
+- **Early-stage growth companies**, where price-to-sales is the common (imperfect) substitute.
+
+## How to actually use this tomorrow
+
+Open the [screener](/screener), sort a sector by P/E, and pick the highest and the lowest. Then spend fifteen minutes on each answering one question: what does the market believe about this company's next three years? Read the latest [earnings report](/blog/how-to-read-earnings-report) to check whether the belief is holding up.
+
+A P/E is not a verdict. It is a well-phrased question. Any article that hands you a threshold — "under 15 is a buy" — is selling you certainty that does not exist. Paste one of those articles into the [Jargon Translator](/translate) and watch how little is left once the jargon comes out.
 `,
   },
   {
     slug: "how-to-pick-your-first-stock",
-    title: "How to Pick Your First Stock (Beginner Framework)",
-    description: "A 5-question framework for choosing your first individual stock — designed for people who've never done this before.",
-    publishedAt: "2026-07-21",
-    readMinutes: 6,
-    tickers: ["AAPL", "MSFT", "NKE", "COST", "SBUX"],
-    tags: ["beginner", "stock-picking"],
-    category: "Beginner Basics",
-    body: `
-## Your first stock doesn't need to be a home run
-
-It just needs to teach you something. The best first stocks are:
-
-- A company you actually understand
-- Large enough that it won't disappear
-- Volatile enough to make the news occasionally
-
-Boring, big, and familiar beats "hot pick" every time.
-
-## The 5-question framework
-
-### 1. Do I use this company's product?
-
-If you can't explain what the company sells in one sentence, skip it. Try [AAPL](/stocks/aapl), [MSFT](/stocks/msft), [NKE](/stocks/nke), [COST](/stocks/cost), or [SBUX](/stocks/sbux) as candidates.
-
-### 2. Is it profitable?
-
-Check the P/E ratio (see [what does P/E mean](/blog/what-does-pe-ratio-mean)). If there's no P/E, the company is losing money. Fine for later, not for stock #1.
-
-### 3. Is it big enough not to vanish?
-
-Market cap > $10B ("large cap") is a reasonable floor. Small caps can be great — but not for training wheels.
-
-### 4. Do I understand roughly *why* it goes up and down?
-
-Read one earnings report and one recent news story. If neither made sense, use the [Jargon Translator](/translate) or pick a simpler company.
-
-### 5. Would I still hold it if it dropped 30% next month?
-
-If the answer is "no, I'd sell," you're not investing — you're gambling on it going up next week. Different game, different rules.
-
-## Position sizing for your first stock
-
-- Never more than 25% of your account in one first stock
-- Ideally 5–10%
-- The rest in an ETF while you learn
-
-## Test it in a simulator
-
-Before real money, run your pick through our [simulator](/sim) for a couple of weeks. If you're bored, great — that's what a good long-term position feels like.
-`,
-  },
-  {
-    slug: "what-is-a-stock-ticker",
-    title: "What Is a Stock Ticker? (And How to Read One)",
-    description: "AAPL, MSFT, ^GSPC — what those short codes actually mean, why they exist, and how to look up any of them in seconds.",
-    publishedAt: "2026-07-23",
-    readMinutes: 4,
-    tickers: ["AAPL", "MSFT", "SPY"],
-    tags: ["beginner", "glossary"],
-    category: "Beginner Basics",
-    body: `
-## Definition, in one sentence
-
-A **stock ticker** (or ticker symbol) is a short code — usually 1 to 5 letters — that uniquely identifies a company's stock on an exchange.
-
-- [AAPL](/stocks/aapl) = Apple
-- [MSFT](/stocks/msft) = Microsoft
-- [SPY](/stocks/spy) = SPDR S&P 500 ETF
-
-## Why tickers exist
-
-Before computers, prices scrolled across a physical "ticker tape." Every second saved by using a 4-letter code instead of a full company name mattered. The names stuck.
-
-## How to read one
-
-- **1–3 letters, U.S. exchange:** usually on the NYSE (older, bigger names: T, F, GE, IBM).
-- **4 letters, U.S. exchange:** usually on the Nasdaq (tech-heavy: AAPL, MSFT, GOOG, AMZN).
-- **5 letters ending in a special letter:** class shares, preferred stock, or a special situation (BRK.B, GOOGL vs GOOG).
-- **Starting with ^:** an index, not a stock you can buy directly (^GSPC = S&P 500, ^IXIC = Nasdaq Composite).
-- **Ending in -USD:** a crypto pair (BTC-USD, ETH-USD).
-
-## Tickers are exchange-specific
-
-Same company can have different tickers in different countries. Apple is AAPL in New York, and different codes on foreign exchanges. When you type a ticker into any brokerage, it defaults to the U.S. listing.
-
-## How to look one up
-
-Type it into our search bar (top of every page). Autocomplete will show the company name, exchange, and live price. Try it with the company name too — "apple" resolves to AAPL.
-
-## Related reading
-
-- [Stock market terms explained simply](/blog/stock-market-terms-explained-simply)
-- [How to read a stock chart for beginners](/blog/how-to-read-a-stock-chart-for-beginners)
-`,
-  },
-  {
-    slug: "why-i-built-integralstocks",
-    title: "Why I Built IntegralStocks: The Story Behind the Platform",
-    description: "The story behind IntegralStocks, why it was created, and how one major simulator mistake became the foundation for a beginner-focused investing education platform.",
-    publishedAt: "2026-07-28",
-    tickers: ["SPY", "AAPL"],
-    readMinutes: 8,
-    category: "Platform Story",
-    tags: ["from-editorial"],
-    body: `
-IntegralStocks began with a simple idea: investing education should be easier to understand. When I first started learning about the stock market, I noticed that many platforms seemed built for people who already knew the language of finance. Charts, ratios, order types, market news, risk warnings, and analyst opinions were everywhere, but beginner-friendly explanations were harder to find.
-
-My name is William Wolenski, and I created IntegralStocks to make the investing learning process clearer, safer, and more practical. The goal was not to create a site that tells people what to buy. The goal was to create a platform that helps beginners understand what they are looking at before they make decisions.
-
-## The Competition That Started Everything
-
-The original version of IntegralStocks came from a school stock market competition. I wanted to build a tool that could help me understand stocks faster and compare opportunities more clearly. I experimented with artificial intelligence, stock summaries, bullish and bearish indicators, portfolio tools, and educational features that made complicated financial information easier to digest.
-
-During the competition, I became overconfident. At one point, my simulated portfolio grew dramatically. I felt like I was making smart decisions, but I was also taking more risk than I understood. Eventually, I entered a short position that moved against me. Even with stop losses, the trade became a disaster in the simulator. What had looked like a winning strategy turned into a major lesson about risk, leverage, and emotional decision-making.
-
-## The Lesson That Changed the Platform
-
-That experience changed the direction of IntegralStocks. I realized that beginners do not just need stock picks or price charts. They need context. They need to understand diversification, position sizing, volatility, short selling, stop losses, market psychology, and the danger of chasing hype without a plan.
-
-A simulator is powerful because it allows mistakes to become lessons instead of financial damage. IntegralStocks was built around that idea. Users should be able to practice, research, and learn before risking real money. The best beginner investing tools should encourage patience, not panic. They should teach people how to think, not pressure them to act quickly.
-
-## Why IntegralStocks Exists
-
-IntegralStocks exists to help beginners build confidence. The stock market can be intimidating, especially for students and young investors who are just starting to learn. Financial education should not feel like a locked door. It should feel like a path that anyone can begin walking with the right explanations and tools.
-
-The platform combines educational articles, simulated investing, research tools, and a beginner-friendly voice. Every part of the site is meant to answer one question: how can this help someone make smarter, more informed decisions?
-
-## What Comes Next
-
-The long-term vision for IntegralStocks is to become a trusted learning platform for beginner investors. That means more articles, better explanations, stronger simulator tools, and a clearer connection between financial education and real-world decision-making.
-
-I built IntegralStocks because I made mistakes, learned from them, and wanted to turn those lessons into something useful. If the platform helps even one beginner slow down, understand risk, and make a more thoughtful decision, then it is doing what it was created to do.
-
-The clearest example of what we were going for is a plain stock page like [AAPL](/stocks/aapl) or the market itself at [SPY](/stocks/spy).
-`,
-  },
-  {
-    slug: "how-to-choose-your-first-stock",
-    title: "How to Choose Your First Stock: A Beginner-Friendly Checklist",
-    description: "A practical checklist for choosing a first stock by focusing on understandable businesses, financial stability, risk, and long-term thinking.",
-    publishedAt: "2026-07-27",
-    tickers: ["AAPL", "COST"],
-    readMinutes: 7,
-    category: "Investing Basics",
-    tags: ["from-editorial"],
-    body: `
-Choosing your first stock can feel overwhelming. There are thousands of public companies, constant headlines, social media opinions, analyst upgrades, analyst downgrades, and charts that move every second. A beginner may feel like the only way to succeed is to find a perfect stock immediately. That is not true.
-
-The better first goal is to learn how to evaluate a business calmly. Investing is not about guessing which ticker will jump tomorrow. It is about understanding what you own, why you own it, and what risks come with that decision.
-
-## Start With Businesses You Understand
-
-A strong first stock candidate is usually a company you can explain in simple language. You should be able to describe what the company sells, who its customers are, how it makes money, and why people might continue buying from it in the future.
-
-Familiarity is not enough by itself. A popular brand can still be a poor investment if it is too expensive, losing money, poorly managed, or facing serious competition. However, familiarity gives beginners a useful starting point. It connects the stock symbol to a real business.
-
-## Ask How the Company Makes Money
-
-Before buying any stock, ask yourself one basic question: how does this company actually generate revenue? If the answer is unclear, slow down. A business model that you cannot explain may be too complicated for your first investment.
-
-Good beginner examples are often companies with clear products and services: stores that sell goods, software companies with subscriptions, restaurants that sell food, or manufacturers that sell physical products. The clearer the business model, the easier it is to follow future results.
-
-## Look for Stability Before Excitement
-
-Many beginners are attracted to exciting stocks because they promise fast growth. But excitement is not the same as quality. A stable company with real demand, consistent revenue, and a history of surviving different market conditions may be a better first learning experience than a speculative company driven mostly by hype.
-
-## Use a Simple Checklist
-
-- Can I explain what this company does in one sentence?
-- Does the company have real customers and clear demand?
-- Does it have competitors, and do I understand them?
-- Is the company profitable or moving toward profitability?
-- Would I still be calm if the stock dropped temporarily?
-- Am I buying because of research, or because of hype?
-
-## The Main Lesson
-
-Your first stock does not need to be perfect. It should help you learn. A careful, understandable investment is usually more valuable for a beginner than a risky trade that only looks exciting because the price is moving quickly.
-
-Two beginner-friendly places to apply this checklist: [Apple (AAPL)](/stocks/aapl) and [Costco (COST)](/stocks/cost) — both are businesses you can explain in one sentence.
-`,
-  },
-  {
-    slug: "stocks-vs-etfs",
-    title: "Stocks vs. ETFs: Which Is Better for Beginners?",
-    description: "A clear explanation of individual stocks and ETFs, including diversification, risk, simplicity, and how beginners can use both thoughtfully.",
-    publishedAt: "2026-07-26",
-    tickers: ["VOO", "AAPL"],
-    readMinutes: 7,
-    category: "Investing Basics",
-    tags: ["from-editorial"],
-    body: `
-One of the first choices a new investor faces is whether to buy individual stocks or exchange-traded funds, usually called ETFs. Both can be useful, but they are not the same. A stock gives you ownership in one company. An ETF can give you exposure to many companies at once.
-
-## What an Individual Stock Gives You
-
-When you buy a stock, your result depends heavily on that individual company. If the business performs well and investors become more confident, the stock price may rise. If the company disappoints, faces competition, loses money, or becomes less attractive to investors, the price may fall.
-
-Individual stocks can be exciting because they allow you to study and own specific companies. But they also create concentrated risk. If one stock is too large a part of your portfolio, one bad event can have a major effect.
-
-## What an ETF Gives You
-
-An ETF is a basket of investments that trades on an exchange like a stock. Some ETFs track broad market indexes. Others focus on sectors, themes, bonds, dividends, or international markets. Because ETFs may hold many investments, they can reduce the effect of one company performing poorly.
-
-This diversification is one reason ETFs are often considered beginner-friendly. A broad ETF can help a new investor participate in the market without needing to pick every individual company correctly.
-
-## The Trade-Off
-
-Individual stocks may offer more focused upside if you choose well, but they also carry more focused downside. ETFs usually provide broader exposure and smoother diversification, but they may not rise as dramatically as a single winning stock.
-
-## A Practical Beginner Strategy
-
-Many beginners use ETFs as a foundation and individual stocks as a smaller learning portion of the portfolio. This allows them to build diversified exposure while still practicing company research.
-
-The best choice depends on your goals, risk tolerance, and willingness to research. What matters most is understanding what you own and why you own it.
-
-Compare the two side by side: the ETF [VOO](/stocks/voo) versus the single stock [Apple (AAPL)](/stocks/aapl).
-`,
-  },
-  {
-    slug: "what-is-diversification",
-    title: "What Is Diversification and Why Does It Matter?",
-    description: "Learn how diversification helps reduce risk by spreading investments across companies, sectors, and asset types.",
-    publishedAt: "2026-07-25",
-    tickers: ["VTI", "VOO"],
-    readMinutes: 6,
-    category: "Risk Management",
-    tags: ["from-editorial"],
-    body: `
-Diversification means spreading your money across different investments instead of depending on one company, one industry, or one idea. It is one of the most important risk management concepts in investing because even strong investments can go through difficult periods.
-
-## Why Concentration Can Be Dangerous
-
-If your entire portfolio is invested in one stock, your financial result depends almost completely on that company. If the company performs well, the portfolio may rise quickly. If the company struggles, the portfolio may fall sharply.
-
-Even excellent companies can face unexpected problems. A new competitor can appear. Management can make poor decisions. Regulations can change. Costs can rise. Customer demand can slow. Diversification helps reduce the damage caused by being wrong about one investment.
-
-## Diversification Across Sectors
-
-A diversified portfolio may include companies from technology, healthcare, consumer goods, energy, financial services, industrials, and other areas. Different sectors can behave differently depending on the economy. When one sector struggles, another may hold up better.
-
-## Diversification Across Investment Types
-
-Investors may also diversify across stocks, ETFs, bonds, cash, and other assets. Beginners do not need to master every asset class immediately, but they should understand that different investments can serve different purposes. Some are built for growth. Others are built for stability.
-
-## Diversification Is Not Random
-
-Diversification does not mean buying random investments. It means building a portfolio where each part has a purpose. The goal is balance, not confusion.
-
-For beginners, diversification is one of the simplest ways to make investing less stressful and more sustainable.
-
-A single broad fund like [VTI](/stocks/vti) or [VOO](/stocks/voo) is the simplest way to own hundreds of companies at once.
-`,
-  },
-  {
-    slug: "dollar-cost-averaging",
-    title: "Dollar-Cost Averaging Explained: A Simple Strategy for Consistent Investors",
-    description: "A beginner-friendly explanation of dollar-cost averaging and how consistent investing can reduce emotional decision-making.",
-    publishedAt: "2026-07-24",
-    tickers: ["VOO", "SPY"],
-    readMinutes: 7,
-    category: "Wealth Building",
-    tags: ["from-editorial"],
-    body: `
-Dollar-cost averaging is an investing strategy where you invest a fixed amount of money at regular intervals. Instead of trying to perfectly time the market, you invest consistently through both rising and falling markets.
-
-## How Dollar-Cost Averaging Works
-
-Imagine investing the same amount every week or every month. When prices are higher, your fixed contribution buys fewer shares. When prices are lower, it buys more shares. Over time, this can smooth out your average purchase price.
-
-## Why Beginners Like This Strategy
-
-Many new investors worry about buying at the wrong time. Dollar-cost averaging helps reduce that pressure. Instead of needing to know whether today is the perfect day to invest, you follow a consistent plan.
-
-## The Emotional Benefit
-
-Investing can become stressful when every decision feels huge. Dollar-cost averaging turns investing into a habit. It can make downturns feel less frightening because lower prices allow future contributions to buy more shares.
-
-## What It Does Not Guarantee
-
-Dollar-cost averaging does not guarantee profits. If the investment performs poorly over the long term, consistently buying it will not solve the problem. You still need to choose investments thoughtfully and understand risk.
-
-## The Main Lesson
-
-Dollar-cost averaging is useful because it encourages patience and discipline. For many beginners, a simple strategy followed consistently is better than an emotional strategy changed constantly.
-
-Most people run DCA into a broad index fund such as [VOO](/stocks/voo) or [SPY](/stocks/spy).
-`,
-  },
-  {
-    slug: "compound-growth",
-    title: "Compound Growth: The Quiet Force Behind Long-Term Wealth",
-    description: "Understand how compound growth works and why time can be one of the strongest advantages for young investors.",
-    publishedAt: "2026-07-23",
-    tickers: ["VOO", "MSFT"],
-    readMinutes: 6,
-    category: "Wealth Building",
-    tags: ["from-editorial"],
-    body: `
-Compound growth happens when your investment returns begin generating their own returns. It is one of the most powerful concepts in finance because it rewards patience, consistency, and time.
-
-## A Simple Way to Think About Compounding
-
-If you invest money and earn a return, your account grows. If you leave those gains invested, future returns are calculated on a larger base. Over time, the process can create a snowball effect.
-
-## Why Time Matters So Much
-
-Young investors have one advantage that cannot be easily replaced: time. Even small amounts can become meaningful when invested consistently over long periods. Starting early can matter more than starting with a large amount.
-
-## Why Compounding Feels Slow at First
-
-Compounding often looks unimpressive in the beginning. The early years may feel slow because the account is still small. Later, the growth can become more noticeable as returns build on previous returns.
-
-## How Investors Interrupt Compounding
-
-Constantly selling, panic-reacting to headlines, chasing trends, or withdrawing investments can interrupt compounding. Long-term investors often benefit from letting time do its work.
-
-The main lesson is simple: time in the market can be more powerful than trying to perfectly time the market.
-
-Look at a decade-long chart of [VOO](/stocks/voo) or [Microsoft (MSFT)](/stocks/msft) to see compounding in action.
-`,
-  },
-  {
-    slug: "emergency-fund-before-investing",
-    title: "Why an Emergency Fund Should Come Before Serious Investing",
-    description: "Why cash savings create a safer foundation before taking investment risk in the stock market.",
-    publishedAt: "2026-07-22",
-    tickers: ["VOO"],
-    readMinutes: 6,
-    category: "Financial Literacy",
-    tags: ["from-editorial"],
-    body: `
-Investing is important, but it should not replace financial stability. Before putting serious money into stocks, beginners should understand the role of an emergency fund. An emergency fund is cash set aside for unexpected expenses.
-
-## Why Cash Still Matters
-
-Stocks can rise and fall quickly. If all your money is invested and you suddenly need cash, you may be forced to sell during a downturn. That can turn a temporary market decline into a permanent loss.
-
-## Emergency Funds Reduce Panic
-
-Having money set aside can make investing emotionally easier. If markets fall, an investor with emergency savings may feel less pressure to sell because short-term needs are already covered.
-
-## How Much Is Enough?
-
-The right emergency fund depends on your situation. A teenager living at home may need less than an adult paying rent, insurance, and household bills. The principle is the same: money needed soon should not be placed at market risk.
-
-## The Foundation Comes First
-
-A strong financial foundation usually starts with budgeting, saving, avoiding unnecessary debt, and then investing for long-term goals. Skipping the foundation can make investing more stressful than it needs to be.
-
-The stock market can help build wealth, but an emergency fund helps protect your stability while you invest.
-
-Once the cash cushion is in place, the boring next step is usually a broad index fund like [VOO](/stocks/voo).
-`,
-  },
-  {
-    slug: "how-stock-market-works",
-    title: "How the Stock Market Works in Plain English",
-    description: "A simple explanation of what the stock market is, how buying and selling shares works, and why prices move.",
-    publishedAt: "2026-07-21",
-    tickers: ["SPY", "AAPL"],
-    readMinutes: 8,
-    category: "Market Education",
-    tags: ["from-editorial"],
-    body: `
-The stock market is a system where investors buy and sell ownership shares of public companies. When you buy a share of stock, you are buying a small piece of a real business. You may not control the company, but you participate in its financial story as an owner.
-
-## Why Companies Sell Stock
-
-Companies sell stock to raise money. That money can be used to build products, hire employees, expand operations, pay down debt, or fund research. In exchange, investors receive shares that can rise or fall in value.
-
-## Why Investors Buy Stock
-
-Investors buy stocks because they believe a company may become more valuable over time. If the company grows revenue, increases profits, builds stronger products, or becomes more competitive, investors may be willing to pay more for its shares.
-
-## Why Prices Move
-
-Stock prices move because buyers and sellers constantly disagree about what a company is worth. If more investors want to buy than sell, the price usually rises. If more investors want to sell than buy, the price usually falls.
-
-Prices can change because of earnings reports, interest rates, economic data, company news, competition, investor expectations, and market psychology. Sometimes the reason is clear. Other times, prices move because investors are reacting emotionally.
-
-## Investing vs. Trading
-
-Investing usually focuses on long-term ownership. Trading usually focuses on shorter-term price movement. Beginners should understand this difference because the risks, skills, and emotional demands are not the same.
-
-The stock market is not just a screen full of numbers. It is a marketplace for ownership, expectations, risk, and opportunity.
-
-The index [SPY](/stocks/spy) is the market in one line; a company like [Apple (AAPL)](/stocks/aapl) is one piece of it.
-`,
-  },
-  {
-    slug: "what-moves-stock-prices",
-    title: "What Actually Moves Stock Prices?",
-    description: "A beginner guide to earnings, expectations, interest rates, news, and investor psychology.",
-    publishedAt: "2026-07-20",
-    tickers: ["NVDA", "AAPL"],
-    readMinutes: 7,
-    category: "Market Education",
-    tags: ["from-editorial"],
-    body: `
-Stock prices move for many reasons, but one idea connects most of them: expectations. A stock price reflects what investors believe a company may be worth in the future. When expectations change, prices change.
-
-## Earnings Reports
-
-Earnings reports show how a company performed during a specific period. Investors look at revenue, profit, margins, guidance, and management commentary. A company can report strong results and still fall if investors expected even more.
-
-## Interest Rates
-
-Interest rates affect the value investors place on future profits. When rates rise, future earnings may become less attractive compared with safer alternatives. When rates fall, investors may become more willing to pay higher prices for growth.
-
-## Company News
-
-Product launches, lawsuits, leadership changes, acquisitions, regulatory decisions, and major partnerships can all move stock prices. Some news changes the long-term business outlook. Other news only affects short-term sentiment.
-
-## Investor Psychology
-
-Markets are not purely mathematical. Fear, greed, confidence, and uncertainty all influence prices. This is why a stock can sometimes move much more than the actual news seems to justify.
-
-Understanding what moves stock prices helps beginners avoid assuming every price change is meaningful. Sometimes the market is reacting to real information. Sometimes it is reacting to emotion.
-
-Watch a news-sensitive name like [Nvidia (NVDA)](/stocks/nvda) next to a steadier one like [Apple (AAPL)](/stocks/aapl) to see these forces play out.
-`,
-  },
-  {
-    slug: "bull-vs-bear-markets",
-    title: "Bull Markets vs. Bear Markets: What Beginners Should Know",
-    description: "Understand the difference between rising and falling markets and how investor behavior changes in each environment.",
-    publishedAt: "2026-07-19",
-    tickers: ["SPY", "VOO"],
-    readMinutes: 6,
-    category: "Market Education",
-    tags: ["from-editorial"],
-    body: `
-A bull market is a period when prices are generally rising and investor confidence is strong. A bear market is a period when prices are generally falling and investors are more fearful. These terms describe broad market conditions, not guaranteed outcomes for every investment.
-
-## What Bull Markets Feel Like
-
-Bull markets can make investing feel easy. Prices rise, portfolios grow, and optimism spreads. Beginners may become overconfident because many decisions appear to work during a rising market.
-
-## The Risk of Overconfidence
-
-The danger in a bull market is assuming rising prices will continue forever. Investors may take larger risks, ignore valuation, or chase stocks after they have already increased dramatically.
-
-## What Bear Markets Feel Like
-
-Bear markets test patience. Prices fall, headlines become negative, and many investors feel pressure to sell. For beginners, this can be the first real test of emotional discipline.
-
-## Why Both Matter
-
-Long-term investors experience both bull and bear markets. The goal is not to avoid every downturn. The goal is to build a strategy strong enough to survive different conditions.
-
-Bull markets reward optimism, but bear markets reward preparation.
-
-Zoom out on [SPY](/stocks/spy) or [VOO](/stocks/voo) and you can spot every bull and bear phase of the last 20 years.
-`,
-  },
-  {
-    slug: "market-corrections",
-    title: "Market Corrections Explained: Why Pullbacks Are Normal",
-    description: "A beginner-friendly guide to market corrections and why short-term declines do not always mean long-term trouble.",
-    publishedAt: "2026-07-18",
-    tickers: ["SPY"],
-    readMinutes: 6,
-    category: "Market Education",
-    tags: ["from-editorial"],
-    body: `
-A market correction is a decline that interrupts an upward trend. Corrections can feel scary, especially for beginners watching their portfolio fall for the first time. But corrections are a normal part of investing.
-
-## Why Corrections Happen
-
-Markets do not move in straight lines. Prices may decline because investors are taking profits, reacting to economic data, adjusting expectations, or becoming nervous about uncertainty.
-
-## The Emotional Challenge
-
-The hardest part of a correction is often emotional. Beginners may feel like they need to do something immediately. But reacting too quickly can lead to selling quality investments simply because prices are temporarily lower.
-
-## Ask the Right Question
-
-During a correction, ask whether the long-term reason for owning the investment has changed. If the business remains strong and your time horizon is long, a correction may not require action. If the business fundamentals have weakened, reassessment may be appropriate.
-
-## The Lesson
-
-Corrections remind investors that risk is real. They also teach patience, discipline, and the importance of owning investments you understand.
-
-Pull up a 5-year chart of [SPY](/stocks/spy) and count the 10% drops — there are more than you'd guess, and the line still rises.
-`,
-  },
-  {
-    slug: "beginner-investor-mistakes",
-    title: "The Biggest Mistakes Beginner Investors Make",
-    description: "A practical guide to avoiding overconfidence, hype, poor diversification, leverage, and emotional trading.",
-    publishedAt: "2026-07-17",
-    tickers: ["TSLA", "VOO"],
-    readMinutes: 8,
-    category: "Risk Management",
-    tags: ["from-editorial"],
-    body: `
-Beginner investors usually do not fail because they are not smart enough. They usually struggle because they underestimate risk, overreact emotionally, or copy strategies they do not fully understand. The stock market rewards patience and discipline, but it can punish overconfidence quickly.
-
-## Mistake 1: Chasing Hype
-
-Hype creates urgency. When a stock is rising quickly and everyone online is talking about it, beginners may feel like they need to buy immediately. The problem is that hype often appears after a major move has already happened.
-
-## Mistake 2: Ignoring Diversification
-
-Putting all your money into one stock or one sector creates unnecessary risk. Even if your idea is right, unexpected events can still damage a concentrated portfolio. Diversification helps reduce the impact of being wrong about any single investment.
-
-## Mistake 3: Using Leverage Too Early
-
-Margin, options, short selling, and other advanced strategies can magnify losses. Beginners may focus on the upside without understanding the downside. If you do not understand the worst-case scenario, you should not use the strategy.
-
-## Mistake 4: Panic Selling
-
-Market downturns can trigger emotional selling. Panic selling often happens after prices have already dropped, locking in losses that could have been temporary.
-
-## Mistake 5: Confusing Luck With Skill
-
-A few winning trades can make anyone feel talented. Short-term success does not always prove a strategy is good. Beginners should focus on process, risk management, and learning.
-
-Hype-driven names like [Tesla (TSLA)](/stocks/tsla) punish these mistakes fastest; broad funds like [VOO](/stocks/voo) forgive them.
-`,
-  },
-  {
-    slug: "stop-loss-orders",
-    title: "Stop-Loss Orders: Helpful Tool or False Sense of Safety?",
-    description: "Understand how stop-loss orders work, where they can help, and why they are not a perfect risk management system.",
+    title: "How to Pick Your First Stock (A Beginner Framework and Checklist)",
+    description:
+      "A repeatable eight-point checklist for choosing a first company — with a full worked example, the numbers to look up, how to size the position, and the four reasons beginners pick badly.",
     publishedAt: "2026-07-16",
-    tickers: ["TSLA", "AAPL"],
-    readMinutes: 7,
-    category: "Risk Management",
-    tags: ["from-editorial"],
-    body: `
-A stop-loss order is designed to sell a stock if it falls to a certain price. Many beginners view stop losses as a safety net. They can be helpful, but they are not perfect and they do not eliminate risk.
-
-## How a Stop Loss Works
-
-If you buy a stock at one price and set a stop loss below it, your brokerage may attempt to sell if the stock reaches that level. This can help define risk before entering a trade.
-
-## Where Stop Losses Help
-
-Stop losses can reduce emotional decision-making because the exit rule is chosen in advance. They can also help prevent a small loss from becoming much larger in normal market conditions.
-
-## Where Stop Losses Can Fail
-
-A stock may gap below the stop price, especially after major news or outside normal trading hours. In fast-moving markets, the actual sale price may be worse than expected. A stop can also trigger during temporary volatility before the stock recovers.
-
-## The Bigger Lesson
-
-A stop loss is a tool, not a complete strategy. Investors still need to think about position size, diversification, volatility, and whether the investment fits their goals.
-
-Try setting a mental stop on a volatile stock such as [Tesla (TSLA)](/stocks/tsla) and a calmer one like [Apple (AAPL)](/stocks/aapl).
-`,
-  },
-  {
-    slug: "leverage-and-shorting",
-    title: "Leverage and Short Selling: Why Beginners Should Be Careful",
-    description: "A clear explanation of why leverage and shorting can create losses larger than expected.",
-    publishedAt: "2026-07-15",
-    tickers: ["TSLA", "NVDA"],
-    readMinutes: 8,
-    category: "Risk Management",
-    tags: ["from-editorial"],
-    body: `
-Leverage means using borrowed money or financial tools to control a larger position than your cash would normally allow. Short selling means betting that a stock will fall. Both can be used by experienced traders, but both can be extremely dangerous for beginners.
-
-## Why Leverage Is Risky
-
-Leverage magnifies gains and losses. A small move in the wrong direction can create a much larger loss than expected. If a beginner does not understand margin requirements, liquidation risk, or volatility, leverage can become dangerous very quickly.
-
-## Why Short Selling Is Different
-
-When you buy a stock normally, the most you can lose is the amount you invested. If the stock goes to zero, the loss is painful but limited. With short selling, the risk can be much larger because a stock price can theoretically keep rising.
-
-## The Emotional Trap
-
-Short selling can feel logical when a company appears overvalued. But markets can stay irrational longer than a beginner expects. A stock can rise sharply because of news, momentum, short squeezes, or investor excitement.
-
-## A Safer Learning Path
-
-Beginners should usually focus first on basic long-term investing, diversification, ETFs, business quality, and risk management before experimenting with advanced strategies.
-
-Heavily shorted, high-volatility names like [Tesla (TSLA)](/stocks/tsla) and [Nvidia (NVDA)](/stocks/nvda) are where these tools blow up fastest.
-`,
-  },
-  {
-    slug: "investing-psychology",
-    title: "Investor Psychology: How Fear and Greed Move Portfolios",
-    description: "Learn how emotions influence investing decisions and how beginners can build a calmer decision-making process.",
-    publishedAt: "2026-07-14",
-    tickers: ["NVDA", "SPY"],
-    readMinutes: 7,
-    category: "Market Psychology",
-    tags: ["from-editorial"],
-    body: `
-Investing is not only about numbers. It is also about emotion. Fear and greed are two of the strongest forces in the market, and beginners often experience both intensely.
-
-## How Greed Shows Up
-
-Greed can make investors chase stocks after large increases, ignore risk, or believe they can get rich quickly. It often appears when markets are rising and everyone seems confident.
-
-## How Fear Shows Up
-
-Fear can make investors sell too quickly, avoid good opportunities, or abandon a long-term plan during temporary downturns. It often appears when headlines are negative and prices are falling.
-
-## The Value of a Written Plan
-
-A written investing plan can reduce emotional decisions. Your plan might include what you invest in, how often you contribute, how diversified your portfolio should be, and when you would consider selling.
-
-## Slow Thinking Beats Fast Reactions
-
-Markets move quickly, but good decisions often benefit from slowing down. Before making a trade, ask whether the decision is based on evidence or emotion.
-
-Emotion is easiest to spot on a fast mover like [Nvidia (NVDA)](/stocks/nvda) and easiest to ignore on a slow one like [SPY](/stocks/spy).
-`,
-  },
-  {
-    slug: "how-to-read-stock-chart",
-    title: "How to Read a Stock Chart Without Feeling Lost",
-    description: "A beginner guide to line charts, candlesticks, timeframes, and volume.",
-    publishedAt: "2026-07-13",
-    tickers: ["AAPL", "MSFT"],
-    readMinutes: 7,
-    category: "Technical Analysis",
-    tags: ["from-editorial"],
-    body: `
-Stock charts can look complicated at first. Green candles, red candles, moving lines, and volume bars may feel like a different language. But a chart is simply a visual story of price movement over time.
-
-## Line Charts
-
-A line chart connects closing prices over a selected period. It is simple and useful for seeing the general direction of a stock. Beginners often start with line charts because they are easy to understand.
-
-## Candlestick Charts
-
-Candlestick charts show more information. Each candle can display the opening price, closing price, high price, and low price for a selected time period. Green candles usually mean the price closed higher than it opened. Red candles usually mean it closed lower.
-
-## Timeframes Matter
-
-A stock may look terrible on a one-day chart but healthy on a five-year chart. Always zoom out. Short-term movement can be noisy, while longer-term charts reveal broader trends.
-
-## Volume
-
-Volume shows how many shares changed hands. High volume can make a price move more meaningful because it suggests stronger market participation. Low volume can make price movement less reliable.
-
-Practise on a clean, liquid chart: [Apple (AAPL)](/stocks/aapl) or [Microsoft (MSFT)](/stocks/msft).
-`,
-  },
-  {
-    slug: "support-and-resistance",
-    title: "Support and Resistance Explained for Beginners",
-    description: "Understand common price zones where stocks may pause, bounce, or struggle to move higher.",
-    publishedAt: "2026-07-12",
-    tickers: ["SPY", "NVDA"],
-    readMinutes: 6,
-    category: "Technical Analysis",
-    tags: ["from-editorial"],
-    body: `
-Support and resistance are basic technical analysis concepts. Support is a price area where buyers have previously stepped in. Resistance is a price area where sellers have previously appeared.
-
-## Support
-
-Support can act like a floor, but it is not guaranteed. If a stock repeatedly bounces near the same price, traders may watch that area closely. If support breaks, the stock may fall further.
-
-## Resistance
-
-Resistance can act like a ceiling. If a stock struggles to move above a certain price, that area may become important. If the stock breaks above resistance with strong volume, traders may interpret it as a sign of strength.
-
-## Why These Levels Matter
-
-Support and resistance matter because many investors watch similar chart areas. Their decisions can influence buying and selling pressure.
-
-## Beginner Warning
-
-Support and resistance are not magic lines. They are possible zones of behavior, not guarantees. Beginners should use them as one tool among many, not as the only reason to buy or sell.
-
-Draw your first levels on [SPY](/stocks/spy), then try a choppier chart like [Nvidia (NVDA)](/stocks/nvda).
-`,
-  },
-  {
-    slug: "pe-ratio-explained",
-    title: "P/E Ratio Explained: What Price-to-Earnings Really Means",
-    description: "A simple explanation of one of the most common stock valuation metrics.",
-    publishedAt: "2026-07-11",
-    tickers: ["AAPL", "TSLA"],
-    readMinutes: 7,
+    readMinutes: 11,
+    tickers: ["AAPL", "COST", "MSFT", "VOO"],
+    tags: ["stock-research", "beginner", "fundamentals"],
     category: "Stock Research",
-    tags: ["from-editorial"],
+    imageAlt:
+      "A magnifying glass held over a company report with revenue and profit bar charts, representing researching a first stock",
     body: `
-The price-to-earnings ratio, or P/E ratio, compares a company stock price to its earnings per share. It is one of the most common valuation metrics used by investors.
+Almost nobody picks their first stock. Their first stock picks them — from a group chat, a headline, a video, or a friend who is up 60% and will not shut up about it. That is how I ended up in my first position, and it is why I now think the framework matters more than the company.
 
-## What the P/E Ratio Tells You
+What follows is the checklist I actually use, in order, with a worked example at the end. It takes about forty minutes per company. If that sounds like a lot, that is the point: forty minutes of friction is what stops you from buying eleven things you cannot explain.
 
-A P/E ratio gives a rough sense of how much investors are willing to pay for each dollar of a company earnings. A higher P/E may suggest investors expect strong future growth. A lower P/E may suggest slower growth, lower expectations, or possible undervaluation.
+## Before the checklist: the one filter that eliminates 95% of the market
 
-## Why Context Matters
+**Can you explain what this company sells, and who pays for it, in two sentences, without using the word "solutions"?**
 
-A P/E ratio should not be judged alone. Some industries naturally have higher valuations than others. A fast-growing software company may trade at a higher P/E than a mature utility company.
+If you cannot, stop. Not because the business is bad, but because you will have no way to evaluate any news about it. When a stock you do not understand drops 20%, you have exactly two options: sell in a panic or hold in ignorance. Neither is investing.
 
-## High Does Not Always Mean Bad
+This filter is unglamorous and it works. It rules out most of the market for a beginner and leaves you with companies whose products are in your house.
 
-A high P/E can be justified if the company grows rapidly and continues increasing profits. But if growth disappoints, high-valuation stocks can fall sharply.
+## The eight-point checklist
 
-## Low Does Not Always Mean Cheap
+1. **Do I use, or clearly understand, the product?** [Costco](/stocks/cost), [Apple](/stocks/aapl), and [Microsoft](/stocks/msft) pass this for most people. A semiconductor equipment supplier probably does not, no matter how good the business is.
+2. **Is revenue growing over three to five years?** Not one quarter — a trend. Flat revenue for five years means you are buying a story, not a business.
+3. **Is the company actually profitable?** Positive, reasonably stable net income. Unprofitable companies can be great investments, but they are a much harder read and a poor place to start.
+4. **How much debt is there relative to profit?** A company earning $2B a year with $60B of debt has less room to survive a bad two years. You do not need a formula; you need to notice the ratio.
+5. **How volatile is it?** Look at the 52-week high and low. A stock that ranged from $40 to $130 in a year will test your nerve in a way one that ranged $88–$112 will not.
+6. **What does the market already expect?** Check the [P/E ratio](/blog/what-does-pe-ratio-mean) against the company's own sector and history. A high multiple is not disqualifying — it just means the bar is higher.
+7. **Who is competing with it, and is the moat real?** Switching costs, scale, brand, network effects, regulation. If a well-funded competitor could replicate the business in two years, be careful.
+8. **What would make me sell?** Write it down before you buy. "Two consecutive quarters of falling revenue" is a reason. "It went down" is not.
 
-A low P/E can look attractive, but it may also signal real problems. The market may be pricing in declining earnings, weak growth, debt concerns, or competitive pressure.
+## Where to find each number without a Bloomberg terminal
 
-Compare a moderate P/E like [Apple (AAPL)](/stocks/aapl) with a richly valued one like [Tesla (TSLA)](/stocks/tsla).
-`,
-  },
-  {
-    slug: "revenue-vs-profit",
-    title: "Revenue vs. Profit: The Difference Every Investor Should Know",
-    description: "Understand the difference between sales, earnings, margins, and why revenue growth alone is not enough.",
-    publishedAt: "2026-07-10",
-    tickers: ["AMZN", "AAPL"],
-    readMinutes: 6,
-    category: "Stock Research",
-    tags: ["from-editorial"],
-    body: `
-Revenue and profit are two of the most important numbers in business, but they are not the same. Revenue is the total amount of money a company brings in from selling products or services. Profit is what remains after expenses are paid.
+Every item above is available free. The company's investor relations page has the quarterly report. The stock page on this site gives you price history, the 52-week range, and a plain-English explanation of recent moves. The [screener](/screener) lets you filter by market cap and volume so you are not evaluating a $200M company by accident, and the [calendar](/calendar) tells you when the next earnings report lands — which matters, because buying two days before earnings is a coin flip, not a thesis.
 
-## Why Revenue Matters
+## A full worked example
 
-Revenue shows demand. If a company is growing revenue, more customers may be buying its products or services. Strong revenue growth can be a positive sign, especially for younger companies.
+Suppose a beginner is considering a large warehouse retailer. Running the checklist:
 
-## Why Profit Matters
+| Checkpoint | Finding | Verdict |
+| --- | --- | --- |
+| Understand the product | Membership warehouse clubs; revenue from goods plus annual fees | Pass — you can explain it in one sentence |
+| Revenue trend | Grown every year for the last five | Pass |
+| Profitability | Consistently profitable, thin but stable margins | Pass |
+| Debt | Modest relative to annual profit | Pass |
+| Volatility | 52-week range roughly $780–$1,080, about ±16% around the middle | Manageable |
+| Valuation | P/E near the top of its own 5-year range | Caution — a lot of good news is priced in |
+| Moat | Membership renewal rates above 90%; scale-based pricing | Strong |
+| Sell trigger | Renewal rate falls two years running, or membership growth stalls | Written down |
 
-Profit shows whether a company can turn sales into earnings. A business may generate huge revenue but still lose money if expenses are too high.
+Score: seven clear passes and one caution. That caution is not a veto — it is a position-sizing instruction. A high-quality business at a rich price deserves a smaller first position, and maybe a second purchase later rather than everything at once.
 
-## Margins
+Now contrast the same checklist applied to a name I once bought purely on momentum: I could not explain the revenue model, revenue was flat, it was unprofitable, debt was heavy, and the 52-week range was $9 to $54. That is five failures. The checklist would have taken four minutes to reject it. I did not run it, and the position taught me a 40% lesson.
 
-Margins show how efficiently a company converts revenue into profit. Higher margins often mean the business has pricing power, cost control, or an efficient operating model.
+## Sizing: the decision that matters more than the pick
 
-## The Investor Lesson
+Beginners obsess over which stock and ignore how much, which is backwards. A brilliant pick at 60% of your portfolio is a worse decision than an average pick at 5%.
 
-Revenue growth is exciting, but profit quality matters. Beginners should look at both numbers together instead of focusing on one headline metric.
+A workable starting structure: keep the majority of your money in a broad-market fund like [VOO](/stocks/voo), and allow yourself a research sleeve of maybe 10–20% for individual companies, with no single name exceeding a quarter of that sleeve. The comparison between the two approaches is laid out in [stocks vs ETFs](/blog/stocks-vs-etfs).
 
-[Amazon (AMZN)](/stocks/amzn) is the classic example of huge revenue with thin profit; [Apple (AAPL)](/stocks/aapl) is the opposite.
+## The four reasons beginners pick badly
+
+- **Familiarity mistaken for analysis.** Knowing the brand is step one of eight, not the whole thing.
+- **Buying the story after the move.** By the time a company is a headline, the expectation is in the price.
+- **Anchoring on share price.** "It's only $12" is not a reason. Market cap is the size of the company.
+- **No sell trigger.** Without one, every decline becomes a debate with yourself, and you will lose that debate at the worst moment.
+
+## Do the whole thing with fake money first
+
+Run the checklist on three companies this week. Buy all three in the [simulator](/simulator), same dollar amount each, and put them on your [watchlist](/watchlist). In ninety days, look at which one moved and — more importantly — whether the reason it moved was something your checklist could have anticipated.
+
+That review is the actual skill. The pick is just the excuse to practice it.
 `,
   },
   {
     slug: "how-to-read-earnings-report",
-    title: "How to Read an Earnings Report as a Beginner",
-    description: "A practical guide to understanding quarterly results, guidance, revenue, profit, margins, and management commentary.",
-    publishedAt: "2026-07-09",
-    tickers: ["AAPL", "MSFT"],
-    readMinutes: 8,
+    title: "How to Read an Earnings Report Without an Accounting Degree",
+    description:
+      "Where the numbers actually live, why revenue and profit diverge, what guidance means, and why a company can beat on every line and still drop 9% — read through a full example quarter.",
+    publishedAt: "2026-07-18",
+    readMinutes: 10,
+    tickers: ["AAPL", "MSFT", "NVDA"],
+    tags: ["fundamentals", "stock-research", "earnings"],
     category: "Stock Research",
-    tags: ["from-editorial"],
+    imageAlt:
+      "A magnifying glass over a quarterly earnings statement showing revenue, net income and guidance figures",
     body: `
-Public companies release earnings reports to show investors how the business performed during a specific period. These reports can look intimidating, but beginners can focus on a few key areas.
+Four times a year, every public company publishes a scorecard and the market re-prices it in about ninety seconds. Earnings season is the single best time to learn how markets actually work, and the report itself is far more readable than its reputation suggests — as long as you know the six numbers that matter and ignore the other four hundred.
 
-## Revenue
+## The three documents, and which one to open
 
-Revenue shows how much money the company brought in. Investors compare current revenue to previous periods to see whether the business is growing, shrinking, or staying flat.
+A company releases three things at once:
 
-## Earnings
+- **The press release** — a few pages, the headline numbers, management quotes. Start here.
+- **The 10-Q or 10-K** — the full regulatory filing. Detailed, dry, authoritative. Use it for specifics.
+- **The earnings call** — management talking to analysts for an hour. The transcript is where the tone lives, and the analyst Q&A at the end is the most honest part of the whole event.
 
-Earnings show profitability. A company may grow revenue but still disappoint investors if earnings are weak or expenses are rising too quickly.
+For your first year, the press release plus a skim of the Q&A gets you 90% of the value.
 
-## Guidance
+## The six numbers
 
-Guidance is management outlook for future performance. Stocks often move strongly after earnings because guidance changes investor expectations.
+1. **Revenue** — total money that came in. The top line. Everything else is what happened to it on the way down.
+2. **Net income** — what was left after every cost, tax, and charge. The bottom line.
+3. **EPS** — net income divided by shares outstanding. This is what headlines quote, and it can rise purely because the company bought back shares.
+4. **Margins** — profit as a percentage of revenue. This is the quality signal. Rising revenue with falling margins means growth is being bought rather than earned.
+5. **Segment breakdown** — which parts of the business grew. A company can post +8% overall while its most important division shrinks.
+6. **Guidance** — management's forecast for next quarter. Frequently the most important item on the page, and the reason the stock moves the way it does.
 
-## Margins
+## Revenue is not profit, and the gap is the business
 
-Margins help investors understand efficiency. If margins improve, the company may be becoming more profitable. If margins decline, costs may be rising or pricing power may be weakening.
+This trips up more beginners than anything else. Walk down a simplified income statement:
 
-## Management Commentary
+| Line | Amount | What it means |
+| --- | --- | --- |
+| Revenue | $10.0B | Everything customers paid |
+| Cost of revenue | −$5.5B | Direct cost of delivering it |
+| Gross profit | $4.5B | 45% gross margin |
+| Operating expenses | −$2.8B | Salaries, R&D, marketing, overhead |
+| Operating income | $1.7B | 17% operating margin |
+| Interest and tax | −$0.5B | Debt costs and government |
+| **Net income** | **$1.2B** | 12% net margin — what actually belongs to shareholders |
 
-The words management uses can matter. Investors listen for confidence, caution, competitive concerns, demand trends, and future plans.
+Ten billion dollars of revenue became $1.2 billion of profit. Now imagine next quarter revenue grows to $11B but net income falls to $0.9B. Revenue is up 10% and the stock drops, because margins compressed from 12% to 8%. The company is selling more and keeping less. That single dynamic explains a huge share of "why did it fall on good news" days.
 
-Follow along with a real report next quarter on [Apple (AAPL)](/stocks/aapl) or [Microsoft (MSFT)](/stocks/msft).
+## Why a company beats every number and still falls 9%
+
+Because the price already contained the beat.
+
+The market does not trade against last year's results. It trades against **expectations**. There are two sets: the published analyst consensus, and the unpublished "whisper" number the market has actually priced in, which is usually higher.
+
+A worked case. A company reports:
+
+- Revenue $10.2B vs $10.0B expected — a beat.
+- EPS $2.15 vs $2.05 expected — a beat.
+- Guidance for next quarter: $10.4B, versus $11.0B expected — a miss.
+
+Two beats, one miss, and the stock falls 9% in after-hours. The past was good; the future was revised down, and stocks are priced on the future. If you only read the headline — "Company beats estimates" — the price action looks insane. It is not. You just read the least important part.
+
+This is exactly the gap the plain-English explanation on each stock page is built to close, and why the [Market Brief](/market-brief) leads with the reason rather than the number.
+
+## A five-minute reading routine
+
+1. Open the press release. Find revenue and EPS, and compare each to the same quarter last year — not to last quarter, since most businesses are seasonal.
+2. Calculate net margin: net income ÷ revenue. Compare it to the year-ago margin. Rising, flat, or falling?
+3. Scan the segment table. Which division carried the quarter, and which one is quietly shrinking?
+4. Find the guidance paragraph. Is next quarter's range above or below what the market expected?
+5. Jump to the analyst Q&A. If four analysts ask about the same thing, that thing is the story.
+
+Five minutes, four times a year, per company. That is the entire commitment.
+
+## Vocabulary that shows up and means less than it sounds
+
+- **Non-GAAP / adjusted** — the company's preferred version of profit, excluding items it considers unusual. Sometimes fair, sometimes flattering. Always compare it to the GAAP number sitting nearby.
+- **One-time charge** — a cost management says will not recur. If it recurs three years running, it is a cost.
+- **Constant currency** — growth with exchange-rate effects stripped out. Legitimate for global businesses.
+- **Headwinds / tailwinds** — things going against or for the company. Usually a softer way of saying a forecast changed.
+
+When a paragraph is dense enough that you cannot tell whether it is good or bad news, paste it into the [Jargon Translator](/translate). It keeps the numbers and removes the fog.
+
+## Common beginner mistakes on earnings day
+
+- **Buying the day before "because it'll beat."** You are betting on a number you do not have, against people who model it professionally. It is a coin flip with worse odds.
+- **Reading only the headline.** The headline is the beat/miss. The guidance is the story.
+- **Comparing to the previous quarter instead of the year-ago quarter.** Retailers make most of their money in Q4. Sequential comparisons look alarming for entirely normal reasons.
+- **Treating one quarter as a verdict.** Three data points make a trend. One makes a headline.
+
+## Practice on a real one
+
+Use the [calendar](/calendar) to find a company reporting this week that you already follow, and put it on your [watchlist](/watchlist). Before the report, write down what you expect. After, run the five-minute routine and see how the stock reacted versus how you thought it would.
+
+If you want to feel the stakes without paying for them, hold the position through earnings in the [simulator](/simulator) first. Owning something into a report is a very different experience from reading about it afterwards.
 `,
   },
   {
-    slug: "what-makes-great-business",
-    title: "What Makes a Great Business Worth Investing In?",
-    description: "Learn the traits that may separate durable businesses from fragile ones.",
-    publishedAt: "2026-07-08",
-    tickers: ["COST", "AAPL"],
-    readMinutes: 7,
-    category: "Stock Research",
-    tags: ["from-editorial"],
-    body: `
-A great stock usually starts with a great business, but not every popular company is a durable investment. Beginners should learn to look beyond brand recognition and study the qualities that make a business strong over time.
-
-## Clear Demand
-
-Great businesses provide products or services that people genuinely need or strongly want. Demand should be visible, repeatable, and not based only on temporary hype.
-
-## Competitive Advantage
-
-A competitive advantage helps a company defend itself. This could include brand strength, technology, scale, network effects, patents, customer loyalty, or cost advantages.
-
-## Financial Discipline
-
-Strong businesses manage money well. They control costs, invest wisely, and avoid relying too heavily on debt or unrealistic growth promises.
-
-## Adaptability
-
-Markets change. Great businesses adapt to new technology, customer behavior, regulation, and competition. A company that cannot evolve may struggle even if it was once successful.
-
-[Costco (COST)](/stocks/cost) and [Apple (AAPL)](/stocks/aapl) are textbook examples of durable advantages.
-`,
-  },
-  {
-    slug: "teen-investing",
-    title: "Investing as a Teenager: What Young Investors Should Learn First",
-    description: "An educational guide for young investors focused on habits, simulation, risk awareness, and long-term thinking.",
-    publishedAt: "2026-07-07",
-    tickers: ["VOO", "AAPL"],
-    readMinutes: 7,
-    category: "Financial Literacy",
-    tags: ["from-editorial"],
-    body: `
-Teenagers who learn about investing early have a major advantage: time. But the first goal should not be getting rich quickly. The first goal should be learning how money, businesses, risk, and long-term growth work.
-
-## Start With Education
-
-Before risking real money, young investors should learn basic terms such as stocks, ETFs, diversification, compound growth, volatility, dividends, and valuation.
-
-## Use Simulation
-
-A simulator can help young investors practice without financial risk. It allows users to experience gains, losses, emotional decisions, and market movement in a safer environment.
-
-## Build Good Habits
-
-Budgeting, saving, avoiding unnecessary debt, and understanding needs versus wants are just as important as picking stocks.
-
-## Think Long Term
-
-Young investors have time to let compounding work. The earlier someone learns patience and consistency, the stronger their financial foundation can become.
-
-Start with something you already understand — a broad fund like [VOO](/stocks/voo), or a company you use daily like [Apple (AAPL)](/stocks/aapl).
-`,
-  },
-  {
-    slug: "paper-trading-benefits",
-    title: "Paper Trading: Why Beginners Should Practice Before Risking Money",
-    description: "Learn how simulated trading can build confidence, reveal mistakes, and improve decision-making.",
-    publishedAt: "2026-07-06",
-    tickers: ["SPY", "AAPL"],
-    readMinutes: 6,
+    slug: "paper-trading-vs-real-trading",
+    title: "Paper Trading vs Real Trading: What Transfers, What Doesn't",
+    description:
+      "Simulated trading builds real, transferable skill in five specific areas and quietly lies to you in three others. Here's how to practise so the habits survive contact with real money.",
+    publishedAt: "2026-07-20",
+    readMinutes: 10,
+    tickers: ["SPY", "AAPL", "NVDA"],
+    tags: ["simulator", "paper-trading", "beginner", "psychology"],
     category: "Platform Education",
-    tags: ["from-editorial"],
+    imageAlt:
+      "A laptop showing a simulated portfolio with a green price chart beside a real brokerage statement, comparing practice and live trading",
     body: `
-Paper trading means practicing with simulated money instead of real capital. It is one of the best learning tools for beginners because it creates experience without financial consequences.
+I turned $100,000 of simulated money into roughly $180,000 during a school trading competition, and I have rarely been more wrong about my own ability. A few weeks later, a single short position that I was completely certain about unwound the whole thing. Nothing about the outcome was real. Everything about the lesson was.
 
-## Practice Builds Familiarity
+That gap — real skill, fake stakes — is what this article is about. Paper trading is genuinely valuable, and it is genuinely misleading, and knowing which is which determines whether the practice helps you or teaches you bad habits at speed.
 
-New investors can learn how orders work, how prices move, and how portfolios change over time. This makes the real market feel less confusing.
+## What transfers completely
 
-## Mistakes Become Lessons
+**1. Mechanics.** Market vs limit orders, how a fill works, what a bid-ask spread costs you, what happens to your position through a split or a dividend. These are identical in a simulator because they are just rules. Getting them wrong with real money costs money; getting them wrong here costs nothing.
 
-Everyone makes mistakes while learning. Paper trading lets beginners experience overconfidence, panic, poor diversification, and chasing hype without losing real money.
+**2. Research process.** The forty minutes you spend running a checklist on a company before buying is the same forty minutes either way. If you build the habit of writing a one-sentence thesis before every entry, that habit walks straight into your real account.
 
-## Track Your Decisions
+**3. Cause and effect.** This is the biggest one. When you own something, you notice why it moved. Owning ten simulated positions through an earnings season teaches you more about what drives prices than a year of reading. Every trade in the [simulator](/simulator) comes back with a plain-English explanation of the move, which is the feedback loop a brokerage will never give you.
 
-The best paper traders write down why they entered each position. Later, they can compare the outcome to their original reasoning and improve their process.
+**4. Position sizing arithmetic.** Learning that a 20% loss on a 30% position costs you 6% of everything is pure math, and math does not care whether the dollars are real.
 
-## Know the Limitations
+**5. Review discipline.** Going back through your closed trades and sorting them into "right for the right reason," "right for the wrong reason," and "wrong" is the single most valuable exercise in trading. It is also the easiest thing to practise when nothing is at stake.
 
-Simulated trading does not perfectly copy the emotions of real money. But it is still an excellent first step for learning mechanics, strategy, and discipline.
+## What does not transfer
 
-Run your first practice trades on [SPY](/stocks/spy) and [Apple (AAPL)](/stocks/aapl).
+**1. Fear.** A 15% drawdown on simulated money is an interesting data point. A 15% drawdown on money you earned is a physical sensation that makes you want to close the app. No simulator reproduces this, and anyone who tells you otherwise is selling something.
+
+**2. Position size discipline under stress.** Because the money is fake, you will take positions you would never take for real. In my competition, I was running concentrated leveraged bets that no sane person would put actual savings into. My "skill" was mostly the absence of consequences.
+
+**3. Liquidity and slippage.** Simulators generally fill you at the quoted price. In reality, size moves the market, especially in smaller names.
+
+Here is the honest side-by-side:
+
+| | Simulator | Real account |
+| --- | --- | --- |
+| Order mechanics | Identical | Identical |
+| Live prices | Same feed | Same feed |
+| Research process | Identical | Identical |
+| Emotional weight | Near zero | The dominant factor |
+| Position sizing behaviour | Reckless by default | Conservative by necessity |
+| Cost of being wrong | A leaderboard place | Rent |
+| Best used for | Learning what to do | Learning whether you can do it |
+
+## The distortion nobody warns you about
+
+Simulated accounts encourage exactly the wrong behaviour: big positions, fast turnover, all-or-nothing bets. That is because the reward structure is a score, not a retirement. Competitions make this worse — if fifty people are ranked by return, the winner is almost always the one who took the most concentrated risk and got lucky, and everyone draws the wrong lesson from watching them.
+
+The fix is to impose the constraints reality would impose:
+
+1. **Set the virtual balance near your real one.** If you will invest $2,000, do not trade $100,000 as though it is yours. Trade a $2,000 slice of it and leave the rest alone.
+2. **Cap any single position at 10% of the account.** Write the rule down before you start.
+3. **Ban leverage and shorting for your first month.** These are the two features that made my simulated account look brilliant right up until it did not.
+4. **Log every trade with a thesis and a sell trigger.** A trade you cannot justify in one sentence does not get placed.
+5. **Hold for a minimum of two weeks.** Simulators tempt you into day trading because there is no cost to churn.
+
+## A structured 30-day practice plan
+
+- **Week 1** — five buys only, no sells. Broad ETF like [SPY](/stocks/spy), one large-cap you use, one volatile name like [NVDA](/stocks/nvda), one you deliberately do not understand, one you buy after it has already run 30%.
+- **Week 2** — no trades at all. Just read why your positions moved and add candidates to your [watchlist](/watchlist).
+- **Week 3** — hold at least one position through an earnings report. Note your reaction before and after.
+- **Week 4** — close everything and write a one-page review: which thesis was right, which was luck, which was wrong and why.
+
+That review page is the deliverable. The profit or loss number is not.
+
+## Then make the first real trade small
+
+Once you have run a month of disciplined practice, open a real account and buy one thing for $100–$500, as laid out in [starting with $100](/blog/how-to-start-investing-with-100-dollars). The purpose of the small real position is to introduce the one variable the simulator cannot: caring.
+
+The right sequence is simulator first for mechanics and process, then small real money for temperament, then size up slowly. Skipping the first step means learning the mechanics with money. Skipping the second means believing a leaderboard rank is an investing track record — which is precisely the mistake I made, and the reason this site exists.
 `,
   },
   {
-    slug: "budgeting-before-investing",
-    title: "Budgeting Before Investing: The Foundation Most Beginners Skip",
-    description: "Why managing income, expenses, and savings should come before aggressive investing.",
-    publishedAt: "2026-07-05",
-    tickers: ["VOO"],
-    readMinutes: 6,
-    category: "Financial Literacy",
-    tags: ["from-editorial"],
-    body: `
-Investing can help grow wealth, but budgeting helps create the money available to invest. Without a budget, investors may put money into the market that they actually need for bills, emergencies, or short-term goals.
-
-## Know Your Cash Flow
-
-Cash flow is the money coming in and going out. Understanding cash flow helps you see whether you are spending more than you earn, saving consistently, or relying too much on debt.
-
-## Separate Needs, Wants, and Goals
-
-Needs are essentials. Wants are optional purchases. Goals are planned uses for money, such as saving, investing, education, or future purchases.
-
-## Invest Only What Can Stay Invested
-
-Money needed soon should usually not be placed into risky investments. A budget helps identify which money can be invested for the long term.
-
-Good investing starts before the first stock purchase. It starts with understanding your own financial behavior.
-
-When the budget has room, the first destination is usually a plain index fund like [VOO](/stocks/voo).
-`,
-  },
-  {
-    slug: "high-yield-savings-vs-stocks",
-    title: "High-Yield Savings vs. Stocks: Where Should Money Go?",
-    description: "Understand the difference between safe savings and long-term investing.",
-    publishedAt: "2026-07-04",
-    tickers: ["SPY", "VOO"],
-    readMinutes: 6,
-    category: "Financial Literacy",
-    tags: ["from-editorial"],
-    body: `
-High-yield savings accounts and stocks both have a place in personal finance, but they serve different purposes. A savings account focuses on safety and access. Stocks focus on long-term growth with risk.
-
-## When Savings Makes Sense
-
-Savings accounts are useful for emergency funds, short-term goals, and money you cannot afford to lose. The value does not swing up and down like stocks.
-
-## When Stocks Make Sense
-
-Stocks may be appropriate for money you do not need soon. They can rise over time as businesses grow, but they can also decline sharply in the short term.
-
-## The Balance
-
-Many people need both. Savings protect short-term stability, while investing supports long-term growth.
-
-Beginners should avoid treating investing and saving as enemies. They are tools for different jobs.
-
-Compare a savings rate against the long-run chart of [SPY](/stocks/spy) or [VOO](/stocks/voo).
-`,
-  },
-  {
-    slug: "news-headlines-and-investing",
-    title: "How to Read Market News Without Overreacting",
-    description: "Learn how to separate useful financial news from noise, hype, and emotional headlines.",
+    slug: "best-stock-simulator-for-beginners",
+    title: "How to Choose a Stock Simulator (and What Ours Does Differently)",
+    description:
+      "Most simulator reviews are written for day traders. Here are the seven things that actually matter when you have never placed a trade — and an honest account of what IntegralStocks does and doesn't do.",
     publishedAt: "2026-07-03",
-    tickers: ["NVDA", "AAPL"],
-    readMinutes: 7,
-    category: "Market Psychology",
-    tags: ["from-editorial"],
+    readMinutes: 8,
+    tickers: ["SPY", "AAPL"],
+    tags: ["simulator", "paper-trading", "beginner"],
+    category: "Platform Education",
+    imageAlt:
+      "A laptop displaying a practice trading account with a green portfolio chart, a leaderboard and a virtual cash balance",
     body: `
-Market headlines are designed to get attention. Some are useful, but many are emotional, dramatic, or incomplete. Beginners need to learn how to read financial news without reacting impulsively.
+Search "best stock simulator" and you get lists written for people who already trade — comparisons of order-routing options, Level 2 data, and hotkey support. If you have never placed a trade in your life, none of that is relevant, and the fanciest platform on those lists is actively the worst place to start.
 
-## Headlines Are Not Full Analysis
+Here is what actually matters when you are at zero, in the order it matters.
 
-A headline may say a stock is soaring or crashing, but it rarely explains the full context. Investors should look beyond the headline and ask what actually changed.
+## The seven criteria
 
-## Separate Company News From Market Noise
+1. **Live prices, not delayed quotes.** A fifteen-minute lag breaks the feedback loop. You place a trade, the price you see is not the price you got, and the chart never matches your memory of the moment. Delayed data is fine for studying history and useless for building instinct.
+2. **No credit card, no waitlist.** If a "free" simulator wants payment details, it is a funnel for a brokerage, and the education is the bait.
+3. **An explanation of why prices moved.** This is the single biggest differentiator. Knowing your position is down 3% is worthless. Knowing it is down 3% because the whole sector sold off on a rate decision — while the company itself did nothing — is the lesson.
+4. **A realistic starting balance.** Some platforms hand you $1,000,000. That is not generosity, it is a distortion: at that size, a $50,000 position feels like nothing, so you learn to bet recklessly. Somewhere between $10,000 and $100,000 keeps decisions proportionate.
+5. **A post-trade recap.** The trade is not the learning event. The review is.
+6. **A reason to come back.** Most simulator accounts are abandoned within nine days. Competition solves this better than willpower does.
+7. **A UI that does not assume vocabulary.** If the order ticket says "GTC / IOC / FOK" with no explanation, the platform was not built for you.
 
-Some news directly affects a company long-term value. Other news only affects short-term sentiment. Knowing the difference can prevent unnecessary panic.
+## What our simulator does
 
-## Watch for Emotional Language
+I will be specific rather than promotional, because vague claims are exactly the problem with the category.
 
-Words like crash, surge, collapse, and skyrocket can trigger emotional responses. Good investors slow down and look for facts.
+| Feature | How it works here |
+| --- | --- |
+| Starting balance | $100,000 virtual, configurable when you create a private game |
+| Prices | The same live feed that powers our stock pages — no delay |
+| Why it moved | After each trade, a plain-English summary of what drove that stock, grounded in real reporting rather than guesswork |
+| Leaderboard | Ranked by return percentage, so a $10,000 account competes fairly with a $100,000 one |
+| Multiplayer | Create a private game with a join code, set the starting cash, duration, and whether leverage is allowed |
+| Cost | Free, no card |
+| Watchlist | Syncs to your account, so the names you track follow you across devices |
 
-## Use News as a Starting Point
+The custom-game settings exist because of a specific failure mode: default settings teach default behaviour. If you want a class or a group of friends to practise long-term investing rather than gambling, set a 90-day duration and turn leverage off. If you want to demonstrate exactly how leverage destroys accounts, turn it on and watch what happens over three weeks. Both are useful lessons; they just need different settings.
 
-News should lead to research, not instant decisions. Before buying or selling, ask whether the news changes the long-term business case.
+## What it deliberately does not do
 
-Check a headline against the actual chart on [Nvidia (NVDA)](/stocks/nvda) or [Apple (AAPL)](/stocks/aapl) before you react.
-`,
-  },
-  {
-    slug: "fractional-shares",
-    title: "Fractional Shares Explained: How Beginners Can Start Small",
-    description: "Learn how fractional shares allow beginners to invest smaller amounts while learning how the market works.",
-    publishedAt: "2026-07-02",
-    tickers: ["AAPL", "VOO"],
-    readMinutes: 6,
-    category: "Investing Basics",
-    tags: ["from-editorial"],
-    body: `
-Fractional shares allow investors to buy part of a share instead of needing enough money to buy a full share. This can make investing more accessible for beginners who want to start small.
+- **No options chain in the simulator.** Options are a fast way to lose money in a way that teaches you nothing about businesses.
+- **No "AI picks" or buy signals.** The AI here explains what already happened. It does not predict, and a platform that claims to is selling you confidence, not analysis.
+- **No day-trading tooling.** No hotkeys, no Level 2. Not an oversight — churn is the main way beginners lose money, and I am not going to make it faster.
 
-## How Fractional Shares Work
+## A first session that is actually worth doing
 
-If a stock trades at a high price, a beginner may not want to buy a full share. Fractional shares allow the investor to purchase a smaller dollar amount. This makes it easier to build a portfolio gradually.
+Give it twenty minutes:
 
-## Why They Help Beginners
+1. Open the [simulator](/simulator) and look at [SPY](/stocks/spy) before touching anything. Note today's move.
+2. Buy $10,000 of it. That is 10% of the account — a deliberately normal-sized position.
+3. Buy $5,000 of a company whose product is in the room with you, like [AAPL](/stocks/aapl).
+4. Read the explanation attached to each fill. Write down one sentence per position about why you bought it.
+5. Close the tab and do not return for a week.
 
-Fractional shares reduce the pressure to invest large amounts at once. They also make it easier to diversify across more companies or funds with limited money.
+The temptation on day one is to place twenty trades. Resist it. Five positions you can explain beat twenty you cannot, and the discipline of holding is the actual thing you are here to build. The full breakdown of which skills carry over to real money is in [paper trading vs real trading](/blog/paper-trading-vs-real-trading).
 
-## Do Small Amounts Matter?
+## A note on how to use the leaderboard
 
-Small amounts can matter because they build habits. The habit of researching, investing consistently, and tracking decisions can be more important early on than the dollar amount invested.
+Leaderboards are motivating and quietly dangerous. The person at the top of a short competition is usually the person who took the most concentrated risk, not the best investor — I know, because I was that person once, right up until the position that ended the run.
 
-## The Lesson
-
-Fractional shares can help beginners participate in the market while keeping risk controlled. Starting small is not a weakness. It is often a smart way to learn.
-
-Fractional shares are how $20 gets you into a high-priced name like [Apple (AAPL)](/stocks/aapl) or a whole index via [VOO](/stocks/voo).
+So use it for consistency, not for rank. Set a 90-day game with friends and compare not just returns but how many trades each person placed. In my experience the lowest-turnover account usually wins by the end, and that finding is worth more than the trophy.
 `,
   },
   {
     slug: "building-watchlist",
-    title: "How to Build a Stock Watchlist That Actually Helps You Learn",
-    description: "A practical method for creating a watchlist based on research, not random tickers.",
-    publishedAt: "2026-07-01",
-    tickers: ["AAPL", "COST"],
-    readMinutes: 6,
-    category: "Stock Research",
-    tags: ["from-editorial"],
+    title: "How to Build a Watchlist That Actually Teaches You Something",
+    description:
+      "Most watchlists are hoarded ticker piles that get ignored. Here's a three-bucket structure, a weekly ten-minute review routine, and the rules for when a name earns a spot or gets removed.",
+    publishedAt: "2026-07-24",
+    readMinutes: 9,
+    tickers: ["AAPL", "COST", "NVDA", "VOO"],
+    tags: ["stock-research", "beginner", "platform"],
+    category: "Platform Education",
+    imageAlt:
+      "A screen showing a curated watchlist of stock tickers with daily percentage changes, organised into groups",
     body: `
-A watchlist is a list of stocks or funds you want to follow. Beginners often create watchlists by adding random trending tickers. A better watchlist is organized around learning, research, and clear questions.
+My first watchlist had forty-one tickers on it. I could not have told you why more than six of them were there. It was not a research tool, it was a collection — every name I had ever heard mentioned, saved in case it mattered later. It never mattered later. I looked at the whole thing roughly once a month, felt vaguely overwhelmed, and closed the tab.
 
-## Start With Companies You Understand
+A watchlist works when it is small enough to review in ten minutes and structured enough that each name is answering a question. Here is how to build one.
 
-Add companies whose products, services, or business models make sense to you. This makes it easier to follow news and understand what might affect the company.
+## Three buckets, twelve names, hard cap
 
-## Write Down Why Each Stock Is There
+Do not organise by sector. Organise by **why the name is there**, because that determines what you do with it.
 
-A watchlist becomes more useful when every ticker has a reason. Are you watching for valuation? Earnings growth? A product launch? Sector trends? Writing down the reason helps you avoid emotional decisions.
+**Bucket 1 — Owned (however many you hold).** Things you have money in, real or simulated. You review these no matter what.
 
-## Track More Than Price
+**Bucket 2 — Candidates (four to six names).** Companies that have passed your research checklist and that you would buy at the right price or after the right confirmation. These are the only names you are allowed to actually buy from.
 
-Price matters, but it is not the only thing to watch. Follow revenue, profit, margins, debt, competition, and management commentary. This helps you learn business analysis instead of only chart watching.
+**Bucket 3 — Teachers (three to five names).** Companies you have no intention of buying but that teach you something. A high-volatility name like [NVDA](/stocks/nvda) teaches what a real drawdown looks like. A broad ETF like [VOO](/stocks/voo) is your baseline — without it you cannot tell whether your stock is doing well or the whole market is. A steady, boring compounder like [COST](/stocks/cost) teaches what a decade-long uptrend feels like from the inside.
 
-## Review the List Regularly
+Twelve total, hard cap. To add a thirteenth, remove one. That constraint is the entire mechanism — it forces you to articulate why a name deserves a slot.
 
-Remove companies you no longer understand or no longer want to follow. A focused watchlist is often better than a huge list that creates confusion.
+## The entry rule
 
-Seed your list with two companies you actually use, for example [Apple (AAPL)](/stocks/aapl) and [Costco (COST)](/stocks/cost).
+A ticker gets added only with a written sentence in this shape:
+
+> "I'm watching [company] because [specific reason], and I'll act if [specific trigger]."
+
+Real examples:
+
+- "I'm watching Costco because membership renewal rates are the whole business, and I'll buy a starter position if the P/E comes back to its five-year average."
+- "I'm watching this chipmaker because I want to see how a 40x P/E stock behaves through an earnings miss. I will not buy it."
+
+Compare that with the reason 90% of tickers get added: "it was in a headline." That is not a reason, it is an impression, and it is why watchlists rot.
+
+## The ten-minute Sunday review
+
+Once a week, not once a day. Daily checking trains reaction; weekly checking trains observation.
+
+1. **Open your [watchlist](/watchlist)** and read the week's percentage change for each name. (Because it saves to your account, it follows you between your phone and laptop rather than living in one browser.)
+2. **Find the biggest mover, up or down.** One name.
+3. **Answer why.** Read the plain-English explanation on that stock's page, or check whether it appeared in the [Market Brief](/market-brief) that week. Was it company news, sector news, or the whole market moving?
+4. **Compare against your baseline ETF.** If your stock is down 4% and the market is down 3.5%, essentially nothing happened to your company. Beginners burn enormous emotional energy on moves that were just the market.
+5. **Write one line in a notes file.** Date, ticker, what happened, what you learned. Nothing else.
+6. **Prune.** Any candidate you have not looked at in a month, or whose thesis you can no longer state, comes off.
+
+Ten minutes. Fifty-two times a year that is nine hours, and it will teach you more than any course.
+
+## Where the names come from
+
+Do not source candidates from social media. Use the [screener](/screener) with deliberately boring filters — a market cap floor of a few billion dollars and a real daily volume requirement — which immediately removes the thinly traded microcaps that generate the most exciting-looking charts and the worst outcomes.
+
+Then apply the two-sentence test from [how to pick your first stock](/blog/how-to-pick-your-first-stock): if you cannot explain what the company sells and who pays for it, it does not go on the list, however good the chart looks.
+
+For candidates, also note the next earnings date from the [calendar](/calendar). Knowing a report is nine days out changes how you interpret every move until then.
+
+## A worked example of the list doing its job
+
+Say your list has a retailer as a candidate at $88, with the note "buy if it revisits the low $70s." Three weeks later it drops to $74 on a day when the entire consumer sector fell 5% on a rate decision.
+
+Without the list, that is a scary headline and you do nothing. With it, you have a pre-written trigger, and you can immediately distinguish two very different situations: the company deteriorated, or the sector got repriced and your company came along for the ride. Checking the explanation on the stock page settles it in about ninety seconds.
+
+That is the whole value proposition. The watchlist converts a vague, emotional moment into a decision you already made when you were calm.
+
+## Four ways watchlists fail
+
+- **Too many names.** Past about fifteen, you stop reviewing and start scrolling.
+- **No baseline.** Without a market ETF on the list you cannot separate company news from market news.
+- **Checking constantly.** Multiple looks per day trains impulse, which is the opposite of the goal.
+- **Never removing anything.** A list is a working set, not an archive. If the thesis is gone, the ticker goes.
+
+Build the twelve, run one Sunday review, and test the candidates by buying them in the [simulator](/simulator) before any real money is involved. The list is not there to make you money. It is there to make you notice things.
 `,
   },
+
 ];
 
 export function getPost(slug: string): BlogPost | undefined {
   return POSTS.find((p) => p.slug === slug);
+}
+
+/** Canonical slug for a retired/merged post, if one exists. */
+export function redirectFor(slug: string): string | undefined {
+  return REDIRECTS[slug];
 }
 
 /** Blog posts that reference a given ticker in their tickers[] array. */
@@ -1426,25 +831,67 @@ export function postsForTicker(symbol: string): BlogPost[] {
   return POSTS.filter((p) => p.tickers?.includes(s));
 }
 
-/** Very small markdown renderer: paragraphs, headings, and [text](url) links. */
-export function renderBody(body: string): { type: "h2" | "h3" | "p" | "ul"; html: string }[] {
+export type BlogBlock = { type: "h2" | "h3" | "p" | "ul" | "ol" | "table"; html: string };
+
+/** Small markdown renderer: headings, paragraphs, bullet/numbered lists, tables, links. */
+export function renderBody(body: string): BlogBlock[] {
   const blocks = body.trim().split(/\n\s*\n/);
-  const linkify = (line: string) =>
+  const inline = (line: string) =>
     line
       .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
       .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-primary underline underline-offset-2 hover:opacity-80">$1</a>');
-  return blocks.map((raw) => {
+
+  const cells = (row: string) =>
+    row
+      .trim()
+      .replace(/^\||\|$/g, "")
+      .split("|")
+      .map((c) => c.trim());
+
+  return blocks.map((raw): BlogBlock => {
     const line = raw.trim();
-    if (line.startsWith("### ")) return { type: "h3", html: linkify(line.slice(4)) };
-    if (line.startsWith("## ")) return { type: "h2", html: linkify(line.slice(3)) };
+
+    if (line.startsWith("### ")) return { type: "h3", html: inline(line.slice(4)) };
+    if (line.startsWith("## ")) return { type: "h2", html: inline(line.slice(3)) };
+
+    if (/^\|/.test(line)) {
+      const rows = line.split(/\n/).filter((l) => l.trim().startsWith("|"));
+      const isDivider = (l: string) => /^[\s|:-]+$/.test(l.replace(/\|/g, "|"));
+      const body_ = rows.filter((l) => !isDivider(l));
+      const [headRow, ...dataRows] = body_;
+      const head = cells(headRow)
+        .map((c) => `<th class="text-left font-bold px-3 py-2 border-b">${inline(c)}</th>`)
+        .join("");
+      const trs = dataRows
+        .map(
+          (r) =>
+            `<tr>${cells(r)
+              .map((c) => `<td class="align-top px-3 py-2 border-b border-border/60">${inline(c)}</td>`)
+              .join("")}</tr>`,
+        )
+        .join("");
+      return {
+        type: "table",
+        html: `<div class="overflow-x-auto rounded-lg border"><table class="w-full text-sm"><thead class="bg-muted/50"><tr>${head}</tr></thead><tbody>${trs}</tbody></table></div>`,
+      };
+    }
+
+    if (/^\d+\.\s/.test(line)) {
+      const items = line
+        .split(/\n(?=\d+\.\s)/)
+        .map((l) => `<li>${inline(l.trim().replace(/^\d+\.\s/, "").replace(/\n\s*/g, " "))}</li>`)
+        .join("");
+      return { type: "ol", html: `<ol class="list-decimal pl-6 space-y-2">${items}</ol>` };
+    }
+
     if (/^- /.test(line)) {
       const items = line
-        .split(/\n/)
-        .filter((l) => l.trim().startsWith("- "))
-        .map((l) => `<li>${linkify(l.trim().slice(2))}</li>`) 
+        .split(/\n(?=- )/)
+        .map((l) => `<li>${inline(l.trim().slice(2).replace(/\n\s*/g, " "))}</li>`)
         .join("");
-      return { type: "ul", html: `<ul class=\"list-disc pl-6 space-y-2\">${items}</ul>` };
+      return { type: "ul", html: `<ul class="list-disc pl-6 space-y-2">${items}</ul>` };
     }
-    return { type: "p", html: linkify(line.replace(/\n/g, "<br />")) };
+
+    return { type: "p", html: inline(line.replace(/\n/g, " ")) };
   });
 }
