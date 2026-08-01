@@ -1,14 +1,9 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/backend";
+import { fetchStockSummary, getCachedSummary, type StockSummaryData } from "@/lib/stockSummary";
 import { cn } from "@/lib/utils";
 import { Sparkles, ChevronDown, Loader2, ThumbsUp, ThumbsDown } from "lucide-react";
 
-interface Summary {
-  whyMoved?: string;
-  outlook?: string;
-}
-
-const cache = new Map<string, Summary>();
+type Summary = StockSummaryData;
 
 /**
  * Compact, collapsible "Why this stock moved today" learning panel.
@@ -26,36 +21,25 @@ export const WhyItMoved = ({
 }) => {
   const bullish = (changePct ?? 0) >= 0;
   const [open, setOpen] = useState(defaultOpen);
-  const [data, setData] = useState<Summary | null>(cache.get(symbol) ?? null);
+  const [data, setData] = useState<Summary | null>(getCachedSummary(symbol));
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  // Load eagerly so the explanation is already there when the card is opened.
   useEffect(() => {
-    setData(cache.get(symbol) ?? null);
+    let alive = true;
+    const cached = getCachedSummary(symbol);
+    setData(cached);
     setErr(null);
+    if (cached) return;
+    setLoading(true);
+    fetchStockSummary(symbol)
+      .then((d) => { if (alive) setData(d); })
+      .catch(() => { if (alive) setErr("Couldn't load an explanation right now."); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
   }, [symbol]);
 
-  useEffect(() => {
-    if (!open || data || cache.get(symbol)) return;
-    let alive = true;
-    setLoading(true);
-    setErr(null);
-    supabase.functions
-      .invoke("stock-summary", { body: { symbol } })
-      .then(({ data: d, error }) => {
-        if (!alive) return;
-        if (error) {
-          setErr("Couldn't load an explanation right now.");
-        } else {
-          cache.set(symbol, d as Summary);
-          setData(d as Summary);
-        }
-      })
-      .finally(() => alive && setLoading(false));
-    return () => {
-      alive = false;
-    };
-  }, [open, symbol, data]);
 
   return (
     <div

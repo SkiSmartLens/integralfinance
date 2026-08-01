@@ -28,8 +28,8 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SEO
-        title="IntegralStocks — Learn Investing with Lessons & a Free Simulator"
-        description="A calm, beginner-friendly home for learning stocks. Follow the Investor Academy, track your watchlist, and practice trading with $100,000 of virtual cash."
+        title="Dashboard — Learn Investing & Practice Trading"
+        description="Your beginner investing dashboard. Follow the Investor Academy, track a watchlist, and practice with $100,000 of virtual cash — free."
         path="/dashboard"
       />
       <h1 className="sr-only">IntegralStocks — Beginner investing home</h1>

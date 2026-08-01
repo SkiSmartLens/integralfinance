@@ -3,6 +3,7 @@
 import { writeFileSync } from "fs";
 import { resolve } from "path";
 import { CATEGORIES, INDEX_TICKERS, TRENDING, SECTORS } from "../src/lib/categories";
+import { POSTS } from "../src/content/blog";
 
 // Collect every ticker referenced anywhere in the app's data.
 function collectTickers(): string[] {
@@ -28,47 +29,54 @@ interface SitemapEntry {
   priority?: string;
 }
 
-const today = new Date().toISOString().slice(0, 10);
-// Pages whose content changes frequently get today's date as lastmod.
-const dynamicLastmod = today;
-// Mostly-static informational pages keep an older, stable lastmod.
-const staticLastmod = "2026-05-28";
+// NOTE: We intentionally omit <lastmod> on pages without a page-specific,
+// authoritative timestamp. A shared "today" or build-time value is not a
+// real signal of content change, so we leave it out and rely on <changefreq>
+// to hint update cadence to crawlers. Blog posts carry a real publishedAt.
 
 const staticEntries: SitemapEntry[] = [
-  { path: "/", lastmod: dynamicLastmod, changefreq: "daily", priority: "1.0" },
-  { path: "/stocks", lastmod: dynamicLastmod, changefreq: "hourly", priority: "0.9" },
-  { path: "/news", lastmod: dynamicLastmod, changefreq: "hourly", priority: "0.9" },
-  { path: "/screener", lastmod: dynamicLastmod, changefreq: "daily", priority: "0.8" },
-  { path: "/calendar", lastmod: dynamicLastmod, changefreq: "daily", priority: "0.7" },
-  { path: "/start", lastmod: staticLastmod, changefreq: "monthly", priority: "0.8" },
-  { path: "/watchlist", lastmod: staticLastmod, changefreq: "weekly", priority: "0.6" },
-  { path: "/simulator", lastmod: staticLastmod, changefreq: "weekly", priority: "0.8" },
-  { path: "/about", lastmod: staticLastmod, changefreq: "monthly", priority: "0.6" },
-  { path: "/contact", lastmod: staticLastmod, changefreq: "monthly", priority: "0.5" },
-  { path: "/disclaimer", lastmod: staticLastmod, changefreq: "yearly", priority: "0.3" },
-  { path: "/data-sources", lastmod: staticLastmod, changefreq: "yearly", priority: "0.3" },
-  { path: "/faq", lastmod: staticLastmod, changefreq: "monthly", priority: "0.5" },
-  { path: "/auth", lastmod: staticLastmod, changefreq: "yearly", priority: "0.4" },
-  { path: "/market-brief", lastmod: dynamicLastmod, changefreq: "daily", priority: "0.8" },
-  { path: "/translate", lastmod: staticLastmod, changefreq: "monthly", priority: "0.7" },
-  { path: "/learn", lastmod: staticLastmod, changefreq: "monthly", priority: "0.8" },
-  { path: "/learn/basics", lastmod: staticLastmod, changefreq: "monthly", priority: "0.7" },
-  { path: "/learn/reading", lastmod: staticLastmod, changefreq: "monthly", priority: "0.7" },
-  { path: "/learn/indicators", lastmod: staticLastmod, changefreq: "monthly", priority: "0.7" },
-  { path: "/learn/patterns", lastmod: staticLastmod, changefreq: "monthly", priority: "0.7" },
-  { path: "/learn/portfolio", lastmod: staticLastmod, changefreq: "monthly", priority: "0.7" },
-  { path: "/learn/advanced", lastmod: staticLastmod, changefreq: "monthly", priority: "0.7" },
+  { path: "/", changefreq: "daily", priority: "1.0" },
+  { path: "/stocks", changefreq: "hourly", priority: "0.9" },
+  { path: "/news", changefreq: "hourly", priority: "0.9" },
+  { path: "/screener", changefreq: "daily", priority: "0.8" },
+  { path: "/calendar", changefreq: "daily", priority: "0.7" },
+  { path: "/start", changefreq: "monthly", priority: "0.8" },
+  { path: "/watchlist", changefreq: "weekly", priority: "0.6" },
+  { path: "/simulator", changefreq: "weekly", priority: "0.8" },
+  { path: "/about", changefreq: "monthly", priority: "0.6" },
+  { path: "/contact", changefreq: "monthly", priority: "0.5" },
+  { path: "/disclaimer", changefreq: "yearly", priority: "0.3" },
+  { path: "/data-sources", changefreq: "yearly", priority: "0.3" },
+  { path: "/faq", changefreq: "monthly", priority: "0.5" },
+  { path: "/auth", changefreq: "yearly", priority: "0.4" },
+  { path: "/market-brief", changefreq: "daily", priority: "0.8" },
+  { path: "/translate", changefreq: "monthly", priority: "0.7" },
+  { path: "/blog", changefreq: "weekly", priority: "0.8" },
+  { path: "/learn", changefreq: "monthly", priority: "0.8" },
+  { path: "/learn/basics", changefreq: "monthly", priority: "0.7" },
+  { path: "/learn/reading", changefreq: "monthly", priority: "0.7" },
+  { path: "/learn/indicators", changefreq: "monthly", priority: "0.7" },
+  { path: "/learn/patterns", changefreq: "monthly", priority: "0.7" },
+  { path: "/learn/portfolio", changefreq: "monthly", priority: "0.7" },
+  { path: "/learn/advanced", changefreq: "monthly", priority: "0.7" },
 ];
 
 // Individual stock pages for every ticker referenced in the app's data.
 const stockEntries: SitemapEntry[] = ALL_TICKERS.map((symbol) => ({
   path: `/stocks/${symbol.toLowerCase()}`,
-  lastmod: dynamicLastmod,
   changefreq: "hourly",
   priority: "0.7",
 }));
 
-const entries = [...staticEntries, ...stockEntries];
+// Blog posts — real page-specific publishedAt is authoritative for lastmod.
+const blogEntries: SitemapEntry[] = POSTS.map((p) => ({
+  path: `/blog/${p.slug}`,
+  lastmod: p.publishedAt,
+  changefreq: "monthly",
+  priority: "0.7",
+}));
+
+const entries = [...staticEntries, ...stockEntries, ...blogEntries];
 
 function generateSitemap(entries: SitemapEntry[]) {
   const urls = entries.map((e) =>
@@ -94,3 +102,4 @@ function generateSitemap(entries: SitemapEntry[]) {
 
 writeFileSync(resolve("public/sitemap.xml"), generateSitemap(entries));
 console.log(`sitemap.xml written (${entries.length} entries)`);
+

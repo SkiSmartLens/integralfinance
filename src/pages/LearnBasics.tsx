@@ -253,8 +253,8 @@ export default function LearnBasics() {
   return (
     <div className="min-h-screen bg-background">
       <SEO
-        title="Learn Stock Market Basics — Beginner Lessons"
-        description="Bite-sized beginner lessons on stocks, tickers, bid/ask, market cap, dividends, P/E, bull vs bear markets, order types, diversification, and ETFs."
+        title="Stock Market Basics — Beginner Lessons"
+        description="Bite-sized beginner lessons on stocks, tickers, bid/ask, market cap, dividends, P/E, bull vs bear, order types, and ETFs."
         path="/learn/basics"
         jsonLd={{
           "@context": "https://schema.org",

@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { SEO } from "@/components/SEO";
 import { Header } from "@/components/Header";
 import { SiteFooter } from "@/components/SiteFooter";
-import { supabase } from "@/lib/backend";
+import { supabase } from "@/integrations/supabase/client";
 import { Sparkles, Languages, BookOpen, ListChecks, Loader2 } from "lucide-react";
 
 interface Result {
@@ -14,17 +15,17 @@ interface Result {
 }
 
 const JargonTranslator = () => {
-  const [mode, setMode] = useState<"text" | "url">("text");
+  const [params] = useSearchParams();
+  const prefillUrl = params.get("url") ?? "";
+  const [mode, setMode] = useState<"text" | "url">(prefillUrl ? "url" : "text");
   const [text, setText] = useState("");
-  const [url, setUrl] = useState("");
+  const [url, setUrl] = useState(prefillUrl);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const run = useCallback(async (body: { text?: string; url?: string }) => {
     setLoading(true);
     setResult(null);
-    const body = mode === "url" ? { url } : { text };
     const { data, error } = await supabase.functions.invoke("jargon-translate", { body });
     if (error) {
       let msg = error.message;
@@ -37,13 +38,29 @@ const JargonTranslator = () => {
       setResult(data as Result);
     }
     setLoading(false);
+  }, []);
+
+  const autoRan = useRef("");
+  useEffect(() => {
+    if (prefillUrl && autoRan.current !== prefillUrl) {
+      autoRan.current = prefillUrl;
+      setMode("url");
+      setUrl(prefillUrl);
+      run({ url: prefillUrl });
+    }
+  }, [prefillUrl, run]);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await run(mode === "url" ? { url } : { text });
   };
+
 
   return (
     <div className="min-h-screen bg-background">
       <SEO
-        title="Jargon Translator — Turn financial articles into plain English | IntegralStocks"
-        description="Paste a financial article or URL and the IntegralStocks AI rewrites it in plain English, with a glossary of jargon and key takeaways."
+        title="Stock Market Jargon Explained Simply — Free Translator"
+        description="Paste any article or term and get stock market jargon explained simply. Learn what 'market cap', P/E, and 'short squeeze' mean in plain English."
         path="/translate"
         jsonLd={{
           "@context": "https://schema.org",

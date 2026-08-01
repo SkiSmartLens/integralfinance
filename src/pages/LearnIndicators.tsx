@@ -257,7 +257,7 @@ export default function LearnIndicators() {
     <div className="min-h-screen bg-background">
       <SEO
         title="Learn Stock Indicators — RSI, MACD, Moving Averages & More"
-        description="Beginner-friendly interactive lessons on the most popular technical indicators: SMA, EMA, RSI, MACD, Bollinger Bands, VWAP, ATR, Stochastic, support/resistance, and Fibonacci."
+        description="Beginner-friendly lessons on the top technical indicators: SMA, EMA, RSI, MACD, Bollinger Bands, VWAP, ATR, Stochastic, and Fibonacci."
         path="/learn/indicators"
         jsonLd={{
           "@context": "https://schema.org",

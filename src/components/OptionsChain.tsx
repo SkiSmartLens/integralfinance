@@ -11,11 +11,9 @@ const normalizeUrl = (value?: string) => {
 const SUPABASE_URL =
   normalizeUrl(env.VITE_SUPABASE_URL) ??
   normalizeUrl(env.VITE_SUPABASE_HOST) ??
-  (env.VITE_SUPABASE_PROJECT_ID ? `https://${env.VITE_SUPABASE_PROJECT_ID}.supabase.co` : undefined) ??
-  "https://oadtpipsbeqiadoluxnq.supabase.co";
-const ANON = (env.VITE_SUPABASE_PUBLISHABLE_KEY ??
-  env.VITE_SUPABASE_ANON_KEY ??
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9hZHRwaXBzYmVxaWFkb2x1eG5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMDUyNDYsImV4cCI6MjA5MzU4MTI0Nn0.k7_W04vpl9Sctg1XhNlSz9abWI--VPk82jD5r-0hFvk") as string;
+  (env.VITE_SUPABASE_PROJECT_ID ? `https://${env.VITE_SUPABASE_PROJECT_ID}.supabase.co` : undefined);
+const ANON = env.VITE_SUPABASE_PUBLISHABLE_KEY ?? env.VITE_SUPABASE_ANON_KEY;
+const BACKEND_CONFIGURED = Boolean(SUPABASE_URL && ANON);
 
 interface Contract {
   contractSymbol: string;
@@ -40,10 +38,11 @@ interface OptionsPayload {
 }
 
 async function fetchOptions(symbol: string, date?: number): Promise<OptionsPayload | null> {
+  if (!BACKEND_CONFIGURED) throw new Error("Backend not configured");
   const qs = new URLSearchParams({ kind: "options", symbol });
   if (date) qs.set("date", String(date));
   const res = await fetch(`${SUPABASE_URL}/functions/v1/yahoo-proxy?${qs.toString()}`, {
-    headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
+    headers: { apikey: ANON!, Authorization: `Bearer ${ANON}` },
   });
   if (!res.ok) return null;
   const j = await res.json().catch(() => null);
@@ -65,6 +64,10 @@ export const OptionsChain = ({ symbol }: { symbol: string }) => {
 
   useEffect(() => {
     if (!open) return;
+    if (!BACKEND_CONFIGURED) {
+      setErr("Options data is unavailable: backend is not configured (missing VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY).");
+      return;
+    }
     setLoading(true);
     setErr(null);
     fetchOptions(symbol)

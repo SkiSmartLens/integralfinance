@@ -9,6 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, TrendingUp, TrendingDown, Zap, Shield } from "lucide-react";
+import { AcademyPrompt } from "@/components/AcademyPrompt";
 
 type Side = "buy" | "sell" | "short" | "cover";
 type OrderType = "market" | "limit" | "stop";
@@ -193,6 +194,7 @@ const Trade = () => {
           <Link to="/sim" className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline">
             <ArrowLeft className="w-4 h-4" /> Back to portfolio
           </Link>
+          <AcademyPrompt moduleId={3} hint="Learn: your first practice trade (5 min)" />
           <div className="bg-card border rounded-xl p-3 shadow-sm">
             <StockChart symbol={symbol} />
           </div>

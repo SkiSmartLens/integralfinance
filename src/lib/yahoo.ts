@@ -171,11 +171,27 @@ export interface NewsItem {
   relatedTickers?: string[];
 }
 
-export async function fetchNews(query = "stock market"): Promise<NewsItem[]> {
-  const data = await callProxy({ kind: "search", q: query });
-  const items: NewsItem[] = data?.news ?? [];
+/**
+ * Fetch news for one query, or merge + dedupe results across several queries.
+ * Multiple queries help for indices (e.g. ^GSPC) where a single plain-text
+ * search returns stale stories.
+ */
+export async function fetchNews(query: string | string[] = "stock market"): Promise<NewsItem[]> {
+  const queries = Array.isArray(query) ? query : [query];
+  const results = await Promise.all(
+    queries.map((q) => callProxy({ kind: "search", q }).catch(() => null)),
+  );
+  const byId = new Map<string, NewsItem>();
+  for (const data of results) {
+    for (const item of (data?.news ?? []) as NewsItem[]) {
+      const id = item.uuid || item.link;
+      if (id && !byId.has(id)) byId.set(id, item);
+    }
+  }
   // Newest articles first.
-  return [...items].sort((a, b) => (b.providerPublishTime ?? 0) - (a.providerPublishTime ?? 0));
+  return [...byId.values()].sort(
+    (a, b) => (b.providerPublishTime ?? 0) - (a.providerPublishTime ?? 0),
+  );
 }
 
 

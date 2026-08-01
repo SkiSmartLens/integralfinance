@@ -1,13 +1,13 @@
 import { Link, NavLink } from "react-router-dom";
 import { Sparkles, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logo.webp";
 
 const LINKS = [
   { to: "/market-brief", label: "Market Brief" },
   { to: "/learn/basics", label: "Learn" },
+  { to: "/blog", label: "Blog" },
   { to: "/simulator", label: "Simulator" },
-  { to: "/#glossary", label: "Glossary" },
 ];
 
 /** Minimal homepage header: logo left, three links center, Start Here button right. */

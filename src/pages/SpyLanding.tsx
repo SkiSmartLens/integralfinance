@@ -30,8 +30,8 @@ const SpyLanding = () => {
   return (
     <div className="min-h-screen bg-background">
       <SEO
-        title="S&P 500 Live Signals — IntegralStocks"
-        description="Live S&P 500 (^GSPC) index quote, interactive chart, plain-English AI signals and analysis, key stats, and the latest market-moving news."
+        title="Learn to Invest — AI Stock Analysis for Beginners"
+        description="Beginner-friendly AI stock analysis, plain-English explainers, live S&P 500 signals, and a risk-free simulator to practice before you invest."
         path="/"
       />
       <Header onSearch={(s) => nav(`/stocks/${s.toLowerCase()}`)} />
@@ -72,7 +72,7 @@ const SpyLanding = () => {
             S&P 500 News <span className="text-muted-foreground font-normal text-base">· latest stories</span>
           </h2>
           <Suspense fallback={<div className="text-muted-foreground py-8 text-center">Loading stories…</div>}>
-            <NewsList query="S&P 500" />
+            <NewsList query={["^GSPC", "SPY", "S&P 500"]} />
           </Suspense>
         </section>
 

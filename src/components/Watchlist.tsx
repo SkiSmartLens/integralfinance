@@ -70,10 +70,10 @@ const Row = ({
       {onRemove && (
         <button
           onClick={onRemove}
-          className="p-2 mr-1 text-muted-foreground hover:text-down opacity-0 group-hover:opacity-100"
+          className="p-2 mr-1 min-w-11 min-h-11 flex items-center justify-center text-muted-foreground hover:text-down opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
           aria-label="Remove"
         >
-          <X className="w-3.5 h-3.5" />
+          <X className="w-4 h-4" />
         </button>
       )}
     </div>

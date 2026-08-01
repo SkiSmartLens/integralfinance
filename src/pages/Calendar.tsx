@@ -1,4 +1,5 @@
 import { Header } from "@/components/Header";
+import { PracticeNav } from "@/components/PracticeNav";
 import { Ticker } from "@/components/Ticker";
 import { SEO } from "@/components/SEO";
 import { Link } from "react-router-dom";
@@ -80,6 +81,8 @@ const Calendar = () => {
         path="/calendar"
       />
       <Header />
+      <PracticeNav />
+
       <Ticker />
       <div className="border-b bg-background sticky top-0 z-30">
         <div className="container mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">

@@ -21,7 +21,6 @@ const Screener = lazy(() => import("./pages/Screener.tsx"));
 const Calendar = lazy(() => import("./pages/Calendar.tsx"));
 const Watchlist = lazy(() => import("./pages/Watchlist.tsx"));
 const About = lazy(() => import("./pages/About.tsx"));
-const Blog = lazy(() => import("./pages/Blog.tsx"));
 const Contact = lazy(() => import("./pages/Contact.tsx"));
 const Disclaimer = lazy(() => import("./pages/Disclaimer.tsx"));
 const DataSources = lazy(() => import("./pages/DataSources.tsx"));
@@ -37,6 +36,9 @@ const StockTicker = lazy(() => import("./pages/StockTicker.tsx"));
 const StartHere = lazy(() => import("./pages/StartHere.tsx"));
 const MarketBrief = lazy(() => import("./pages/MarketBrief.tsx"));
 const JargonTranslator = lazy(() => import("./pages/JargonTranslator.tsx"));
+const BlogIndex = lazy(() => import("./pages/BlogIndex.tsx"));
+const BlogPost = lazy(() => import("./pages/BlogPost.tsx"));
+const WhyMoved = lazy(() => import("./pages/WhyMoved.tsx"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -78,7 +80,6 @@ const App = () => (
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/watchlist" element={<Watchlist />} />
             <Route path="/about" element={<About />} />
-            <Route path="/blog" element={<Blog />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/disclaimer" element={<Disclaimer />} />
             <Route path="/data-sources" element={<DataSources />} />
@@ -90,6 +91,9 @@ const App = () => (
             <Route path="/learn/reading" element={<LearnReading />} />
             <Route path="/learn/portfolio" element={<LearnPortfolio />} />
             <Route path="/learn/advanced" element={<LearnAdvanced />} />
+            <Route path="/blog" element={<BlogIndex />} />
+            <Route path="/blog/why-did-:ticker-move-today" element={<WhyMoved />} />
+            <Route path="/blog/:slug" element={<BlogPost />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

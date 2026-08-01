@@ -142,8 +142,8 @@ const MarketBrief = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SEO
-        title="Daily Market Brief — Top News, Gainers & Losers | Integral Stocks"
-        description="Your beginner-friendly daily market brief: today's top stock news, the biggest gainers and losers, and a lesson of the day that connects investing concepts to what's happening now."
+        title="Daily Market Brief — Top News, Gainers & Losers"
+        description="Beginner-friendly daily market brief: today's top stock news, biggest gainers and losers, and a lesson of the day tied to what's happening now."
         path="/market-brief"
         jsonLd={{
           "@context": "https://schema.org",
@@ -219,7 +219,7 @@ const MarketBrief = () => {
                     <div className="aspect-[16/8] overflow-hidden">
                       <img
                         src={hero.thumbnail.resolutions[0].url}
-                        alt=""
+                        alt={`Thumbnail for lead story: ${hero.title}`}
                         loading="lazy"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
