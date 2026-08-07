@@ -1,9 +1,9 @@
-import { Link, useParams } from "react-router-dom";
+import { Link, Navigate, useParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, BookOpen, Clock, LineChart } from "lucide-react";
 import { Header } from "@/components/Header";
 import { SEO } from "@/components/SEO";
 import { SiteFooter } from "@/components/SiteFooter";
-import { getPost, POSTS, renderBody } from "@/content/blog";
+import { getPost, POSTS, redirectFor, renderBody } from "@/content/blog";
 import { featuredImage } from "@/content/blogImages";
 import NotFound from "./NotFound";
 
@@ -12,8 +12,11 @@ const SITE = "https://integralstocks.com";
 const BlogPost = () => {
   const { slug = "" } = useParams();
   const post = getPost(slug);
+  const redirect = post ? undefined : redirectFor(slug);
+  if (redirect) return <Navigate to={`/blog/${redirect}`} replace />;
   if (!post) return <NotFound />;
   const blocks = renderBody(post.body);
+
   const related = POSTS.filter((p) => p.slug !== post.slug && p.tags?.some((t) => post.tags?.includes(t))).slice(0, 3);
   const hero = featuredImage(post);
   const canonicalPath = `/blog/${post.slug}`;

@@ -38,7 +38,9 @@ export const REDIRECTS: Record<string, string> = {
   "how-to-read-stock-chart": "how-to-read-a-stock-chart-for-beginners",
   "how-to-choose-your-first-stock": "how-to-pick-your-first-stock",
   "paper-trading-benefits": "paper-trading-vs-real-trading",
-  "stock-market-terms-explained-simply": "how-to-invest-in-stocks-with-no-experience",
+  "stock-market-terms-explained-simply": "how-to-start-investing-with-100-dollars",
+  "how-to-invest-in-stocks-with-no-experience": "how-to-start-investing-with-100-dollars",
+  "best-stock-simulator-for-beginners": "paper-trading-vs-real-trading",
   "what-is-a-stock-ticker": "how-to-read-a-stock-chart-for-beginners",
   "how-much-money-do-i-need-to-start-investing": "how-to-start-investing-with-100-dollars",
   "fractional-shares": "how-to-start-investing-with-100-dollars",
@@ -132,90 +134,6 @@ When you place a trade there, the post-trade card explains in plain English why 
 ## What to do 30 days from now
 
 Open your position, look at the percentage, and ask yourself one question: do you know why it moved? If yes, add another $100 and repeat. If no, that is not a reason to quit — it is the exact gap the [Market Brief](/market-brief) and the [Learn hub](/learn) exist to close. Start there, then add the money.
-`,
-  },
-  {
-    slug: "how-to-invest-in-stocks-with-no-experience",
-    title: "How to Invest in Stocks With No Experience",
-    description:
-      "A 90-day plan from complete beginner to first real position — the money you need in place first, the fifteen terms that actually come up, and a week-by-week schedule that ends in a trade you understand.",
-    publishedAt: "2026-07-11",
-    readMinutes: 10,
-    tickers: ["VOO", "VTI", "SPY"],
-    tags: ["beginner", "getting-started", "glossary"],
-    category: "Beginner Basics",
-    imageAlt:
-      "A gold coin beside a step-by-step rising chart, representing a beginner's first 90 days of learning to invest",
-    body: `
-Most "how to start investing" advice fails in the same place: it tells you to open an account and buy an index fund, then stops. That is technically correct and practically useless, because the part people struggle with is not the buy button. It is the six weeks after, when the position is red and nobody has explained why.
-
-So this is a 90-day plan instead of a list of tips. It assumes zero experience and it ends with you owning something you can explain to another person.
-
-## Days 1–7: get the money right before the market
-
-You cannot invest your way out of a cash problem, and market timing does not fix a 24% credit card APR. Before anything else:
-
-1. **Hold one month of expenses in cash.** Not six — one is enough to start. It stops a flat tire from becoming a forced sale.
-2. **Kill debt above roughly 8% interest.** Paying off a 24% balance is a guaranteed 24% return. No stock offers that with certainty.
-3. **Name your time horizon.** Money you need inside three years does not belong in stocks. Say the number out loud: "this is money I will not touch until 2031."
-
-If you fail this week, do not skip to week two. Everything downstream depends on being able to hold through a bad month.
-
-## Days 8–21: the fifteen terms that actually come up
-
-You do not need a glossary of 200 words. In your first month you will meet about fifteen, and here they are in one sentence each:
-
-- **Share** — one unit of ownership in a company.
-- **Ticker** — the short code that identifies it, like VOO or AAPL. Tickers are how every quote, chart, and news feed refers to a company, so learning to read one is step zero.
-- **Market cap** — share price × total shares. This, not share price, tells you how big a company is.
-- **ETF** — a single ticker that holds a basket of companies.
-- **Index** — a scoreboard of a group of stocks, like the S&P 500.
-- **Bid / ask** — the highest price a buyer will pay and the lowest a seller will take. The gap between them is the spread, and it is a hidden cost.
-- **Market order** — buy now at whatever the price is. **Limit order** — buy only at your price or better.
-- **Volume** — how many shares traded. High volume on a move means the move is real.
-- **EPS** — profit divided by shares outstanding.
-- **P/E ratio** — price divided by EPS, covered fully in [what P/E ratio actually means](/blog/what-does-pe-ratio-mean).
-- **Dividend** — cash the company pays you for holding.
-- **Earnings report** — the quarterly scorecard, walked through in [how to read an earnings report](/blog/how-to-read-earnings-report).
-- **Volatility** — how violently the price swings, in either direction.
-- **Drawdown** — how far you are down from the peak.
-- **Position size** — how much of your money is in one thing. The most underrated term on this list.
-
-When something outside this list shows up in an article — "sequential margin compression," "hawkish guidance" — paste the paragraph into the [Jargon Translator](/translate) instead of pretending you understood it. It rewrites the article in plain English and keeps the numbers intact.
-
-## Days 22–45: trade fake money badly, on purpose
-
-This is the part that gets skipped, and skipping it is why so many people quit after one loss.
-
-Open the [simulator](/simulator), take the $100,000 virtual balance, and place at least ten trades. Not careful trades — varied ones. Buy a boring ETF. Buy a volatile tech name. Buy something right before its earnings date, which you can find on the [calendar](/calendar). Deliberately buy something after it has already run 30% so you can watch what happens.
-
-The goal is not profit. The goal is to have felt these five things before real money is involved:
-
-- Watching a position drop 8% and doing nothing.
-- Placing a limit order and having it not fill.
-- Owning a stock through an earnings report.
-- Seeing your total balance move while you were asleep.
-- Reading the plain-English explanation of why one of your holdings dropped, and realizing it had nothing to do with the company.
-
-## Days 46–75: build a real watchlist
-
-Now narrow. Use the [screener](/screener) to filter for companies above a few billion in market cap with reasonable trading volume, and add eight to twelve names to your [watchlist](/watchlist) that pass one filter: **you can explain what the company sells to a twelve-year-old.**
-
-Then watch them for a month without buying. Every week, open the [Market Brief](/market-brief) and see whether any of your names show up in the movers. When one does, click through and read why. This is the single highest-leverage habit in the whole plan — you are learning cause and effect on companies you have chosen to care about.
-
-## Days 76–90: buy one thing, small
-
-Pick one. Size it so that a 30% loss would annoy you but not hurt you — for most beginners that is $100 to $500. Place a market order during regular hours. Write down, in one sentence, why you bought it and what would make you sell.
-
-Then stop. Do not check it daily. Set a reminder for 30 days out.
-
-## What to deliberately avoid in year one
-
-Options, margin, leverage, short selling, day trading, and anything sold as "signals" or "alerts." Every one of these amplifies mistakes you do not yet know you are making. I learned that in a simulator by blowing up a short position that I was certain was safe, which cost me nothing but taught me everything — that story is in [why I built this site](/blog/why-i-built-integralstocks).
-
-## The honest expectation
-
-Ninety days in, you will own one small position, understand maybe fifteen terms, and have a watchlist. You will not be good at this yet. But you will have replaced the vague anxiety of "investing is complicated" with a specific, boring routine, and the routine is what compounds. Structured lessons for the next ninety days are in the [Learn hub](/learn).
 `,
   },
   {
@@ -665,74 +583,6 @@ The right sequence is simulator first for mechanics and process, then small real
 `,
   },
   {
-    slug: "best-stock-simulator-for-beginners",
-    title: "How to Choose a Stock Simulator (and What Ours Does Differently)",
-    description:
-      "Most simulator reviews are written for day traders. Here are the seven things that actually matter when you have never placed a trade — and an honest account of what IntegralStocks does and doesn't do.",
-    publishedAt: "2026-07-03",
-    readMinutes: 8,
-    tickers: ["SPY", "AAPL"],
-    tags: ["simulator", "paper-trading", "beginner"],
-    category: "Platform Education",
-    imageAlt:
-      "A laptop displaying a practice trading account with a green portfolio chart, a leaderboard and a virtual cash balance",
-    body: `
-Search "best stock simulator" and you get lists written for people who already trade — comparisons of order-routing options, Level 2 data, and hotkey support. If you have never placed a trade in your life, none of that is relevant, and the fanciest platform on those lists is actively the worst place to start.
-
-Here is what actually matters when you are at zero, in the order it matters.
-
-## The seven criteria
-
-1. **Live prices, not delayed quotes.** A fifteen-minute lag breaks the feedback loop. You place a trade, the price you see is not the price you got, and the chart never matches your memory of the moment. Delayed data is fine for studying history and useless for building instinct.
-2. **No credit card, no waitlist.** If a "free" simulator wants payment details, it is a funnel for a brokerage, and the education is the bait.
-3. **An explanation of why prices moved.** This is the single biggest differentiator. Knowing your position is down 3% is worthless. Knowing it is down 3% because the whole sector sold off on a rate decision — while the company itself did nothing — is the lesson.
-4. **A realistic starting balance.** Some platforms hand you $1,000,000. That is not generosity, it is a distortion: at that size, a $50,000 position feels like nothing, so you learn to bet recklessly. Somewhere between $10,000 and $100,000 keeps decisions proportionate.
-5. **A post-trade recap.** The trade is not the learning event. The review is.
-6. **A reason to come back.** Most simulator accounts are abandoned within nine days. Competition solves this better than willpower does.
-7. **A UI that does not assume vocabulary.** If the order ticket says "GTC / IOC / FOK" with no explanation, the platform was not built for you.
-
-## What our simulator does
-
-I will be specific rather than promotional, because vague claims are exactly the problem with the category.
-
-| Feature | How it works here |
-| --- | --- |
-| Starting balance | $100,000 virtual, configurable when you create a private game |
-| Prices | The same live feed that powers our stock pages — no delay |
-| Why it moved | After each trade, a plain-English summary of what drove that stock, grounded in real reporting rather than guesswork |
-| Leaderboard | Ranked by return percentage, so a $10,000 account competes fairly with a $100,000 one |
-| Multiplayer | Create a private game with a join code, set the starting cash, duration, and whether leverage is allowed |
-| Cost | Free, no card |
-| Watchlist | Syncs to your account, so the names you track follow you across devices |
-
-The custom-game settings exist because of a specific failure mode: default settings teach default behaviour. If you want a class or a group of friends to practise long-term investing rather than gambling, set a 90-day duration and turn leverage off. If you want to demonstrate exactly how leverage destroys accounts, turn it on and watch what happens over three weeks. Both are useful lessons; they just need different settings.
-
-## What it deliberately does not do
-
-- **No options chain in the simulator.** Options are a fast way to lose money in a way that teaches you nothing about businesses.
-- **No "AI picks" or buy signals.** The AI here explains what already happened. It does not predict, and a platform that claims to is selling you confidence, not analysis.
-- **No day-trading tooling.** No hotkeys, no Level 2. Not an oversight — churn is the main way beginners lose money, and I am not going to make it faster.
-
-## A first session that is actually worth doing
-
-Give it twenty minutes:
-
-1. Open the [simulator](/simulator) and look at [SPY](/stocks/spy) before touching anything. Note today's move.
-2. Buy $10,000 of it. That is 10% of the account — a deliberately normal-sized position.
-3. Buy $5,000 of a company whose product is in the room with you, like [AAPL](/stocks/aapl).
-4. Read the explanation attached to each fill. Write down one sentence per position about why you bought it.
-5. Close the tab and do not return for a week.
-
-The temptation on day one is to place twenty trades. Resist it. Five positions you can explain beat twenty you cannot, and the discipline of holding is the actual thing you are here to build. The full breakdown of which skills carry over to real money is in [paper trading vs real trading](/blog/paper-trading-vs-real-trading).
-
-## A note on how to use the leaderboard
-
-Leaderboards are motivating and quietly dangerous. The person at the top of a short competition is usually the person who took the most concentrated risk, not the best investor — I know, because I was that person once, right up until the position that ended the run.
-
-So use it for consistency, not for rank. Set a 90-day game with friends and compare not just returns but how many trades each person placed. In my experience the lowest-turnover account usually wins by the end, and that finding is worth more than the trophy.
-`,
-  },
-  {
     slug: "building-watchlist",
     title: "How to Build a Watchlist That Actually Teaches You Something",
     description:
@@ -874,6 +724,20 @@ This gets you the market's return as a floor, plus a real research education, an
 ## Test the difference before funding it
 
 Open the [simulator](/simulator), split the virtual balance evenly between one broad ETF and three individual companies, and leave it for a quarter. Then compare not just the returns but how often you felt the urge to do something about each. Most people discover the satellite sleeve consumed 95% of their attention for a fraction of the outcome — which is exactly the argument for keeping it small.
+
+## The questions to answer before you buy either one
+
+For an **ETF**, four things tell you almost everything: what index it tracks, the expense ratio, how much it holds in assets, and how concentrated its top ten positions are. A broad-market fund with a 0.03% fee and hundreds of billions under management is a commodity product — the version from any large provider is close to interchangeable. If the top ten holdings are 40% of the fund, understand that you own an index in name and a handful of very large companies in practice.
+
+For a **stock**, you need a one-sentence answer to "how does this company make money, and why will it make more in three years?" If you cannot write that sentence without looking anything up, you are not ready to own it in size. Everything else — margins, debt, valuation — sits on top of that sentence.
+
+## How taxes and account type quietly change the answer
+
+Individual stocks tempt you to trade, and trading in a taxable account creates a tax bill on every gain you realise. Broad ETFs are naturally tax-efficient because you rarely sell them and they rarely distribute large capital gains internally. If your investing lives in a tax-advantaged retirement account, this matters less; in a regular brokerage account it can be worth more than the difference in returns. This is not tax advice — it is a reason the boring option often wins on the after-tax number even when the pre-tax numbers are similar.
+
+## The short version
+
+Buy the ETF for the return you need. Buy individual stocks for the education you want, in amounts small enough that the education stays cheap. Almost every beginner reverses those two.
 `,
   },
   {
@@ -943,7 +807,23 @@ That decomposition is exactly what the explanation on each stock page and the [M
 - Reading a bullish article and assuming you are early.
 - Judging a thesis on a five-day price move.
 
-Practise the decomposition. For two weeks, pick one mover a day from your [watchlist](/watchlist), split the move into market, sector, and company, and write down the split. It is the closest thing to a superpower a beginner can build cheaply — and you can test your conclusions in the [simulator](/simulator) without paying for the wrong ones.
+## Two more forces worth knowing
+
+**Supply of shares.** Buybacks shrink the share count, which mechanically raises earnings per share even if profits are flat. New share issuance and the expiry of insider lock-ups do the opposite. Neither is news in the dramatic sense, and both move prices.
+
+**Index and fund flows.** When a company is added to a major index, every fund tracking that index has to buy it, regardless of price or opinion. That is pure mechanical demand. The same thing happens in reverse on removal. If a stock jumps 6% on a day with no company news and no sector move, an index change or a large institutional rebalance is often the answer.
+
+## Why the same news moves two companies differently
+
+Rising oil prices lift an energy producer and squeeze an airline. A weaker currency helps an exporter and hurts an importer. A rate cut helps companies with heavy debt and unprofitable growth companies most, and helps a cash-rich, already-profitable business least. Before you ask "is this news good or bad," ask "good or bad *for whose business model*." Beginners tend to treat headlines as universally bullish or bearish; the market treats them as a redistribution.
+
+## Time horizon changes the answer entirely
+
+Over a day, prices move on flow, positioning and headlines. Over a quarter, they move on earnings and guidance. Over a decade, they move on one thing only: whether the business grew its profits. That is why day-to-day explanations feel unsatisfying — they are describing noise honestly. If your holding period is years, the only force in the list above that ultimately decides your outcome is force number one.
+
+## Practise the decomposition
+
+For two weeks, pick one mover a day from your [watchlist](/watchlist), split the move into market, sector, and company, and write down the split. It is the closest thing to a superpower a beginner can build cheaply — and you can test your conclusions in the [simulator](/simulator) without paying for the wrong ones.
 `,
   },
   {
@@ -1101,6 +981,24 @@ Then make the real position small enough that week five is survivable. Size is t
 - **Find the actual cause.** Read the plain-English explanation of the move on the stock page or in the [Market Brief](/market-brief). "Rates repriced the whole sector" and "our main product is failing" both look like red numbers, and they demand opposite responses.
 
 Most panic is the absence of an explanation. Get the explanation, check your written rules, and the urge usually passes.
+
+## Confirmation bias and the research trap
+
+Once you own something, your reading changes. You start seeking articles that agree with you and dismissing the ones that don't, and it happens without any sense of dishonesty — the agreeable article simply seems better argued. The fix is procedural: before you buy, write down the two strongest arguments *against* the position. If you cannot find two, you have not researched enough. Revisit them at your weekly review and ask whether either has become more true.
+
+The related trap is mistaking effort for edge. Reading forty articles about a company you already own is not research; it is reassurance. Real research changes a number in your thesis.
+
+## Herding, and why crowds feel like information
+
+When everyone you follow owns the same stock, the agreement feels like evidence. It isn't — it is one opinion repeated. Crowded positions are also the ones that fall hardest on mild bad news, because there is nobody left to buy. If a name arrives in your feed from five directions in a week, treat that as a reason to be slower, not faster.
+
+## Overconfidence after a winning streak
+
+The most dangerous moment in a beginner's first year is not a loss. It is a run of three or four wins, which reliably produces the conclusion "I have figured this out" — and then a larger position, then leverage. Short-run results contain almost no information about skill. A useful habit: after any strong stretch, deliberately keep your position sizes exactly where they were. The rule exists precisely for the moment you feel it is unnecessary.
+
+## Grade the process, not the score
+
+At the end of each month, review your trades and score only three things: was the thesis written before the trade, was the size within your cap, and did you follow your own sell trigger. You can score three out of three on a month you lost money — and that is the month you did this correctly.
 `,
   },
   {
@@ -1162,6 +1060,22 @@ The strategy is not hard. Staying is hard. Three things that help:
 Compounding at a market rate for four decades is a genuinely good outcome available to anyone with patience. That is the argument for keeping the majority of your money in a broad fund, as laid out in [stocks vs ETFs](/blog/stocks-vs-etfs), and treating individual companies as the small, educational part of the portfolio.
 
 You can watch the mechanism in the [simulator](/simulator): buy a broad ETF, do nothing for a quarter, and compare it to whatever you actively traded in the same period. For most beginners — including me, the first time I ran that comparison — the untouched position wins, and the lesson lands harder than any table.
+
+## Inflation, and the return that actually matters
+
+An 8% return in a year when prices rose 3% is a 5% gain in what your money can buy. That distinction changes how you think about cash: money left in a low-interest account is not standing still, it is slowly losing purchasing power. Over thirty years, the difference between a real return of 5% and a nominal one of 8% is enormous, which is why long-term projections should always be read as "roughly, before inflation." The table above is not a promise of a lifestyle — it is a promise of a number, and the number buys less each decade.
+
+## What a realistic assumption looks like
+
+Eight percent is a long-run average, not an annual delivery. Real sequences look like +26%, −9%, +14%, +2%, −18%, +31%. The average can be 8% while no individual year is anywhere near it. Two consequences: never plan around a specific year's return, and expect the balance to fall below your total contributions at some point early on. That is normal, it has happened in almost every long investing career, and it is not evidence the plan failed.
+
+## Contributions do the heavy lifting early
+
+In the first five years, how much you add matters far more than what you earn. Raising your monthly contribution from $200 to $300 in year two changes the final figure more than a percentage point of extra return would — and it is entirely under your control, unlike returns. Increase it with every raise, before the money reaches your spending, and let the market do the part you cannot influence.
+
+## One more reason time beats timing
+
+Waiting for a better entry point costs years, and years are the only irreplaceable input in the table. Someone who invests steadily through every level, including the expensive ones, historically ends up far ahead of someone who held cash waiting for a dip that they then hesitated to buy. Starting imperfectly beats starting later.
 `,
   },
   {
