@@ -876,6 +876,20 @@ This gets you the market's return as a floor, plus a real research education, an
 ## Test the difference before funding it
 
 Open the [simulator](/simulator), split the virtual balance evenly between one broad ETF and three individual companies, and leave it for a quarter. Then compare not just the returns but how often you felt the urge to do something about each. Most people discover the satellite sleeve consumed 95% of their attention for a fraction of the outcome — which is exactly the argument for keeping it small.
+
+## The questions to answer before you buy either one
+
+For an **ETF**, four things tell you almost everything: what index it tracks, the expense ratio, how much it holds in assets, and how concentrated its top ten positions are. A broad-market fund with a 0.03% fee and hundreds of billions under management is a commodity product — the version from any large provider is close to interchangeable. If the top ten holdings are 40% of the fund, understand that you own an index in name and a handful of very large companies in practice.
+
+For a **stock**, you need a one-sentence answer to "how does this company make money, and why will it make more in three years?" If you cannot write that sentence without looking anything up, you are not ready to own it in size. Everything else — margins, debt, valuation — sits on top of that sentence.
+
+## How taxes and account type quietly change the answer
+
+Individual stocks tempt you to trade, and trading in a taxable account creates a tax bill on every gain you realise. Broad ETFs are naturally tax-efficient because you rarely sell them and they rarely distribute large capital gains internally. If your investing lives in a tax-advantaged retirement account, this matters less; in a regular brokerage account it can be worth more than the difference in returns. This is not tax advice — it is a reason the boring option often wins on the after-tax number even when the pre-tax numbers are similar.
+
+## The short version
+
+Buy the ETF for the return you need. Buy individual stocks for the education you want, in amounts small enough that the education stays cheap. Almost every beginner reverses those two.
 `,
   },
   {
