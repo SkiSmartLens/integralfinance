@@ -106,6 +106,28 @@ function isNavSoup(t: string): boolean {
   return words > 60 && sentences < words / 40;
 }
 
+/**
+ * Yahoo (and other React/Next portals) render the article client-side but ship the full body
+ * as JSON in the HTML (`bodyBlocks`). Pull the text nodes straight out of it.
+ */
+function extractEmbedded(html: string): string {
+  const i = html.search(/\\?"bodyBlocks\\?"\s*:\s*\[/);
+  if (i < 0) return "";
+  const seg = html.slice(i, i + 400_000).replace(/\\"/g, '"');
+  let out = "";
+  for (const m of seg.matchAll(/"text"\s*:\s*(null|"((?:[^"\\]|\\.)*)")/g)) {
+    if (m[1] === "null") {
+      if (out && !out.endsWith("\n\n")) out += "\n\n";
+      continue;
+    }
+    let t = m[2];
+    try { t = JSON.parse(`"${t}"`); } catch { /* keep raw */ }
+    out += t;
+  }
+  out = out.replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+  return out.length >= 500 ? out.slice(0, 12000) : "";
+}
+
 /** Pull the real article body out of a page by keeping substantial <p> blocks. */
 function extractArticle(html: string): string {
   const paras: string[] = [];
@@ -115,14 +137,15 @@ function extractArticle(html: string): string {
   }
   const joined = paras.join("\n\n");
   if (joined.length >= 500) return joined.slice(0, 12000);
-  return "";
+  return extractEmbedded(html);
 }
+
 
 
 /** Pages that are consent walls, bot challenges or nav-only shells are useless to summarize. */
 function isJunk(text: string): boolean {
   if (text.length < 400) return true;
-  return /just a moment|enable javascript and cookies|verifying you are human|attention required|we and our \d+ partners|iab transparency|privacy dashboard|datenschutz|are you a robot|access denied|content is currently unavailable/i.test(
+  return /just a moment|enable javascript and cookies|verifying you are human|attention required|we and our \d+ partners|iab transparency|privacy dashboard|datenschutz|are you a robot|access denied|content is currently unavailable|oops, something went wrong/i.test(
     text.slice(0, 3000),
   );
 }
@@ -176,7 +199,7 @@ async function rawFetch(target: string, ua = BROWSER_UA): Promise<string | null>
           Cookie: CONSENT_COOKIE,
         },
         redirect: "manual",
-        signal: AbortSignal.timeout(15000),
+        signal: AbortSignal.timeout(9000),
       });
       if (r.status >= 300 && r.status < 400) {
         const loc = r.headers.get("location");
@@ -206,6 +229,29 @@ async function readable(target: string, ua = BROWSER_UA): Promise<string | null>
   return text;
 }
 
+/**
+ * Yahoo Finance renders /m/ and /news/ stubs client-side, so scraping the page often yields a
+ * consent/nav shell. Its content API returns the full article markup for the story UUID.
+ */
+async function yahooCaas(target: string): Promise<string | null> {
+  let u: URL;
+  try { u = new URL(target); } catch { return null; }
+  if (!/(^|\.)yahoo\.com$/.test(u.hostname)) return null;
+  const uuid = u.pathname.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)?.[0];
+  if (!uuid) return null;
+  const body = await rawFetch(`https://finance.yahoo.com/caas/content/article/?uuid=${uuid}`);
+  if (!body) return null;
+  try {
+    const markup = JSON.parse(body)?.items?.[0]?.markup;
+    if (typeof markup !== "string") return null;
+    const text = extractArticle(markup);
+    return text && !isJunk(text) ? text : null;
+  } catch {
+    return null;
+  }
+}
+
+
 function proxies(u: string): string[] {
   const noScheme = u.replace(/^https?:\/\//, "");
   return [
@@ -216,38 +262,60 @@ function proxies(u: string): string[] {
   ];
 }
 
-/** One pass: publisher canonical pages, then the page itself, then reader proxies. */
-async function attempt(url: string): Promise<string | null> {
-  const html = (await rawFetch(url)) ?? (await rawFetch(url, UA));
-  const alts = html ? altUrls(html, url) : [];
+/** Resolve the first task that yields text; all candidates run concurrently. */
+function firstSuccess(tasks: Array<() => Promise<string | null>>): Promise<string | null> {
+  return new Promise((resolve) => {
+    let pending = tasks.length;
+    if (pending === 0) return resolve(null);
+    let done = false;
+    for (const t of tasks) {
+      t()
+        .then((r) => {
+          if (r && !done) { done = true; resolve(r); }
+        })
+        .catch(() => {})
+        .finally(() => {
+          pending--;
+          if (pending === 0 && !done) resolve(null);
+        });
+    }
+  });
+}
 
-  // 1) publisher pages, direct
-  for (const a of alts) {
-    const t = await readable(a);
-    if (t) return t;
-  }
-  // 2) the requested page itself
+/** Race the page itself, its publisher canonicals and every reader proxy at once. */
+async function attempt(url: string): Promise<string | null> {
+  // Yahoo's own content API is the most reliable source for its stubs — try it first.
+  const caas = await yahooCaas(url);
+  if (caas) return caas;
+
+  // Kick off proxies for the original URL immediately — they don't depend on the direct fetch.
+  const proxyRace = firstSuccess(proxies(url).map((c) => () => readable(c, UA)));
+
+  const html = await rawFetch(url);
   if (html) {
     const isHtml = /<\/?[a-z][\s\S]*>/i.test(html);
     const own = isHtml ? extractArticle(html) : html.trim().slice(0, 12000);
     if (own && !isJunk(own) && !isNavSoup(own)) return own;
-  }
-  // 3) reader proxies for the publisher pages, then the original
-  for (const target of [...alts, url]) {
-    for (const c of proxies(target)) {
-      const t = await readable(c, UA);
-      if (t) return t;
+
+    const alts = altUrls(html, url);
+    if (alts.length) {
+      const altRace = firstSuccess([
+        ...alts.map((a) => () => readable(a)),
+        ...alts.flatMap((a) => proxies(a).map((c) => () => readable(c, UA))),
+      ]);
+      // Publisher pages are the real article — prefer them over syndicator-stub proxies.
+      const winner = await altRace;
+      if (winner) return winner;
     }
   }
-  return null;
+  return await proxyRace;
 }
 
-/** Portals intermittently serve consent/bot shells — retry the whole cascade a few times. */
+/** Portals intermittently serve consent shells — one quick retry, then give up. */
 async function fetchArticleText(url: string): Promise<string> {
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 2; i++) {
     const t = await attempt(url);
     if (t) return t;
-    await new Promise((r) => setTimeout(r, 600));
   }
   throw new Error("UNREADABLE");
 }
@@ -319,9 +387,10 @@ Deno.serve(async (req) => {
           response_format: { type: "json_object" },
           messages: [
             { role: "system", content: SYSTEM },
-            { role: "user", content: `Source URL: ${sourceUrl ?? "(pasted text)"}\n\nSOURCE:\n${source}` },
+            { role: "user", content: `Source URL: ${sourceUrl ?? "(pasted text)"}\n\nSOURCE:\n${source.slice(0, 8000)}` },
           ],
           temperature: 0.3,
+          max_tokens: 1600,
         }),
       });
 

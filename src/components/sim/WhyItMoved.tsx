@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { fetchStockSummary, getCachedSummary, type StockSummaryData } from "@/lib/stockSummary";
 import { cn } from "@/lib/utils";
+import { CitedText } from "@/components/CitedText";
+
 import { Sparkles, ChevronDown, Loader2, ThumbsUp, ThumbsDown } from "lucide-react";
 
 type Summary = StockSummaryData;
@@ -86,7 +88,7 @@ export const WhyItMoved = ({
             <p className="text-sm text-muted-foreground">{err}</p>
           ) : (
             <div className="space-y-2 text-sm leading-relaxed text-foreground/90">
-              {data?.whyMoved && <p>{data.whyMoved}</p>}
+              {data?.whyMoved && <p><CitedText text={data.whyMoved} sources={data.sources} /></p>}
               {data?.outlook && (
                 <p>
                   <span className={cn("text-xs font-bold uppercase tracking-wider", bullish ? "text-emerald-700" : "text-rose-700")}>Outlook · </span>

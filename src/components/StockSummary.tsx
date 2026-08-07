@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { fetchStockSummary, getCachedSummary, type StockSummaryData } from "@/lib/stockSummary";
 import { fetchQuotes } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
+import { CitedText } from "@/components/CitedText";
+
 import { Sparkles, TrendingUp, TrendingDown, Calendar, Eye, BarChart3, DollarSign, Percent, Landmark, Shield, LineChart, ChevronDown, Zap, Newspaper, ExternalLink } from "lucide-react";
 
 
@@ -102,9 +104,13 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
         <div className="space-y-2">
           {data.whyMoved && (
             <CollapsibleRow icon={<Zap className="w-4 h-4 text-primary" />} title="Why did this stock move today?">
-              <p className="text-sm leading-relaxed">{data.whyMoved}</p>
+              <p className="text-sm leading-relaxed"><CitedText text={data.whyMoved} sources={data.sources} /></p>
+              {data.sources && data.sources.length > 0 && (
+                <p className="text-[11px] text-muted-foreground mt-2">Grounded in live web articles — tap a number to read the source.</p>
+              )}
             </CollapsibleRow>
           )}
+
           <CollapsibleRow icon={<TrendingUp className="w-4 h-4 text-up" />} title="Positives">
             <ul className="text-sm space-y-1.5 list-disc pl-5">
               {data.positives?.map((p, i) => <li key={i}>{p}</li>)}

@@ -4,7 +4,6 @@ import { Header } from "@/components/Header";
 import { SEO } from "@/components/SEO";
 import { SiteFooter } from "@/components/SiteFooter";
 import { StockChart } from "@/components/StockChart";
-import { StockExplainer } from "@/components/StockExplainer";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { formatNumber } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
@@ -12,6 +11,9 @@ import { ArrowRight, LineChart } from "lucide-react";
 
 const StockSummary = lazy(() =>
   import("@/components/StockSummary").then((m) => ({ default: m.StockSummary })),
+);
+const StockExplainer = lazy(() =>
+  import("@/components/StockExplainer").then((m) => ({ default: m.StockExplainer })),
 );
 const NewsList = lazy(() =>
   import("@/components/NewsList").then((m) => ({ default: m.NewsList })),
@@ -63,7 +65,9 @@ const SpyLanding = () => {
 
       <main className="px-4 sm:px-6 py-6 space-y-6 max-w-5xl mx-auto">
         <div id="chart"><StockChart symbol={SYMBOL} /></div>
-        <StockExplainer symbol={SYMBOL} />
+        <Suspense fallback={<div className="h-32" />}>
+          <StockExplainer symbol={SYMBOL} />
+        </Suspense>
         <Suspense fallback={<div className="h-32" />}>
           <StockSummary symbol={SYMBOL} />
         </Suspense>
