@@ -1133,6 +1133,24 @@ Then make the real position small enough that week five is survivable. Size is t
 - **Find the actual cause.** Read the plain-English explanation of the move on the stock page or in the [Market Brief](/market-brief). "Rates repriced the whole sector" and "our main product is failing" both look like red numbers, and they demand opposite responses.
 
 Most panic is the absence of an explanation. Get the explanation, check your written rules, and the urge usually passes.
+
+## Confirmation bias and the research trap
+
+Once you own something, your reading changes. You start seeking articles that agree with you and dismissing the ones that don't, and it happens without any sense of dishonesty — the agreeable article simply seems better argued. The fix is procedural: before you buy, write down the two strongest arguments *against* the position. If you cannot find two, you have not researched enough. Revisit them at your weekly review and ask whether either has become more true.
+
+The related trap is mistaking effort for edge. Reading forty articles about a company you already own is not research; it is reassurance. Real research changes a number in your thesis.
+
+## Herding, and why crowds feel like information
+
+When everyone you follow owns the same stock, the agreement feels like evidence. It isn't — it is one opinion repeated. Crowded positions are also the ones that fall hardest on mild bad news, because there is nobody left to buy. If a name arrives in your feed from five directions in a week, treat that as a reason to be slower, not faster.
+
+## Overconfidence after a winning streak
+
+The most dangerous moment in a beginner's first year is not a loss. It is a run of three or four wins, which reliably produces the conclusion "I have figured this out" — and then a larger position, then leverage. Short-run results contain almost no information about skill. A useful habit: after any strong stretch, deliberately keep your position sizes exactly where they were. The rule exists precisely for the moment you feel it is unnecessary.
+
+## Grade the process, not the score
+
+At the end of each month, review your trades and score only three things: was the thesis written before the trade, was the size within your cap, and did you follow your own sell trigger. You can score three out of three on a month you lost money — and that is the month you did this correctly.
 `,
   },
   {
