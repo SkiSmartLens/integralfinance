@@ -56,6 +56,7 @@ export interface Quote {
   currency?: string;
   exchange?: string;
   quoteType?: string;
+  marketState?: string;
 }
 
 export async function fetchQuotes(symbols: string[]): Promise<Quote[]> {

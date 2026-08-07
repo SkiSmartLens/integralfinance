@@ -4,6 +4,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Analytics } from "@/components/Analytics";
 import SpyLanding from "./pages/SpyLanding.tsx";
 const Index = lazy(() => import("./pages/Index.tsx"));
 const Academy = lazy(() => import("./pages/Academy.tsx"));
@@ -55,7 +56,9 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <Analytics />
         <Suspense fallback={null}>
+
           <Routes>
             <Route path="/" element={<SpyLanding />} />
             <Route path="/dashboard" element={<Index />} />

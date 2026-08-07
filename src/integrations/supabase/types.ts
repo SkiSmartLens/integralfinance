@@ -296,9 +296,9 @@ export type Database = {
       owns_member: { Args: { _member_id: string }; Returns: boolean }
     }
     Enums: {
-      order_side: "buy" | "sell"
-      order_status: "pending" | "filled" | "cancelled"
-      order_type: "market" | "limit" | "stop"
+      order_side: "buy" | "sell" | "short" | "cover"
+      order_status: "pending" | "filled" | "cancelled" | "rejected"
+      order_type: "market" | "limit" | "stop" | "market_on_open"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -426,9 +426,9 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      order_side: ["buy", "sell"],
-      order_status: ["pending", "filled", "cancelled"],
-      order_type: ["market", "limit", "stop"],
+      order_side: ["buy", "sell", "short", "cover"],
+      order_status: ["pending", "filled", "cancelled", "rejected"],
+      order_type: ["market", "limit", "stop", "market_on_open"],
     },
   },
 } as const

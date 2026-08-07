@@ -18,6 +18,9 @@ import { Leaderboard } from "@/components/sim/Leaderboard";
 import { ArrowLeft, LogOut, RefreshCw, Trophy, Copy, LogIn, Users, Lock, Globe, DoorOpen, HelpCircle } from "lucide-react";
 import { SimWalkthrough, hasSeenSimWalkthrough } from "@/components/sim/SimWalkthrough";
 import { PostTradeCard } from "@/components/sim/PostTradeCard";
+import { PortfolioBar } from "@/components/sim/PortfolioBar";
+import { isUsMarketOpen, nextOpenLabel } from "@/lib/marketHours";
+
 
 interface Member { id: string; game_id: string; user_id: string; cash: number }
 interface Position { id: string; symbol: string; shares: number; avg_cost: number }
@@ -135,9 +138,16 @@ const Sim = () => {
   const selPrice = selQuote?.regularMarketPrice;
   const selChange = selQuote?.regularMarketChangePercent ?? 0;
   const flash = usePriceFlash(selPrice);
+  // Regular-session check — gains and order entry are only live during trading hours.
+  // Yahoo's marketState wins when we have it; the ET clock is the fallback so an
+  // empty/stale quote list can't wrongly report "market closed" during the session.
+  const states = quotes.map((q) => q.marketState).filter(Boolean) as string[];
+  const marketOpen = states.length ? states.includes("REGULAR") : isUsMarketOpen();
+  const nextOpen = nextOpenLabel();
 
   const cash = Number(member?.cash ?? 0);
   const startingCash = Number(game?.starting_cash ?? 100000);
+  const buyingPower = startingCash * Number(game?.leverage ?? 1);
   const heldShares = Number(positions.find((p) => p.symbol === selected)?.shares ?? 0);
 
   const holdings: Holding[] = positions
@@ -160,23 +170,58 @@ const Sim = () => {
   const dayPL = holdings.reduce((s, h) => s + (h.last - h.prevClose) * h.shares, 0);
   const totalReturnPct = startingCash > 0 ? ((equity - startingCash) / startingCash) * 100 : 0;
 
-  const execute = async (side: "buy" | "sell" | "short" | "cover", shares: number) => {
+  const execute = async (side: "buy" | "sell" | "short" | "cover", shares: number, atOpen = false) => {
     if (!member) return;
     setPlacing(true);
     const { data, error } = await supabase.functions.invoke("place-order", {
-      body: { member_id: member.id, symbol: selected, side, shares, order_type: "market" },
+      body: {
+        member_id: member.id,
+        symbol: selected,
+        side,
+        shares,
+        order_type: atOpen || !marketOpen ? "market_on_open" : "market",
+      },
     });
     setPlacing(false);
-    if (error) return toast({ title: "Order failed", description: error.message, variant: "destructive" });
+    if (error) {
+      // functions.invoke returns a generic "non-2xx" message — read the real reason.
+      let reason = error.message;
+      try {
+        const body = await (error as any)?.context?.json?.();
+        if (body?.error) reason = body.error;
+      } catch { /* keep generic message */ }
+      return toast({ title: "Order failed", description: reason, variant: "destructive" });
+    }
     if ((data as any)?.error) return toast({ title: "Order failed", description: (data as any).error, variant: "destructive" });
     const filledPrice = (data as any)?.price as number | undefined;
+    const queued = !!(data as any)?.queued;
     toast({
-      title: (data as any)?.queued ? "Order queued (after-hours)" : `Filled @ $${formatNumber(filledPrice)}`,
+      title: queued ? `Queued for market open (${nextOpen})` : `Filled @ $${formatNumber(filledPrice)}`,
       description: `${side} ${shares} ${selected}`,
     });
-    setLastTrade({ symbol: selected, side, shares, price: filledPrice });
+    if (!queued) setLastTrade({ symbol: selected, side, shares, price: filledPrice });
     reloadPortfolio(member);
   };
+
+  // Release any market-on-open orders as soon as the session is live.
+  useEffect(() => {
+    if (!member || !marketOpen) return;
+    let alive = true;
+    (async () => {
+      const { data } = await supabase.functions.invoke("place-order", {
+        body: { member_id: member.id, action: "run_queued" },
+      });
+      const processed = (data as any)?.processed as any[] | undefined;
+      if (!alive || !processed?.length) return;
+      const filled = processed.filter((p) => p.filled).length;
+      if (filled) {
+        toast({ title: `${filled} queued order${filled === 1 ? "" : "s"} filled at the open` });
+        reloadPortfolio(member);
+      }
+    })();
+    return () => { alive = false; };
+    /* eslint-disable-next-line */
+  }, [member?.id, marketOpen]);
 
   const copyCode = () => {
     if (!game) return;
@@ -252,16 +297,18 @@ const Sim = () => {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-5 space-y-5">
-        {/* Portfolio summary + Safety Meter */}
-        <section className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-3">
-          <div className="grid grid-cols-2 gap-3">
-            <SummaryCard label="Equity" value={equity} prefix="$" />
-            <SummaryCard label="Cash" value={cash} prefix="$" />
-            <SummaryCard label="Day P/L" value={dayPL} prefix="$" signed colored />
-            <SummaryCard label="Total return" value={totalReturnPct} suffix="%" signed colored />
-          </div>
-          <SafetyMeter holdings={holdings} cash={cash} equity={equity} />
-        </section>
+        {/* Portfolio header + allocation bar */}
+        <PortfolioBar
+          equity={equity}
+          buyingPower={buyingPower}
+          dayPL={dayPL}
+          marketOpen={marketOpen}
+          totalReturnPct={totalReturnPct}
+          holdings={holdings}
+          onSelect={setSelected}
+        />
+        <SafetyMeter holdings={holdings} cash={cash} equity={equity} />
+
 
         {/* Search */}
         <SimSearch onSelect={setSelected} />
@@ -327,11 +374,15 @@ const Sim = () => {
                 symbol={selected}
                 price={selPrice}
                 cash={cash}
+                shortPower={Math.max(0, buyingPower - Math.abs(holdingsValue))}
                 heldShares={heldShares}
                 allowShort={game?.allow_short ?? false}
+                marketOpen={marketOpen}
+                nextOpen={nextOpen}
                 placing={placing}
                 onExecute={execute}
               />
+
             ) : (
               <div className="rounded-3xl border-2 bg-card p-6 text-center text-sm text-muted-foreground shadow-sm">
                 <button onClick={() => nav("/sim/lobby")} className="inline-flex items-center gap-2 text-primary font-bold">
@@ -377,32 +428,6 @@ const Sim = () => {
   );
 };
 
-const SummaryCard = ({
-  label,
-  value,
-  prefix = "",
-  suffix = "",
-  signed = false,
-  colored = false,
-}: {
-  label: string;
-  value: number;
-  prefix?: string;
-  suffix?: string;
-  signed?: boolean;
-  colored?: boolean;
-}) => {
-  const cls = colored ? (value >= 0 ? "text-emerald-600" : "text-rose-600") : "";
-  const fmt = (n: number) => `${signed ? (n >= 0 ? "+" : "-") : ""}${prefix}${formatNumber(Math.abs(n))}${suffix}`;
-  return (
-    <div className="rounded-2xl border-2 bg-card p-3.5 shadow-sm">
-      <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-extrabold">{label}</div>
-      <div className={cn("text-xl sm:text-2xl font-extrabold tabular-nums mt-0.5", cls)}>
-        <AnimatedNumber value={value} format={fmt} />
-      </div>
-    </div>
-  );
-};
 
 const Stat = ({ label, value }: { label: string; value: string }) => (
   <div className="rounded-xl bg-muted/40 border p-2.5">

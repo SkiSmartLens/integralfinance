@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
     }
     const sym = symbol.toUpperCase();
     const isBeginner = mode === "beginner";
-    const key = `sum:v4:${isBeginner ? "b:" : ""}${sym}`;
+    const key = `sum:v5:${isBeginner ? "b:" : ""}${sym}`;
     const hit = cache.get(key);
     if (hit && hit.exp > Date.now()) {
       return new Response(hit.body, {
@@ -50,13 +50,22 @@ Deno.serve(async (req) => {
       { headers: { apikey: anon } },
     ).then((r) => r.json()).catch(() => ({}));
 
+    // Firecrawl web search — real, recent articles about why the stock moved.
+    // We ask for markdown so the model reads actual article text, not just snippets.
+    const fcQuery = `${sym} stock why it moved today news`;
     const firecrawlPromise = FIRECRAWL_API_KEY
       ? fetch("https://api.firecrawl.dev/v2/search", {
           method: "POST",
           headers: { Authorization: `Bearer ${FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ query: `Why did ${sym} stock move today`, limit: 6 }),
+          body: JSON.stringify({
+            query: fcQuery,
+            limit: 5,
+            tbs: "qdr:w",
+            scrapeOptions: { formats: ["markdown"], onlyMainContent: true },
+          }),
         }).then((r) => (r.ok ? r.json() : null)).catch(() => null)
       : Promise.resolve(null);
+
 
     const quoteJson: any = await quotePromise;
     const q = quoteJson?.quoteResponse?.result?.[0] ?? {};
@@ -89,30 +98,40 @@ Deno.serve(async (req) => {
       url: (n.link as string) ?? (n.url as string) ?? "",
     }));
 
-    // 3) Real web search results (started in parallel above) for why the stock
-    //    moved today, so "whyMoved" reflects what actually happened.
+    // 3) Real web research (Firecrawl, started in parallel above): actual article
+    //    text about why the stock moved, plus citable sources for the UI.
     let webContext = "";
+    const webSources: { title: string; publisher: string; url: string }[] = [];
     try {
       const fc: any = await firecrawlPromise;
       const results: any[] = fc?.data?.web ?? fc?.web ?? (Array.isArray(fc?.data) ? fc.data : []) ?? [];
-      const lines = results
-        .map((r: any) => {
-          const title = r.title ?? "";
-          const snippet = (r.description ?? r.snippet ?? "").toString().slice(0, 300);
-          let src = "";
-          try { src = r.url ? new URL(r.url).hostname.replace(/^www\./, "") : ""; } catch { /* ignore */ }
-          return title ? `- ${title}${snippet ? `: ${snippet}` : ""}${src ? ` (${src})` : ""}` : "";
-        })
-        .filter(Boolean)
-        .slice(0, 6);
-      if (lines.length) webContext = lines.join("\n");
+      const lines: string[] = [];
+      for (const r of results.slice(0, 5)) {
+        const title = (r.title ?? "").toString().trim();
+        const url = (r.url ?? "").toString();
+        if (!title || !url) continue;
+        let host = "";
+        try { host = new URL(url).hostname.replace(/^www\./, ""); } catch { /* ignore */ }
+        const body = (r.markdown ?? r.description ?? r.snippet ?? "")
+          .toString()
+          .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+          .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 1400);
+        const n = webSources.length + 1;
+        webSources.push({ title, publisher: host || "web", url });
+        lines.push(`[${n}] ${title} — ${host}\n${body}`);
+      }
+      if (lines.length) webContext = lines.join("\n\n");
     } catch (e) {
       console.warn("firecrawl error", e instanceof Error ? e.message : e);
     }
 
     const webBlock = webContext
-      ? `\n\nWeb search results (Google) for why ${companyName} (${sym}) moved today — use these as the SOURCE OF TRUTH for the "whyMoved" field:\n${webContext}\n`
+      ? `\n\nRESEARCH — real, recently published articles about ${companyName} (${sym}), fetched from the live web. These are the SOURCE OF TRUTH for "whyMoved":\n${webContext}\n\nWhen you use a fact from an article above, append its bracket number (e.g. [1], [2]) to that sentence in "whyMoved". Never cite a number that is not listed above. Do not invent facts that are not in these articles.\n`
       : "";
+
 
     const beginnerPrompt = `Stock: ${companyName} (${sym})
 Sector: ${q.sector ?? ""}  Industry: ${q.industry ?? ""}
@@ -158,9 +177,11 @@ Produce a DETAILED, in-depth analyst-grade summary. Be specific and quantitative
 
 HARD RULES for whyMoved (violating these is a failure):
 - NEVER say "broad market action", "no recent headlines", "no news", "market sentiment", "general market conditions", or any similar filler.
-- If the web search / headlines above give a concrete company-specific catalyst, summarize it in plain English (earnings, guidance, analyst rating change, product/legal/macro news) with the reported number.
+- If a RESEARCH article above is provided, whyMoved MUST be built from it and MUST include at least one bracket citation like [1]. Name the actual catalyst and the reported number (earnings, guidance, analyst action, product/legal/macro event) as reported.
+- Never state a catalyst that is not supported by the research or headlines above. If the research is thin, say what IS known and then explain the rest from the structural data.
 - If they do NOT give a concrete catalyst, explain the move from the STRUCTURAL data above. Call out whichever apply and cite the numbers: extreme under- or over-performance vs the 52-week range, severe unprofitability (negative EPS, negative operating/profit margins), lack of institutional backing (low heldPercentInstitutions), heavy debt load (high debtToEquity / totalDebt), or high volatility (beta well above 1, wide day range). Tie those structural facts to why the price is reacting the way it is today.
 - 3-5 sentences. Concrete numbers, not adjectives.
+
 
 Return strict JSON with shape:
 {
@@ -279,7 +300,16 @@ Return strict JSON with shape:
       if (!Array.isArray(parsed.negatives) || !parsed.negatives.length) parsed.negatives = ["Analysis unavailable right now."];
     }
     // Attach real headline sources so the UI can render citations.
-    parsed.sources = sources;
+    // Attach citations: researched web articles first (these are what whyMoved's
+    // [1], [2] markers refer to), then the remaining ticker headlines.
+    const seen = new Set<string>();
+    parsed.sources = [...webSources, ...sources].filter((s: any) => {
+      if (!s?.url || seen.has(s.url)) return false;
+      seen.add(s.url);
+      return true;
+    }).slice(0, 10);
+    parsed.grounded = webSources.length > 0;
+
     const body = JSON.stringify(parsed);
     cache.set(key, { body, exp: Date.now() + 1000 * 60 * 30 });
     return new Response(body, {
