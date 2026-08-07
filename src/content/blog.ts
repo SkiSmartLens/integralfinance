@@ -959,7 +959,23 @@ That decomposition is exactly what the explanation on each stock page and the [M
 - Reading a bullish article and assuming you are early.
 - Judging a thesis on a five-day price move.
 
-Practise the decomposition. For two weeks, pick one mover a day from your [watchlist](/watchlist), split the move into market, sector, and company, and write down the split. It is the closest thing to a superpower a beginner can build cheaply — and you can test your conclusions in the [simulator](/simulator) without paying for the wrong ones.
+## Two more forces worth knowing
+
+**Supply of shares.** Buybacks shrink the share count, which mechanically raises earnings per share even if profits are flat. New share issuance and the expiry of insider lock-ups do the opposite. Neither is news in the dramatic sense, and both move prices.
+
+**Index and fund flows.** When a company is added to a major index, every fund tracking that index has to buy it, regardless of price or opinion. That is pure mechanical demand. The same thing happens in reverse on removal. If a stock jumps 6% on a day with no company news and no sector move, an index change or a large institutional rebalance is often the answer.
+
+## Why the same news moves two companies differently
+
+Rising oil prices lift an energy producer and squeeze an airline. A weaker currency helps an exporter and hurts an importer. A rate cut helps companies with heavy debt and unprofitable growth companies most, and helps a cash-rich, already-profitable business least. Before you ask "is this news good or bad," ask "good or bad *for whose business model*." Beginners tend to treat headlines as universally bullish or bearish; the market treats them as a redistribution.
+
+## Time horizon changes the answer entirely
+
+Over a day, prices move on flow, positioning and headlines. Over a quarter, they move on earnings and guidance. Over a decade, they move on one thing only: whether the business grew its profits. That is why day-to-day explanations feel unsatisfying — they are describing noise honestly. If your holding period is years, the only force in the list above that ultimately decides your outcome is force number one.
+
+## Practise the decomposition
+
+For two weeks, pick one mover a day from your [watchlist](/watchlist), split the move into market, sector, and company, and write down the split. It is the closest thing to a superpower a beginner can build cheaply — and you can test your conclusions in the [simulator](/simulator) without paying for the wrong ones.
 `,
   },
   {
