@@ -1212,6 +1212,22 @@ The strategy is not hard. Staying is hard. Three things that help:
 Compounding at a market rate for four decades is a genuinely good outcome available to anyone with patience. That is the argument for keeping the majority of your money in a broad fund, as laid out in [stocks vs ETFs](/blog/stocks-vs-etfs), and treating individual companies as the small, educational part of the portfolio.
 
 You can watch the mechanism in the [simulator](/simulator): buy a broad ETF, do nothing for a quarter, and compare it to whatever you actively traded in the same period. For most beginners — including me, the first time I ran that comparison — the untouched position wins, and the lesson lands harder than any table.
+
+## Inflation, and the return that actually matters
+
+An 8% return in a year when prices rose 3% is a 5% gain in what your money can buy. That distinction changes how you think about cash: money left in a low-interest account is not standing still, it is slowly losing purchasing power. Over thirty years, the difference between a real return of 5% and a nominal one of 8% is enormous, which is why long-term projections should always be read as "roughly, before inflation." The table above is not a promise of a lifestyle — it is a promise of a number, and the number buys less each decade.
+
+## What a realistic assumption looks like
+
+Eight percent is a long-run average, not an annual delivery. Real sequences look like +26%, −9%, +14%, +2%, −18%, +31%. The average can be 8% while no individual year is anywhere near it. Two consequences: never plan around a specific year's return, and expect the balance to fall below your total contributions at some point early on. That is normal, it has happened in almost every long investing career, and it is not evidence the plan failed.
+
+## Contributions do the heavy lifting early
+
+In the first five years, how much you add matters far more than what you earn. Raising your monthly contribution from $200 to $300 in year two changes the final figure more than a percentage point of extra return would — and it is entirely under your control, unlike returns. Increase it with every raise, before the money reaches your spending, and let the market do the part you cannot influence.
+
+## One more reason time beats timing
+
+Waiting for a better entry point costs years, and years are the only irreplaceable input in the table. Someone who invests steadily through every level, including the expensive ones, historically ends up far ahead of someone who held cash waiting for a dip that they then hesitated to buy. Starting imperfectly beats starting later.
 `,
   },
   {
