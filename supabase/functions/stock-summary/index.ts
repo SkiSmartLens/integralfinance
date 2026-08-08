@@ -190,14 +190,21 @@ HARD RULES for whyMoved (violating these is a failure):
 - Never state a catalyst that is not supported by the research or headlines above. If the research is thin, say what IS known and then explain the rest from the structural data.
 - If they do NOT give a concrete catalyst, explain the move from the STRUCTURAL data above. Call out whichever apply and cite the numbers: extreme under- or over-performance vs the 52-week range, severe unprofitability (negative EPS, negative operating/profit margins), lack of institutional backing (low heldPercentInstitutions), heavy debt load (high debtToEquity / totalDebt), or high volatility (beta well above 1, wide day range). Tie those structural facts to why the price is reacting the way it is today.
 - 3-5 sentences. Concrete numbers, not adjectives.
+HARD RULES for positives and negatives (violating these is a failure):
+- Every bullet MUST be grounded in EITHER (a) a RESEARCH article / headline above, or (b) the structural quote data above (valuation, margins, EPS, debt, growth, beta, institutional ownership, 52-week range, analyst target). NEVER invent a claim from general knowledge or memory.
+- When a bullet draws on a RESEARCH article, it MUST end with that article's bracket citation (e.g. [1], [2]), using the SAME numbering as whyMoved. Never cite a number that is not listed above.
+- When there is not enough research to support a specific bullish or bearish claim, do NOT guess: fall back explicitly to the structural financial data above and cite the actual figure (e.g. "Forward P/E of 18.4 vs trailing 24.1 implies expected earnings growth", "Debt/Equity of 162 leaves little cushion").
+- No generic filler ("strong brand", "faces competition", "macro uncertainty") unless it is tied to a cited article or a specific number above.
+- 4-6 bullets each, 1-2 sentences, concrete numbers over adjectives.
 
 
 Return strict JSON with shape:
 {
   "whyMoved": string,              // 3-5 sentences, follow the HARD RULES above.
   "whatItDoes": string,            // 1-2 sentences on the company's business — what they actually sell/do and where their revenue comes from. Required.
-  "positives": [string],           // 4-6 detailed bullets, each 1-2 sentences with specifics
-  "negatives": [string],           // 4-6 detailed bullets, each 1-2 sentences with specifics
+  "positives": [string],           // 4-6 detailed bullets, grounded + cited per the HARD RULES above
+  "negatives": [string],           // 4-6 detailed bullets, grounded + cited per the HARD RULES above
+
   "predictedRevenue": string,      // a CONCRETE estimated next-fiscal-year TOTAL revenue figure as a dollar amount (e.g. "~$412B" or "~$8.5B"). Base it on the latest reported revenue and the expected growth rate. ALWAYS give a specific number, not a range of words. If genuinely unknown, give your best quantitative estimate and note it is approximate.
   "revenueGrowth": string,         // 2-3 sentences on historical + expected revenue growth trajectory, cite YoY % if known
   "earningsGrowth": string,        // 2-3 sentences on EPS trend, beat/miss history, forward growth expectations
