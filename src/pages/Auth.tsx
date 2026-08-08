@@ -86,16 +86,30 @@ const Auth = () => {
             <button
               onClick={() => signIn("google")}
               disabled={loading !== null}
-              className="w-full py-2.5 rounded-md border bg-background font-semibold text-sm hover:bg-muted transition-colors disabled:opacity-60"
+              className="w-full py-2.5 rounded-md border bg-background font-semibold text-sm hover:bg-muted transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
             >
-              {loading === "google" ? "Connecting…" : "Continue with Google"}
+              {loading === "google" ? (
+                "Connecting…"
+              ) : (
+                <>
+                  <GoogleIcon className="w-4 h-4" />
+                  Continue with Google
+                </>
+              )}
             </button>
             <button
               onClick={() => signIn("apple")}
               disabled={loading !== null}
-              className="w-full py-2.5 rounded-md bg-foreground text-background font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-60"
+              className="w-full py-2.5 rounded-md bg-foreground text-background font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2"
             >
-              {loading === "apple" ? "Connecting…" : "Continue with Apple"}
+              {loading === "apple" ? (
+                "Connecting…"
+              ) : (
+                <>
+                  <AppleIcon className="w-4 h-4 fill-current" />
+                  Continue with Apple
+                </>
+              )}
             </button>
           </div>
           <p className="text-xs text-muted-foreground mt-6">
