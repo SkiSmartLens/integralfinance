@@ -50,21 +50,26 @@ Deno.serve(async (req) => {
       { headers: { apikey: anon } },
     ).then((r) => r.json()).catch(() => ({}));
 
-    // Firecrawl web search — real, recent articles about why the stock moved.
-    // We ask for markdown so the model reads actual article text, not just snippets.
-    const fcQuery = `${sym} stock why it moved today news`;
-    const firecrawlPromise = FIRECRAWL_API_KEY
-      ? fetch("https://api.firecrawl.dev/v2/search", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            query: fcQuery,
-            limit: 5,
-            tbs: "qdr:w",
-            scrapeOptions: { formats: ["markdown"], onlyMainContent: true },
-          }),
-        }).then((r) => (r.ok ? r.json() : null)).catch(() => null)
-      : Promise.resolve(null);
+    // Firecrawl web search — real, recent articles about why the stock moved,
+    // plus a second pass for bull/bear/analyst-outlook material so the
+    // positives/negatives bullets can be grounded and cited too.
+    const fcSearch = (query: string, tbs?: string) =>
+      FIRECRAWL_API_KEY
+        ? fetch("https://api.firecrawl.dev/v2/search", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              query,
+              limit: 5,
+              ...(tbs ? { tbs } : {}),
+              scrapeOptions: { formats: ["markdown"], onlyMainContent: true },
+            }),
+          }).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+        : Promise.resolve(null);
+
+    const firecrawlPromise = fcSearch(`${sym} stock why it moved today news`, "qdr:w");
+    const firecrawlCasePromise = fcSearch(`${sym} stock bull case bear case analyst outlook`, "qdr:m");
+
 
 
     const quoteJson: any = await quotePromise;
