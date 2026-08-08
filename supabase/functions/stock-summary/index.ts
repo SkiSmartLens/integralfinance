@@ -50,21 +50,26 @@ Deno.serve(async (req) => {
       { headers: { apikey: anon } },
     ).then((r) => r.json()).catch(() => ({}));
 
-    // Firecrawl web search — real, recent articles about why the stock moved.
-    // We ask for markdown so the model reads actual article text, not just snippets.
-    const fcQuery = `${sym} stock why it moved today news`;
-    const firecrawlPromise = FIRECRAWL_API_KEY
-      ? fetch("https://api.firecrawl.dev/v2/search", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            query: fcQuery,
-            limit: 5,
-            tbs: "qdr:w",
-            scrapeOptions: { formats: ["markdown"], onlyMainContent: true },
-          }),
-        }).then((r) => (r.ok ? r.json() : null)).catch(() => null)
-      : Promise.resolve(null);
+    // Firecrawl web search — real, recent articles about why the stock moved,
+    // plus a second pass for bull/bear/analyst-outlook material so the
+    // positives/negatives bullets can be grounded and cited too.
+    const fcSearch = (query: string, tbs?: string) =>
+      FIRECRAWL_API_KEY
+        ? fetch("https://api.firecrawl.dev/v2/search", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              query,
+              limit: 5,
+              ...(tbs ? { tbs } : {}),
+              scrapeOptions: { formats: ["markdown"], onlyMainContent: true },
+            }),
+          }).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+        : Promise.resolve(null);
+
+    const firecrawlPromise = fcSearch(`${sym} stock why it moved today news`, "qdr:w");
+    const firecrawlCasePromise = fcSearch(`${sym} stock bull case bear case analyst outlook`, "qdr:m");
+
 
 
     const quoteJson: any = await quotePromise;
@@ -103,13 +108,16 @@ Deno.serve(async (req) => {
     let webContext = "";
     const webSources: { title: string; publisher: string; url: string }[] = [];
     try {
-      const fc: any = await firecrawlPromise;
-      const results: any[] = fc?.data?.web ?? fc?.web ?? (Array.isArray(fc?.data) ? fc.data : []) ?? [];
+      const [fc, fcCase]: any[] = await Promise.all([firecrawlPromise, firecrawlCasePromise]);
+      const pick = (x: any): any[] => x?.data?.web ?? x?.web ?? (Array.isArray(x?.data) ? x.data : []) ?? [];
+      const results: any[] = [...pick(fc).slice(0, 5), ...pick(fcCase).slice(0, 4)];
       const lines: string[] = [];
-      for (const r of results.slice(0, 5)) {
+      const seen = new Set<string>();
+      for (const r of results) {
         const title = (r.title ?? "").toString().trim();
         const url = (r.url ?? "").toString();
-        if (!title || !url) continue;
+        if (!title || !url || seen.has(url)) continue;
+        seen.add(url);
         let host = "";
         try { host = new URL(url).hostname.replace(/^www\./, ""); } catch { /* ignore */ }
         const body = (r.markdown ?? r.description ?? r.snippet ?? "")
@@ -129,8 +137,9 @@ Deno.serve(async (req) => {
     }
 
     const webBlock = webContext
-      ? `\n\nRESEARCH — real, recently published articles about ${companyName} (${sym}), fetched from the live web. These are the SOURCE OF TRUTH for "whyMoved":\n${webContext}\n\nWhen you use a fact from an article above, append its bracket number (e.g. [1], [2]) to that sentence in "whyMoved". Never cite a number that is not listed above. Do not invent facts that are not in these articles.\n`
+      ? `\n\nRESEARCH — real, recently published articles about ${companyName} (${sym}), fetched from the live web. These are the SOURCE OF TRUTH for "whyMoved", "positives" and "negatives":\n${webContext}\n\nWhen you use a fact from an article above, append its bracket number (e.g. [1], [2]) to that sentence or bullet. Never cite a number that is not listed above. Do not invent facts that are not in these articles.\n`
       : "";
+
 
 
     const beginnerPrompt = `Stock: ${companyName} (${sym})
@@ -181,14 +190,21 @@ HARD RULES for whyMoved (violating these is a failure):
 - Never state a catalyst that is not supported by the research or headlines above. If the research is thin, say what IS known and then explain the rest from the structural data.
 - If they do NOT give a concrete catalyst, explain the move from the STRUCTURAL data above. Call out whichever apply and cite the numbers: extreme under- or over-performance vs the 52-week range, severe unprofitability (negative EPS, negative operating/profit margins), lack of institutional backing (low heldPercentInstitutions), heavy debt load (high debtToEquity / totalDebt), or high volatility (beta well above 1, wide day range). Tie those structural facts to why the price is reacting the way it is today.
 - 3-5 sentences. Concrete numbers, not adjectives.
+HARD RULES for positives and negatives (violating these is a failure):
+- Every bullet MUST be grounded in EITHER (a) a RESEARCH article / headline above, or (b) the structural quote data above (valuation, margins, EPS, debt, growth, beta, institutional ownership, 52-week range, analyst target). NEVER invent a claim from general knowledge or memory.
+- When a bullet draws on a RESEARCH article, it MUST end with that article's bracket citation (e.g. [1], [2]), using the SAME numbering as whyMoved. Never cite a number that is not listed above.
+- When there is not enough research to support a specific bullish or bearish claim, do NOT guess: fall back explicitly to the structural financial data above and cite the actual figure (e.g. "Forward P/E of 18.4 vs trailing 24.1 implies expected earnings growth", "Debt/Equity of 162 leaves little cushion").
+- No generic filler ("strong brand", "faces competition", "macro uncertainty") unless it is tied to a cited article or a specific number above.
+- 4-6 bullets each, 1-2 sentences, concrete numbers over adjectives.
 
 
 Return strict JSON with shape:
 {
   "whyMoved": string,              // 3-5 sentences, follow the HARD RULES above.
   "whatItDoes": string,            // 1-2 sentences on the company's business — what they actually sell/do and where their revenue comes from. Required.
-  "positives": [string],           // 4-6 detailed bullets, each 1-2 sentences with specifics
-  "negatives": [string],           // 4-6 detailed bullets, each 1-2 sentences with specifics
+  "positives": [string],           // 4-6 detailed bullets, grounded + cited per the HARD RULES above
+  "negatives": [string],           // 4-6 detailed bullets, grounded + cited per the HARD RULES above
+
   "predictedRevenue": string,      // a CONCRETE estimated next-fiscal-year TOTAL revenue figure as a dollar amount (e.g. "~$412B" or "~$8.5B"). Base it on the latest reported revenue and the expected growth rate. ALWAYS give a specific number, not a range of words. If genuinely unknown, give your best quantitative estimate and note it is approximate.
   "revenueGrowth": string,         // 2-3 sentences on historical + expected revenue growth trajectory, cite YoY % if known
   "earningsGrowth": string,        // 2-3 sentences on EPS trend, beat/miss history, forward growth expectations
