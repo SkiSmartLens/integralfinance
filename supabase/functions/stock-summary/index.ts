@@ -108,13 +108,16 @@ Deno.serve(async (req) => {
     let webContext = "";
     const webSources: { title: string; publisher: string; url: string }[] = [];
     try {
-      const fc: any = await firecrawlPromise;
-      const results: any[] = fc?.data?.web ?? fc?.web ?? (Array.isArray(fc?.data) ? fc.data : []) ?? [];
+      const [fc, fcCase]: any[] = await Promise.all([firecrawlPromise, firecrawlCasePromise]);
+      const pick = (x: any): any[] => x?.data?.web ?? x?.web ?? (Array.isArray(x?.data) ? x.data : []) ?? [];
+      const results: any[] = [...pick(fc).slice(0, 5), ...pick(fcCase).slice(0, 4)];
       const lines: string[] = [];
-      for (const r of results.slice(0, 5)) {
+      const seen = new Set<string>();
+      for (const r of results) {
         const title = (r.title ?? "").toString().trim();
         const url = (r.url ?? "").toString();
-        if (!title || !url) continue;
+        if (!title || !url || seen.has(url)) continue;
+        seen.add(url);
         let host = "";
         try { host = new URL(url).hostname.replace(/^www\./, ""); } catch { /* ignore */ }
         const body = (r.markdown ?? r.description ?? r.snippet ?? "")
@@ -134,8 +137,9 @@ Deno.serve(async (req) => {
     }
 
     const webBlock = webContext
-      ? `\n\nRESEARCH — real, recently published articles about ${companyName} (${sym}), fetched from the live web. These are the SOURCE OF TRUTH for "whyMoved":\n${webContext}\n\nWhen you use a fact from an article above, append its bracket number (e.g. [1], [2]) to that sentence in "whyMoved". Never cite a number that is not listed above. Do not invent facts that are not in these articles.\n`
+      ? `\n\nRESEARCH — real, recently published articles about ${companyName} (${sym}), fetched from the live web. These are the SOURCE OF TRUTH for "whyMoved", "positives" and "negatives":\n${webContext}\n\nWhen you use a fact from an article above, append its bracket number (e.g. [1], [2]) to that sentence or bullet. Never cite a number that is not listed above. Do not invent facts that are not in these articles.\n`
       : "";
+
 
 
     const beginnerPrompt = `Stock: ${companyName} (${sym})
