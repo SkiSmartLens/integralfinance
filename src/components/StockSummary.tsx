@@ -119,7 +119,7 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
 
           <CollapsibleRow icon={<TrendingDown className="w-4 h-4 text-down" />} title="Risks">
             <ul className="text-sm space-y-1.5 list-disc pl-5">
-              {data.negatives?.map((p, i) => <li key={i}>{p}</li>)}
+              {data.negatives?.map((p, i) => <li key={i}><CitedText text={p} sources={data.sources} /></li>)}
             </ul>
           </CollapsibleRow>
           {data.predictedRevenue && (
