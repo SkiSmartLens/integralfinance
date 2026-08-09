@@ -257,6 +257,27 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       watchlist: {
         Row: {
           created_at: string
@@ -283,6 +304,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       is_game_member: { Args: { _game_id: string }; Returns: boolean }
       join_game_by_code: {
         Args: { _code: string }
@@ -296,6 +324,7 @@ export type Database = {
       owns_member: { Args: { _member_id: string }; Returns: boolean }
     }
     Enums: {
+      app_role: "admin" | "moderator" | "user"
       order_side: "buy" | "sell" | "short" | "cover"
       order_status: "pending" | "filled" | "cancelled" | "rejected"
       order_type: "market" | "limit" | "stop" | "market_on_open"
@@ -426,6 +455,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "moderator", "user"],
       order_side: ["buy", "sell", "short", "cover"],
       order_status: ["pending", "filled", "cancelled", "rejected"],
       order_type: ["market", "limit", "stop", "market_on_open"],
