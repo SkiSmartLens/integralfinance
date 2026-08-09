@@ -45,11 +45,17 @@ const setActiveGame = (id: string) => {
   try { localStorage.setItem("activeSimGame", id); } catch {}
 };
 
+interface AdminGame extends Game {
+  players: { user_id: string; cash: number; name: string }[];
+}
+
 const GameLobby = () => {
   const nav = useNavigate();
   const [userId, setUserId] = useState<string | null>(null);
   const [myMemberships, setMyMemberships] = useState<(Member & { game: Game })[]>([]);
   const [publicGames, setPublicGames] = useState<Game[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminGames, setAdminGames] = useState<AdminGame[]>([]);
   const [code, setCode] = useState("");
   const [joining, setJoining] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -79,12 +85,44 @@ const GameLobby = () => {
       .order("created_at", { ascending: false })
       .limit(24);
     setPublicGames(((pubs ?? []) as Game[]).filter((g) => !memberGameIds.has(g.id)));
+
+    // Admins can see every game and every player in it.
+    const { data: roles } = await (supabase as any)
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", uid)
+      .eq("role", "admin");
+    const admin = ((roles ?? []) as any[]).length > 0;
+    setIsAdmin(admin);
+    if (admin) {
+      const { data: allGames } = await supabase
+        .from("games")
+        .select("*")
+        .order("created_at", { ascending: false });
+      const { data: allMembers } = await supabase
+        .from("game_members")
+        .select("game_id, user_id, cash");
+      const { data: profs } = await supabase.from("profiles").select("user_id, display_name");
+      const nameBy = new Map(((profs ?? []) as any[]).map((p) => [p.user_id, p.display_name as string]));
+      const byGame = new Map<string, { user_id: string; cash: number; name: string }[]>();
+      ((allMembers ?? []) as any[]).forEach((m) => {
+        const list = byGame.get(m.game_id) ?? [];
+        list.push({ user_id: m.user_id, cash: Number(m.cash), name: nameBy.get(m.user_id) ?? "Player" });
+        byGame.set(m.game_id, list);
+      });
+      setAdminGames(
+        ((allGames ?? []) as Game[]).map((g) => ({ ...g, players: byGame.get(g.id) ?? [] })),
+      );
+    } else {
+      setAdminGames([]);
+    }
     setLoading(false);
   };
 
   useEffect(() => {
     if (userId) refresh(userId);
   }, [userId]);
+
 
   const enterGame = (gameId: string) => {
     setActiveGame(gameId);
