@@ -33,23 +33,43 @@ const AppleIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
+const NEXT_KEY = "postAuthRedirect";
+
+const safeNext = (v: string | null) =>
+  v && v.startsWith("/") && !v.startsWith("//") ? v : null;
+
 const Auth = () => {
   const nav = useNavigate();
   const [loading, setLoading] = useState<"google" | "apple" | null>(null);
 
   useEffect(() => {
+    const fromUrl = safeNext(new URLSearchParams(window.location.search).get("next"));
+    if (fromUrl) {
+      try { localStorage.setItem(NEXT_KEY, fromUrl); } catch { /* ignore */ }
+    }
+    const go = () => {
+      let dest = "/sim/lobby";
+      try {
+        const stored = safeNext(localStorage.getItem(NEXT_KEY));
+        if (stored) dest = stored;
+        localStorage.removeItem(NEXT_KEY);
+      } catch { /* ignore */ }
+      nav(dest, { replace: true });
+    };
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (session) nav("/sim/lobby");
+      if (session) go();
     });
-    supabase.auth.getSession().then(({ data }) => { if (data.session) nav("/sim/lobby"); });
+    supabase.auth.getSession().then(({ data }) => { if (data.session) go(); });
     return () => subscription.unsubscribe();
   }, [nav]);
 
   const signIn = async (provider: "google" | "apple") => {
     setLoading(provider);
     try {
+      // Return to /auth (a public route) so the redirect lands here and we can
+      // forward the user to the simulator instead of the homepage.
       const result = await lovable.auth.signInWithOAuth(provider, {
-        redirect_uri: window.location.origin,
+        redirect_uri: `${window.location.origin}/auth`,
       });
       if (result.error) {
         toast({ title: "Sign in failed", description: result.error.message, variant: "destructive" });
@@ -57,7 +77,6 @@ const Auth = () => {
         return;
       }
       if (result.redirected) return;
-      nav("/sim/lobby");
     } catch (e) {
       toast({
         title: "Sign in failed",
@@ -67,6 +86,7 @@ const Auth = () => {
       setLoading(null);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-background">
