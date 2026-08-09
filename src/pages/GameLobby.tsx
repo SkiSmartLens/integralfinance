@@ -45,11 +45,17 @@ const setActiveGame = (id: string) => {
   try { localStorage.setItem("activeSimGame", id); } catch {}
 };
 
+interface AdminGame extends Game {
+  players: { user_id: string; cash: number; name: string }[];
+}
+
 const GameLobby = () => {
   const nav = useNavigate();
   const [userId, setUserId] = useState<string | null>(null);
   const [myMemberships, setMyMemberships] = useState<(Member & { game: Game })[]>([]);
   const [publicGames, setPublicGames] = useState<Game[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminGames, setAdminGames] = useState<AdminGame[]>([]);
   const [code, setCode] = useState("");
   const [joining, setJoining] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -79,12 +85,44 @@ const GameLobby = () => {
       .order("created_at", { ascending: false })
       .limit(24);
     setPublicGames(((pubs ?? []) as Game[]).filter((g) => !memberGameIds.has(g.id)));
+
+    // Admins can see every game and every player in it.
+    const { data: roles } = await (supabase as any)
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", uid)
+      .eq("role", "admin");
+    const admin = ((roles ?? []) as any[]).length > 0;
+    setIsAdmin(admin);
+    if (admin) {
+      const { data: allGames } = await supabase
+        .from("games")
+        .select("*")
+        .order("created_at", { ascending: false });
+      const { data: allMembers } = await supabase
+        .from("game_members")
+        .select("game_id, user_id, cash");
+      const { data: profs } = await supabase.from("profiles").select("user_id, display_name");
+      const nameBy = new Map(((profs ?? []) as any[]).map((p) => [p.user_id, p.display_name as string]));
+      const byGame = new Map<string, { user_id: string; cash: number; name: string }[]>();
+      ((allMembers ?? []) as any[]).forEach((m) => {
+        const list = byGame.get(m.game_id) ?? [];
+        list.push({ user_id: m.user_id, cash: Number(m.cash), name: nameBy.get(m.user_id) ?? "Player" });
+        byGame.set(m.game_id, list);
+      });
+      setAdminGames(
+        ((allGames ?? []) as Game[]).map((g) => ({ ...g, players: byGame.get(g.id) ?? [] })),
+      );
+    } else {
+      setAdminGames([]);
+    }
     setLoading(false);
   };
 
   useEffect(() => {
     if (userId) refresh(userId);
   }, [userId]);
+
 
   const enterGame = (gameId: string) => {
     setActiveGame(gameId);
@@ -138,8 +176,99 @@ const GameLobby = () => {
           </p>
         </header>
 
+        {/* Your games — first thing you see */}
+        {myMemberships.length > 0 && (
+          <section>
+            <h2 className="text-xl font-extrabold mb-4">Your games</h2>
+            <ul className="grid md:grid-cols-2 gap-4">
+              {myMemberships.map((m) => (
+                <li key={m.id} className="rounded-2xl border-2 bg-card p-5">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="min-w-0">
+                      <div className="font-extrabold truncate">{m.game.name}</div>
+                      <div className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
+                        {m.game.is_public ? (
+                          <><Globe className="w-3 h-3" /> Public</>
+                        ) : (
+                          <><Lock className="w-3 h-3" /> Private</>
+                        )}
+                        <span>·</span>
+                        <span className="tabular-nums">${formatNumber(Number(m.cash))} cash</span>
+                      </div>
+                    </div>
+                    {!m.game.is_public && <CopyCode code={m.game.join_code} />}
+                  </div>
+                  <div className="flex gap-2 mt-4">
+                    <button
+                      onClick={() => enterGame(m.game_id)}
+                      className="flex-1 h-10 rounded-xl bg-primary text-primary-foreground font-extrabold text-sm"
+                    >
+                      Enter
+                    </button>
+                    <button
+                      onClick={() => leaveGame(m.id)}
+                      className="h-10 px-3 rounded-xl border-2 text-muted-foreground hover:text-rose-600 hover:border-rose-300 text-sm font-bold"
+                    >
+                      Leave
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/* Admin: every game and every player */}
+        {isAdmin && (
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-extrabold">All games (admin)</h2>
+              <span className="text-xs text-muted-foreground">{adminGames.length} total</span>
+            </div>
+            <ul className="grid md:grid-cols-2 gap-4">
+              {adminGames.map((g) => (
+                <li key={g.id} className="rounded-2xl border-2 bg-card p-5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="font-extrabold truncate">{g.name}</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {g.is_public ? "Public" : "Private"} · {g.players.length} player
+                        {g.players.length === 1 ? "" : "s"} · ${formatNumber(Number(g.starting_cash))} start
+                      </div>
+                    </div>
+                    <CopyCode code={g.join_code} />
+                  </div>
+                  <ul className="mt-3 space-y-1">
+                    {g.players.map((p) => (
+                      <li
+                        key={p.user_id}
+                        className="flex items-center justify-between text-xs bg-muted/40 rounded-lg px-2.5 py-1.5"
+                      >
+                        <span className="truncate font-bold">{p.name}</span>
+                        <span className="tabular-nums text-muted-foreground">
+                          ${formatNumber(p.cash)} cash
+                        </span>
+                      </li>
+                    ))}
+                    {g.players.length === 0 && (
+                      <li className="text-xs text-muted-foreground">No players yet.</li>
+                    )}
+                  </ul>
+                  <button
+                    onClick={() => enterGame(g.id)}
+                    className="mt-4 w-full h-10 rounded-xl border-2 font-extrabold text-sm hover:border-primary"
+                  >
+                    Open game
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         {/* Create options */}
         <section className="grid md:grid-cols-2 gap-5">
+
           <Link
             to="/sim/create?mode=solo"
             className="group rounded-3xl border-2 bg-card p-7 hover:border-emerald-500 transition-all hover:-translate-y-0.5"
@@ -203,49 +332,6 @@ const GameLobby = () => {
           </div>
         </section>
 
-        {/* Your games */}
-        {myMemberships.length > 0 && (
-          <section>
-            <h2 className="text-xl font-extrabold mb-4">Your games</h2>
-            <ul className="grid md:grid-cols-2 gap-4">
-              {myMemberships.map((m) => (
-                <li key={m.id} className="rounded-2xl border-2 bg-card p-5">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="min-w-0">
-                      <div className="font-extrabold truncate">{m.game.name}</div>
-                      <div className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
-                        {m.game.is_public ? (
-                          <><Globe className="w-3 h-3" /> Public</>
-                        ) : (
-                          <><Lock className="w-3 h-3" /> Private</>
-                        )}
-                        <span>·</span>
-                        <span className="tabular-nums">${formatNumber(Number(m.cash))} cash</span>
-                      </div>
-                    </div>
-                    {!m.game.is_public && (
-                      <CopyCode code={m.game.join_code} />
-                    )}
-                  </div>
-                  <div className="flex gap-2 mt-4">
-                    <button
-                      onClick={() => enterGame(m.game_id)}
-                      className="flex-1 h-10 rounded-xl bg-primary text-primary-foreground font-extrabold text-sm"
-                    >
-                      Enter
-                    </button>
-                    <button
-                      onClick={() => leaveGame(m.id)}
-                      className="h-10 px-3 rounded-xl border-2 text-muted-foreground hover:text-rose-600 hover:border-rose-300 text-sm font-bold"
-                    >
-                      Leave
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
 
         {/* Public games */}
         <section>
