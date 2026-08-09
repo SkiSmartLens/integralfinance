@@ -332,49 +332,6 @@ const GameLobby = () => {
           </div>
         </section>
 
-        {/* Your games */}
-        {myMemberships.length > 0 && (
-          <section>
-            <h2 className="text-xl font-extrabold mb-4">Your games</h2>
-            <ul className="grid md:grid-cols-2 gap-4">
-              {myMemberships.map((m) => (
-                <li key={m.id} className="rounded-2xl border-2 bg-card p-5">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="min-w-0">
-                      <div className="font-extrabold truncate">{m.game.name}</div>
-                      <div className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
-                        {m.game.is_public ? (
-                          <><Globe className="w-3 h-3" /> Public</>
-                        ) : (
-                          <><Lock className="w-3 h-3" /> Private</>
-                        )}
-                        <span>·</span>
-                        <span className="tabular-nums">${formatNumber(Number(m.cash))} cash</span>
-                      </div>
-                    </div>
-                    {!m.game.is_public && (
-                      <CopyCode code={m.game.join_code} />
-                    )}
-                  </div>
-                  <div className="flex gap-2 mt-4">
-                    <button
-                      onClick={() => enterGame(m.game_id)}
-                      className="flex-1 h-10 rounded-xl bg-primary text-primary-foreground font-extrabold text-sm"
-                    >
-                      Enter
-                    </button>
-                    <button
-                      onClick={() => leaveGame(m.id)}
-                      className="h-10 px-3 rounded-xl border-2 text-muted-foreground hover:text-rose-600 hover:border-rose-300 text-sm font-bold"
-                    >
-                      Leave
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
 
         {/* Public games */}
         <section>
