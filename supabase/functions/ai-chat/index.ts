@@ -1,5 +1,3 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -127,6 +125,61 @@ async function gatherStockContext(symbol: string): Promise<string | null> {
   return lines.join("\n");
 }
 
+
+// ---- Real article research: recent Yahoo Finance / web articles about a ticker ----
+export interface Article { title: string; publisher: string; url: string; text: string; date?: string }
+
+async function yahooArticles(symbol: string): Promise<Article[]> {
+  const j = await yfetch(`https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(symbol)}&quotesCount=0&newsCount=10`);
+  const items: any[] = j?.news ?? [];
+  return items.slice(0, 8).map((n) => ({
+    title: String(n?.title ?? ""),
+    publisher: String(n?.publisher ?? "Yahoo Finance"),
+    url: String(n?.link ?? ""),
+    text: String(n?.summary ?? ""),
+    date: n?.providerPublishTime ? new Date(n.providerPublishTime * 1000).toISOString().slice(0, 10) : undefined,
+  })).filter((a) => a.title && a.url);
+}
+
+async function firecrawlArticles(symbol: string, name: string): Promise<Article[]> {
+  const key = Deno.env.get("FIRECRAWL_API_KEY");
+  if (!key) return [];
+  try {
+    const r = await fetch("https://api.firecrawl.dev/v2/search", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        query: `${name || symbol} (${symbol}) stock news analysis should I buy or sell`,
+        limit: 5,
+        tbs: "qdr:w",
+        scrapeOptions: { formats: ["markdown"], onlyMainContent: true },
+      }),
+    });
+    if (!r.ok) return [];
+    const j: any = await r.json();
+    const pick = (x: any): any[] => x?.data?.web ?? x?.web ?? (Array.isArray(x?.data) ? x.data : []) ?? [];
+    return pick(j).slice(0, 5).map((x: any) => ({
+      title: String(x?.title ?? ""),
+      publisher: (() => { try { return new URL(String(x?.url)).hostname.replace(/^www\./, ""); } catch { return "web"; } })(),
+      url: String(x?.url ?? ""),
+      text: String(x?.markdown ?? x?.description ?? "").replace(/\s+/g, " ").slice(0, 1800),
+    })).filter((a: Article) => a.title && a.url);
+  } catch { return []; }
+}
+
+async function gatherArticles(symbol: string, name: string): Promise<Article[]> {
+  const [yh, fc] = await Promise.all([yahooArticles(symbol), firecrawlArticles(symbol, name)]);
+  const out: Article[] = [];
+  const seen = new Set<string>();
+  for (const a of [...fc, ...yh]) {
+    if (seen.has(a.url)) continue;
+    seen.add(a.url);
+    out.push(a);
+    if (out.length >= 8) break;
+  }
+  return out;
+}
+
 async function resolveCandidates(text: string, contextSymbol?: string): Promise<string[]> {
   const found = new Set<string>();
   if (contextSymbol) found.add(contextSymbol.toUpperCase());
@@ -157,23 +210,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    // Require authenticated user
-    const auth = req.headers.get("Authorization");
-    if (!auth?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    const SB_URL = Deno.env.get("SUPABASE_URL")!;
-    const SB_ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const userClient = createClient(SB_URL, SB_ANON, { global: { headers: { Authorization: auth } } });
-    const { data: uData, error: uErr } = await userClient.auth.getUser();
-    if (uErr || !uData?.user) {
-      return new Response(JSON.stringify({ error: "unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
+    // Public endpoint: anyone can ask Integral AI (no sign-in required).
     const { messages = [], context } = (await req.json()) as { messages: Msg[]; context?: any };
     const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
     if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY missing");
@@ -183,6 +220,15 @@ Deno.serve(async (req) => {
     const candidates = lastUser ? await resolveCandidates(lastUser, context?.symbol) : (context?.symbol ? [context.symbol.toUpperCase()] : []);
     const stockBlocks = (await Promise.all(candidates.map((s) => gatherStockContext(s)))).filter(Boolean) as string[];
 
+    // Read what recent articles actually say about the ticker(s) in question.
+    const articleLists = await Promise.all(candidates.slice(0, 2).map((s) => gatherArticles(s, "")));
+    const allArticles = articleLists.flat().slice(0, 10);
+    const researchBlock = allArticles.length
+      ? `\n\n=== RECENT ARTICLES (read these, summarize what they say, cite as [1], [2]...) ===\n` +
+        allArticles.map((a, i) => `[${i + 1}] ${a.title} — ${a.publisher}${a.date ? ` (${a.date})` : ""}\n${a.url}\n${a.text ? a.text.slice(0, 1200) : "(headline only)"}`).join("\n\n") +
+        `\n=== END ARTICLES ===`
+      : "";
+
     const ctxLine = context
       ? `Current app state — route: ${context.path}; category: ${context.category}; symbol: ${context.symbol}; widgets: ${(context.widgets || []).join(",")}; watchlist: ${(context.watchlist || []).slice(0, 12).join(",")}.`
       : "";
@@ -190,7 +236,7 @@ Deno.serve(async (req) => {
       ? `\n\n=== LIVE MARKET DATA (use these numbers) ===\n${stockBlocks.join("\n\n")}\n=== END LIVE DATA ===`
       : "";
 
-    const system: Msg = { role: "system", content: SYSTEM + (ctxLine ? `\n\n${ctxLine}` : "") + liveBlock };
+    const system: Msg = { role: "system", content: SYSTEM + (ctxLine ? `\n\n${ctxLine}` : "") + liveBlock + researchBlock };
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
@@ -201,13 +247,13 @@ Deno.serve(async (req) => {
         body: JSON.stringify({ model, messages: [system, ...messages], stream: true }),
       });
 
-    let aiRes = await callProvider("https://api.groq.com/openai/v1/chat/completions", GROQ_API_KEY, "llama-3.3-70b-versatile");
+    let aiRes = await callProvider("https://api.groq.com/openai/v1/chat/completions", GROQ_API_KEY, "llama-3.1-8b-instant");
 
-    const groqUnavailable = (r: Response) => r.status === 429 || r.status === 402 || r.status >= 500;
+    const groqUnavailable = (r: Response) => r.status === 429 || r.status === 402 || r.status === 404 || r.status === 400 || r.status >= 500;
 
     if (groqUnavailable(aiRes)) {
-      console.warn("groq 70b unavailable", aiRes.status, (await aiRes.clone().text()).slice(0, 500));
-      aiRes = await callProvider("https://api.groq.com/openai/v1/chat/completions", GROQ_API_KEY, "llama-3.1-8b-instant");
+      console.warn("groq primary unavailable", aiRes.status, (await aiRes.clone().text()).slice(0, 500));
+      aiRes = await callProvider("https://api.groq.com/openai/v1/chat/completions", GROQ_API_KEY, "openai/gpt-oss-120b");
     }
 
     if (groqUnavailable(aiRes) && LOVABLE_API_KEY) {
