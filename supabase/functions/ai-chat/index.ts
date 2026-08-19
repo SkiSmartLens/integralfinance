@@ -44,6 +44,7 @@ When the user asks something like "should I sell my Moderna stock?", do ALL of t
 2. **Where the stock stands** — 2-3 bullets with real numbers from the live data (price, % change, 52-week range, valuation, analyst target).
 3. **Questions for you** — ask exactly 3 short, concrete questions whose answers would change the decision (e.g. how long do you plan to hold, are you up or down on the position and by how much, what % of your portfolio is it, would you buy it again today, do you have a target price or a loss you'd accept). Number them 1-3 and stop there.
 4. **How I'd think about it** — after the user answers those questions, in the NEXT turn give a clear, decisive recommendation framework: what a long-term holder would likely do vs. what a short-term trader would do, the key risk to watch, and the specific signal that would change the answer.
+NEVER invent prices, dates, headlines, or article facts. If the LIVE MARKET DATA or RECENT ARTICLES blocks are missing or empty for the ticker asked about, say plainly that you could not pull fresh data right now and ask the user to confirm the ticker instead of guessing numbers.
 Never say "I can't give financial advice" and never add a disclaimer paragraph — be a helpful, honest coach who explains reasoning, cites sources, and reminds the user the final call is theirs in at most one short sentence.
 If a "Sources" section helps, list the cited articles at the end as [n] Title — publisher, with the URL.
 - Keep answers scannable: short bullets, bold mini-headers, no walls of text.`;
@@ -65,14 +66,30 @@ async function yfetch(url: string): Promise<any | null> {
   } catch { return null; }
 }
 
+const SB_URL_ENV = Deno.env.get("SUPABASE_URL") ?? "";
+const SB_ANON_ENV = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+
+// Yahoo blocks a lot of direct datacenter traffic — go through our own proxy
+// (which handles crumbs/cookies/caching) and only use direct calls as a backup.
+async function pfetch(qs: string): Promise<any | null> {
+  if (!SB_URL_ENV) return null;
+  try {
+    const r = await fetch(`${SB_URL_ENV}/functions/v1/yahoo-proxy?${qs}`, { headers: { apikey: SB_ANON_ENV } });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch { return null; }
+}
+
 async function searchSymbol(term: string): Promise<string | null> {
-  const j = await yfetch(`https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(term)}&quotesCount=3&newsCount=0`);
+  const j = (await pfetch(`kind=search&q=${encodeURIComponent(term)}&quotesCount=5&newsCount=0`))
+    ?? (await yfetch(`https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(term)}&quotesCount=5&newsCount=0`));
   const hit = j?.quotes?.find((q: any) => q?.symbol && (q.quoteType === "EQUITY" || q.quoteType === "ETF" || q.quoteType === "CRYPTOCURRENCY" || q.quoteType === "INDEX" || q.quoteType === "CURRENCY")) ?? j?.quotes?.[0];
   return hit?.symbol ?? null;
 }
 
 async function quoteFor(symbol: string): Promise<any | null> {
-  const j = await yfetch(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbol)}`);
+  const j = (await pfetch(`kind=quote&symbols=${encodeURIComponent(symbol)}`))
+    ?? (await yfetch(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbol)}`));
   return j?.quoteResponse?.result?.[0] ?? null;
 }
 
@@ -83,7 +100,8 @@ async function summaryFor(symbol: string): Promise<any | null> {
 }
 
 async function newsFor(symbol: string): Promise<string[]> {
-  const j = await yfetch(`https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(symbol)}&quotesCount=0&newsCount=6`);
+  const j = (await pfetch(`kind=search&q=${encodeURIComponent(symbol)}&quotesCount=0&newsCount=8`))
+    ?? (await yfetch(`https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(symbol)}&quotesCount=0&newsCount=8`));
   const items = j?.news ?? [];
   return items.slice(0, 6).map((n: any) => n?.title).filter(Boolean);
 }
@@ -141,7 +159,8 @@ async function gatherStockContext(symbol: string): Promise<string | null> {
 export interface Article { title: string; publisher: string; url: string; text: string; date?: string }
 
 async function yahooArticles(symbol: string): Promise<Article[]> {
-  const j = await yfetch(`https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(symbol)}&quotesCount=0&newsCount=10`);
+  const j = (await pfetch(`kind=search&q=${encodeURIComponent(symbol)}&quotesCount=0&newsCount=10`))
+    ?? (await yfetch(`https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(symbol)}&quotesCount=0&newsCount=10`));
   const items: any[] = j?.news ?? [];
   return items.slice(0, 8).map((n) => ({
     title: String(n?.title ?? ""),
@@ -206,11 +225,17 @@ async function resolveCandidates(text: string, contextSymbol?: string): Promise<
   // 2) Company-name lookups via Yahoo search for capitalized multi-word phrases
   const phrases = new Set<string>();
   for (const m of text.matchAll(/\b([A-Z][a-zA-Z]{2,}(?:\s+[A-Z][a-zA-Z]+){0,3})\b/g)) phrases.add(m[1]);
-  // Also try the whole user message as a single search (catches lowercase "apple", "nvidia")
+  // Also try the message with filler words removed — this is what catches
+  // lowercase company names like "should i sell my moderna stock" -> "moderna".
+  const FILLER = new Set(["should","i","my","me","we","you","the","a","an","is","it","do","does","did","can","could","would","will","sell","buy","hold","stock","stocks","share","shares","price","now","today","about","of","in","on","for","to","and","or","what","whats","why","how","tell","think","good","bad","time","right","this","that","any","more","tho","please","thanks","invest","investing","worth","still","keep","get","rid"]);
+  const words = text.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter(Boolean);
+  const keep = words.filter((w) => !FILLER.has(w) && w.length >= 3);
+  if (keep.length) phrases.add(keep.join(" "));
+  for (const w of keep.slice(0, 3)) phrases.add(w);
   const cleaned = text.replace(/[^\w\s]/g, " ").trim();
   if (cleaned && cleaned.length < 60) phrases.add(cleaned);
 
-  const lookups = Array.from(phrases).slice(0, 4).map((p) => searchSymbol(p));
+  const lookups = Array.from(phrases).slice(0, 6).map((p) => searchSymbol(p));
   const resolved = await Promise.all(lookups);
   for (const s of resolved) if (s) found.add(s.toUpperCase());
 
