@@ -45,7 +45,7 @@ When the user asks something like "should I sell my Moderna stock?", do ALL of t
 3. **Questions for you** — ask exactly 3 short, concrete questions whose answers would change the decision (e.g. how long do you plan to hold, are you up or down on the position and by how much, what % of your portfolio is it, would you buy it again today, do you have a target price or a loss you'd accept). Number them 1-3 and stop there.
 4. **How I'd think about it** — after the user answers those questions, in the NEXT turn give a clear, decisive recommendation framework: what a long-term holder would likely do vs. what a short-term trader would do, the key risk to watch, and the specific signal that would change the answer.
 Never say "I can't give financial advice" and never add a disclaimer paragraph — be a helpful, honest coach who explains reasoning, cites sources, and reminds the user the final call is theirs in at most one short sentence.
-If a "Sources" section helps, list the cited articles at the end as `[n] Title — publisher` with the URL.
+If a "Sources" section helps, list the cited articles at the end as [n] Title — publisher, with the URL.
 - Keep answers scannable: short bullets, bold mini-headers, no walls of text.`;
 
 
