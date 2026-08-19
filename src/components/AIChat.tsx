@@ -28,7 +28,7 @@ interface Msg { role: "user" | "assistant"; content: string }
 const seedMsg: Msg = {
   role: "assistant",
   content:
-    "Hi 👋 I'm Integral. I can answer market questions **and drive the app for you**.\n\nTry: *“Take me to the screener”*, *“Show Tesla”*, *“Switch to crypto”*, *“Add Top Losers to my dashboard”*, *“Reorder widgets so sectors is first”*.",
+    "Hi 👋 I'm Integral AI. Ask me about any stock and I'll read the most recent articles about it, summarize what they actually say (with sources), then ask you a few questions to help you make your own decision.\n\nTry: *“Should I sell my Moderna stock?”*, *“What's happening with NVDA?”*, *“Take me to the screener”*.",
 };
 
 const ACTION_RE = /<<<ACTIONS>>>([\s\S]*?)<<<END>>>/;
@@ -54,10 +54,10 @@ function extractActions(text: string): AppAction[] {
 }
 
 const QUICK_PROMPTS = [
-  "Take me to top losers",
-  "Add Top Losers widget",
-  "Show me NVDA",
-  "Switch to crypto",
+  "Should I sell my Moderna stock?",
+  "What's going on with NVDA this week?",
+  "Is AAPL a good buy right now?",
+  "Explain today's market in simple terms",
   "Open the trading simulator",
 ];
 
@@ -125,18 +125,10 @@ export const AIChat = () => {
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        setMessages((prev) => {
-          const cp = [...prev];
-          cp[assistantIndex] = { role: "assistant", content: "Please sign in to chat with Integral." };
-          return cp;
-        });
-        setStreaming(false);
-        return;
-      }
+      const bearer = session?.access_token ?? ANON;
       const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", apikey: ANON, Authorization: `Bearer ${session.access_token}` },
+        headers: { "Content-Type": "application/json", apikey: ANON, Authorization: `Bearer ${bearer}` },
         body: JSON.stringify({
           messages: next.slice(0, -1).map((m) => ({ role: m.role, content: m.content })),
           context: {
@@ -206,7 +198,7 @@ export const AIChat = () => {
         <button
           onClick={() => setOpen(true)}
           className="fixed bottom-5 right-5 z-50 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-xl hover:scale-105 transition-transform flex items-center justify-center"
-          aria-label="Open AI assistant"
+          aria-label="Ask Integral AI"
         >
           <Sparkles className="w-6 h-6" />
         </button>
@@ -218,8 +210,8 @@ export const AIChat = () => {
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-primary" />
               <div>
-                <div className="font-bold text-sm leading-tight">Integral AI · Guide</div>
-                <div className="text-[10px] text-muted-foreground">Ask me to navigate, customize, or explain</div>
+                <div className="font-bold text-sm leading-tight">Ask Integral AI</div>
+                <div className="text-[10px] text-muted-foreground">Reads recent articles · cites sources · asks questions</div>
               </div>
             </div>
             <button onClick={() => setOpen(false)} className="p-1 rounded hover:bg-muted" aria-label="Close">
@@ -298,7 +290,7 @@ export const AIChat = () => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-              placeholder="Ask Integral to take you somewhere…"
+              placeholder="Ask Integral AI anything… e.g. should I sell MRNA?"
               rows={1}
               className="flex-1 resize-none bg-muted rounded-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary max-h-24"
             />
