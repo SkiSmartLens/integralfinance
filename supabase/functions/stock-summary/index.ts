@@ -272,19 +272,22 @@ Return strict JSON with shape:
         body: JSON.stringify({ model, messages, tools, tool_choice }),
       });
 
-    // Primary: Groq (70b), then a second Groq model (separate rate-limit bucket),
+    // Primary: Groq, then a second Groq model (separate rate-limit bucket),
     // then Lovable AI gateway as the last resort.
-    let aiRes = await callProvider("https://api.groq.com/openai/v1/chat/completions", GROQ_API_KEY, "llama-3.3-70b-versatile");
+    const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+    let aiRes = await callProvider(GROQ_URL, GROQ_API_KEY, "llama-3.1-8b-instant");
 
-    const groqUnavailable = (r: Response) => r.status === 429 || r.status === 402 || r.status >= 500;
+    // 404/400 = model decommissioned or request rejected by Groq → also fall through.
+    const groqUnavailable = (r: Response) =>
+      r.status === 429 || r.status === 402 || r.status === 404 || r.status === 400 || r.status >= 500;
 
     if (groqUnavailable(aiRes)) {
-      console.warn("groq 70b unavailable", aiRes.status, (await aiRes.clone().text()).slice(0, 500));
-      aiRes = await callProvider("https://api.groq.com/openai/v1/chat/completions", GROQ_API_KEY, "llama-3.1-8b-instant");
+      console.warn("groq primary unavailable", aiRes.status, (await aiRes.clone().text()).slice(0, 500));
+      aiRes = await callProvider(GROQ_URL, GROQ_API_KEY, "openai/gpt-oss-120b");
     }
 
     if (groqUnavailable(aiRes) && LOVABLE_API_KEY) {
-      console.warn("groq unavailable", aiRes.status, "— falling back to Lovable AI");
+      console.warn("groq unavailable", aiRes.status, (await aiRes.clone().text()).slice(0, 300), "— falling back to Lovable AI");
       aiRes = await callProvider("https://ai.gateway.lovable.dev/v1/chat/completions", LOVABLE_API_KEY, "google/gemini-3.6-flash");
     }
 
