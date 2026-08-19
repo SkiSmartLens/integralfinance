@@ -1,5 +1,3 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -38,7 +36,19 @@ Category catalog: news (all, ipo, earnings, ma, fed, macro, analyst), markets (u
 Rules:
 - Whenever the user asks about a specific company/stock, ALSO emit a selectSymbol action so the dashboard updates.
 - Keep prose focused and useful. For deep stock questions, write 4-8 sentences with concrete numbers from the live data block. For navigation chit-chat, keep it 1-3 sentences.
-- Use markdown sparingly (bold for headlines, lists for multi-point answers).`;
+- Use markdown sparingly (bold for headlines, lists for multi-point answers).
+
+DECISION COACHING (buy / sell / hold questions):
+When the user asks something like "should I sell my Moderna stock?", do ALL of this, in this order:
+1. **What the news says** — 3-5 short bullets summarizing the RECENT ARTICLES block in plain English. Every bullet ends with a bracketed citation like [1] pointing at the numbered article you used. Never invent a fact that is not in the articles or the live data.
+2. **Where the stock stands** — 2-3 bullets with real numbers from the live data (price, % change, 52-week range, valuation, analyst target).
+3. **Questions for you** — ask exactly 3 short, concrete questions whose answers would change the decision (e.g. how long do you plan to hold, are you up or down on the position and by how much, what % of your portfolio is it, would you buy it again today, do you have a target price or a loss you'd accept). Number them 1-3 and stop there.
+4. **How I'd think about it** — after the user answers those questions, in the NEXT turn give a clear, decisive recommendation framework: what a long-term holder would likely do vs. what a short-term trader would do, the key risk to watch, and the specific signal that would change the answer.
+NEVER invent prices, dates, headlines, or article facts. If the LIVE MARKET DATA or RECENT ARTICLES blocks are missing or empty for the ticker asked about, say plainly that you could not pull fresh data right now and ask the user to confirm the ticker instead of guessing numbers.
+Never say "I can't give financial advice" and never add a disclaimer paragraph — be a helpful, honest coach who explains reasoning, cites sources, and reminds the user the final call is theirs in at most one short sentence.
+If a "Sources" section helps, list the cited articles at the end as [n] Title — publisher, with the URL.
+- Keep answers scannable: short bullets, bold mini-headers, no walls of text.`;
+
 
 const COMMON_WORDS = new Set([
   "I","A","AN","THE","IS","ARE","WAS","WERE","HAS","HAVE","HAD","DO","DOES","DID","WILL","CAN","COULD","SHOULD","WOULD","MAY","MIGHT","MUST",
@@ -56,14 +66,30 @@ async function yfetch(url: string): Promise<any | null> {
   } catch { return null; }
 }
 
+const SB_URL_ENV = Deno.env.get("SUPABASE_URL") ?? "";
+const SB_ANON_ENV = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+
+// Yahoo blocks a lot of direct datacenter traffic — go through our own proxy
+// (which handles crumbs/cookies/caching) and only use direct calls as a backup.
+async function pfetch(qs: string): Promise<any | null> {
+  if (!SB_URL_ENV) return null;
+  try {
+    const r = await fetch(`${SB_URL_ENV}/functions/v1/yahoo-proxy?${qs}`, { headers: { apikey: SB_ANON_ENV } });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch { return null; }
+}
+
 async function searchSymbol(term: string): Promise<string | null> {
-  const j = await yfetch(`https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(term)}&quotesCount=3&newsCount=0`);
+  const j = (await pfetch(`kind=search&q=${encodeURIComponent(term)}&quotesCount=5&newsCount=0`))
+    ?? (await yfetch(`https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(term)}&quotesCount=5&newsCount=0`));
   const hit = j?.quotes?.find((q: any) => q?.symbol && (q.quoteType === "EQUITY" || q.quoteType === "ETF" || q.quoteType === "CRYPTOCURRENCY" || q.quoteType === "INDEX" || q.quoteType === "CURRENCY")) ?? j?.quotes?.[0];
   return hit?.symbol ?? null;
 }
 
 async function quoteFor(symbol: string): Promise<any | null> {
-  const j = await yfetch(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbol)}`);
+  const j = (await pfetch(`kind=quote&symbols=${encodeURIComponent(symbol)}`))
+    ?? (await yfetch(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbol)}`));
   return j?.quoteResponse?.result?.[0] ?? null;
 }
 
@@ -74,7 +100,8 @@ async function summaryFor(symbol: string): Promise<any | null> {
 }
 
 async function newsFor(symbol: string): Promise<string[]> {
-  const j = await yfetch(`https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(symbol)}&quotesCount=0&newsCount=6`);
+  const j = (await pfetch(`kind=search&q=${encodeURIComponent(symbol)}&quotesCount=0&newsCount=8`))
+    ?? (await yfetch(`https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(symbol)}&quotesCount=0&newsCount=8`));
   const items = j?.news ?? [];
   return items.slice(0, 6).map((n: any) => n?.title).filter(Boolean);
 }
@@ -127,6 +154,62 @@ async function gatherStockContext(symbol: string): Promise<string | null> {
   return lines.join("\n");
 }
 
+
+// ---- Real article research: recent Yahoo Finance / web articles about a ticker ----
+export interface Article { title: string; publisher: string; url: string; text: string; date?: string }
+
+async function yahooArticles(symbol: string): Promise<Article[]> {
+  const j = (await pfetch(`kind=search&q=${encodeURIComponent(symbol)}&quotesCount=0&newsCount=10`))
+    ?? (await yfetch(`https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(symbol)}&quotesCount=0&newsCount=10`));
+  const items: any[] = j?.news ?? [];
+  return items.slice(0, 8).map((n) => ({
+    title: String(n?.title ?? ""),
+    publisher: String(n?.publisher ?? "Yahoo Finance"),
+    url: String(n?.link ?? ""),
+    text: String(n?.summary ?? ""),
+    date: n?.providerPublishTime ? new Date(n.providerPublishTime * 1000).toISOString().slice(0, 10) : undefined,
+  })).filter((a) => a.title && a.url);
+}
+
+async function firecrawlArticles(symbol: string, name: string): Promise<Article[]> {
+  const key = Deno.env.get("FIRECRAWL_API_KEY");
+  if (!key) return [];
+  try {
+    const r = await fetch("https://api.firecrawl.dev/v2/search", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        query: `${name || symbol} (${symbol}) stock news analysis should I buy or sell`,
+        limit: 5,
+        tbs: "qdr:w",
+        scrapeOptions: { formats: ["markdown"], onlyMainContent: true },
+      }),
+    });
+    if (!r.ok) return [];
+    const j: any = await r.json();
+    const pick = (x: any): any[] => x?.data?.web ?? x?.web ?? (Array.isArray(x?.data) ? x.data : []) ?? [];
+    return pick(j).slice(0, 5).map((x: any) => ({
+      title: String(x?.title ?? ""),
+      publisher: (() => { try { return new URL(String(x?.url)).hostname.replace(/^www\./, ""); } catch { return "web"; } })(),
+      url: String(x?.url ?? ""),
+      text: String(x?.markdown ?? x?.description ?? "").replace(/\s+/g, " ").slice(0, 1800),
+    })).filter((a: Article) => a.title && a.url);
+  } catch { return []; }
+}
+
+async function gatherArticles(symbol: string, name: string): Promise<Article[]> {
+  const [yh, fc] = await Promise.all([yahooArticles(symbol), firecrawlArticles(symbol, name)]);
+  const out: Article[] = [];
+  const seen = new Set<string>();
+  for (const a of [...fc, ...yh]) {
+    if (seen.has(a.url)) continue;
+    seen.add(a.url);
+    out.push(a);
+    if (out.length >= 8) break;
+  }
+  return out;
+}
+
 async function resolveCandidates(text: string, contextSymbol?: string): Promise<string[]> {
   const found = new Set<string>();
   if (contextSymbol) found.add(contextSymbol.toUpperCase());
@@ -142,11 +225,17 @@ async function resolveCandidates(text: string, contextSymbol?: string): Promise<
   // 2) Company-name lookups via Yahoo search for capitalized multi-word phrases
   const phrases = new Set<string>();
   for (const m of text.matchAll(/\b([A-Z][a-zA-Z]{2,}(?:\s+[A-Z][a-zA-Z]+){0,3})\b/g)) phrases.add(m[1]);
-  // Also try the whole user message as a single search (catches lowercase "apple", "nvidia")
+  // Also try the message with filler words removed — this is what catches
+  // lowercase company names like "should i sell my moderna stock" -> "moderna".
+  const FILLER = new Set(["should","i","my","me","we","you","the","a","an","is","it","do","does","did","can","could","would","will","sell","buy","hold","stock","stocks","share","shares","price","now","today","about","of","in","on","for","to","and","or","what","whats","why","how","tell","think","good","bad","time","right","this","that","any","more","tho","please","thanks","invest","investing","worth","still","keep","get","rid"]);
+  const words = text.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter(Boolean);
+  const keep = words.filter((w) => !FILLER.has(w) && w.length >= 3);
+  if (keep.length) phrases.add(keep.join(" "));
+  for (const w of keep.slice(0, 3)) phrases.add(w);
   const cleaned = text.replace(/[^\w\s]/g, " ").trim();
   if (cleaned && cleaned.length < 60) phrases.add(cleaned);
 
-  const lookups = Array.from(phrases).slice(0, 4).map((p) => searchSymbol(p));
+  const lookups = Array.from(phrases).slice(0, 6).map((p) => searchSymbol(p));
   const resolved = await Promise.all(lookups);
   for (const s of resolved) if (s) found.add(s.toUpperCase());
 
@@ -157,23 +246,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    // Require authenticated user
-    const auth = req.headers.get("Authorization");
-    if (!auth?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    const SB_URL = Deno.env.get("SUPABASE_URL")!;
-    const SB_ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const userClient = createClient(SB_URL, SB_ANON, { global: { headers: { Authorization: auth } } });
-    const { data: uData, error: uErr } = await userClient.auth.getUser();
-    if (uErr || !uData?.user) {
-      return new Response(JSON.stringify({ error: "unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
+    // Public endpoint: anyone can ask Integral AI (no sign-in required).
     const { messages = [], context } = (await req.json()) as { messages: Msg[]; context?: any };
     const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
     if (!GROQ_API_KEY) throw new Error("GROQ_API_KEY missing");
@@ -183,6 +256,15 @@ Deno.serve(async (req) => {
     const candidates = lastUser ? await resolveCandidates(lastUser, context?.symbol) : (context?.symbol ? [context.symbol.toUpperCase()] : []);
     const stockBlocks = (await Promise.all(candidates.map((s) => gatherStockContext(s)))).filter(Boolean) as string[];
 
+    // Read what recent articles actually say about the ticker(s) in question.
+    const articleLists = await Promise.all(candidates.slice(0, 2).map((s) => gatherArticles(s, "")));
+    const allArticles = articleLists.flat().slice(0, 10);
+    const researchBlock = allArticles.length
+      ? `\n\n=== RECENT ARTICLES (read these, summarize what they say, cite as [1], [2]...) ===\n` +
+        allArticles.map((a, i) => `[${i + 1}] ${a.title} — ${a.publisher}${a.date ? ` (${a.date})` : ""}\n${a.url}\n${a.text ? a.text.slice(0, 1200) : "(headline only)"}`).join("\n\n") +
+        `\n=== END ARTICLES ===`
+      : "";
+
     const ctxLine = context
       ? `Current app state — route: ${context.path}; category: ${context.category}; symbol: ${context.symbol}; widgets: ${(context.widgets || []).join(",")}; watchlist: ${(context.watchlist || []).slice(0, 12).join(",")}.`
       : "";
@@ -190,7 +272,7 @@ Deno.serve(async (req) => {
       ? `\n\n=== LIVE MARKET DATA (use these numbers) ===\n${stockBlocks.join("\n\n")}\n=== END LIVE DATA ===`
       : "";
 
-    const system: Msg = { role: "system", content: SYSTEM + (ctxLine ? `\n\n${ctxLine}` : "") + liveBlock };
+    const system: Msg = { role: "system", content: SYSTEM + (ctxLine ? `\n\n${ctxLine}` : "") + liveBlock + researchBlock };
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
@@ -201,13 +283,13 @@ Deno.serve(async (req) => {
         body: JSON.stringify({ model, messages: [system, ...messages], stream: true }),
       });
 
-    let aiRes = await callProvider("https://api.groq.com/openai/v1/chat/completions", GROQ_API_KEY, "llama-3.3-70b-versatile");
+    let aiRes = await callProvider("https://api.groq.com/openai/v1/chat/completions", GROQ_API_KEY, "llama-3.1-8b-instant");
 
-    const groqUnavailable = (r: Response) => r.status === 429 || r.status === 402 || r.status >= 500;
+    const groqUnavailable = (r: Response) => r.status === 429 || r.status === 402 || r.status === 404 || r.status === 400 || r.status >= 500;
 
     if (groqUnavailable(aiRes)) {
-      console.warn("groq 70b unavailable", aiRes.status, (await aiRes.clone().text()).slice(0, 500));
-      aiRes = await callProvider("https://api.groq.com/openai/v1/chat/completions", GROQ_API_KEY, "llama-3.1-8b-instant");
+      console.warn("groq primary unavailable", aiRes.status, (await aiRes.clone().text()).slice(0, 500));
+      aiRes = await callProvider("https://api.groq.com/openai/v1/chat/completions", GROQ_API_KEY, "openai/gpt-oss-120b");
     }
 
     if (groqUnavailable(aiRes) && LOVABLE_API_KEY) {
