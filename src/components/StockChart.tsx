@@ -374,4 +374,219 @@ export const StockChart = ({ symbol }: Props) => {
                 open: { dot: "bg-success animate-pulse", text: "Live · market open" },
                 pre: { dot: "bg-primary", text: "Pre-market · showing previous session" },
                 post: { dot: "bg-primary animate-pulse", text: "After-hours" },
-                closed: { dot: "bg-muted-foreground", text: "Market closed
+                closed: { dot: "bg-muted-foreground", text: "Market closed · showing previous session" },
+              } as const;
+              const p = pillMap[marketStatus];
+              return (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full border bg-muted/40">
+                  <span className={cn("inline-block w-2 h-2 rounded-full", p.dot)} />
+                  {p.text}
+                </span>
+              );
+            })()}
+          </div>
+          {/* Day range bar — shows where current price sits between day's low & high */}
+          {quote?.regularMarketDayLow != null && quote?.regularMarketDayHigh != null && lastPrice != null && quote.regularMarketDayHigh > quote.regularMarketDayLow && (
+            <div className="mt-3 max-w-xs">
+              <div className="flex justify-between text-[10px] text-muted-foreground tabular-nums">
+                <span>L {formatNumber(quote.regularMarketDayLow)}</span>
+                <span className="font-semibold">Day range</span>
+                <span>H {formatNumber(quote.regularMarketDayHigh)}</span>
+              </div>
+              <div className="relative h-1.5 mt-1 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="absolute top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-primary shadow ring-2 ring-background"
+                  style={{
+                    left: `calc(${Math.max(0, Math.min(100, ((lastPrice - quote.regularMarketDayLow) / (quote.regularMarketDayHigh - quote.regularMarketDayLow)) * 100))}% - 5px)`,
+                  }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex flex-wrap gap-1 justify-end">
+            {RANGES.map((rg, i) => (
+              <button
+                key={rg.label}
+                onClick={() => setRangeIdx(i)}
+                className={cn(
+                  "px-3 py-1.5 rounded text-xs font-semibold transition-colors",
+                  rangeIdx === i
+                    ? "bg-foreground text-background"
+                    : "text-muted-foreground hover:bg-muted"
+                )}
+              >
+                {rg.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div
+        ref={wrapRef}
+        className="h-[380px] w-full relative touch-none select-none"
+      >
+        {loading && !chartData.length ? (
+          <div className="h-full flex items-center justify-center text-muted-foreground">
+            Loading chart…
+          </div>
+        ) : error && !chartData.length ? (
+          <div className="h-full flex flex-col items-center justify-center text-center gap-3 px-6">
+            <div className="text-4xl">📉</div>
+            <div>
+              <div className="font-extrabold">Market data unavailable</div>
+              <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                We couldn't reach the market data provider. This usually clears up in a few seconds.
+              </p>
+            </div>
+            <button
+              onClick={refetch}
+              className="mt-1 px-4 h-10 rounded-full bg-primary text-primary-foreground text-sm font-extrabold hover:brightness-110"
+            >
+              Retry
+            </button>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart
+              data={withSMA}
+              margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+            >
+              <defs>
+                <linearGradient id="gradUp" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(var(--chart-up))" stopOpacity={0.4} />
+                  <stop offset="100%" stopColor="hsl(var(--chart-up))" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="gradDown" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(var(--chart-down))" stopOpacity={0.4} />
+                  <stop offset="100%" stopColor="hsl(var(--chart-down))" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <XAxis
+                dataKey="t"
+                tickFormatter={formatTime}
+                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                axisLine={false}
+                tickLine={false}
+                minTickGap={50}
+                type="category"
+              />
+              <YAxis
+                domain={minMax}
+                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                axisLine={false}
+                tickLine={false}
+                orientation="right"
+                width={60}
+                tickFormatter={(v) => formatNumber(v)}
+              />
+              {is1D && prevClose && (
+                <ReferenceLine
+                  y={prevClose}
+                  stroke="hsl(var(--muted-foreground))"
+                  strokeDasharray="3 3"
+                  strokeOpacity={0.5}
+                />
+              )}
+              <Tooltip
+                contentStyle={{
+                  background: "hsl(var(--card))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: 8,
+                  fontSize: 12,
+                }}
+                labelFormatter={(v) => new Date(v as number).toLocaleString()}
+                formatter={(v: number, name: string) => [formatNumber(v), name]}
+              />
+              {chartType === "mountain" && (
+                <Area
+                  type="linear"
+                  dataKey={is1D ? "regularPrice" : "price"}
+                  name="Price"
+                  stroke={isUp ? "hsl(var(--chart-up))" : "hsl(var(--chart-down))"}
+                  strokeWidth={1.75}
+                  fill={isUp ? "url(#gradUp)" : "url(#gradDown)"}
+                  isAnimationActive={true}
+                  animationDuration={2200}
+                  animationEasing="ease-out"
+                  connectNulls={false}
+                  dot={false}
+                />
+              )}
+              {chartType === "mountain" && is1D && (
+                <Line
+                  type="linear"
+                  dataKey="afterHoursPrice"
+                  name="After-hours"
+                  stroke="hsl(var(--muted-foreground))"
+                  strokeWidth={1.5}
+                  strokeDasharray="2 3"
+                  isAnimationActive={true}
+                  animationDuration={2200}
+                  animationEasing="ease-out"
+                  connectNulls={false}
+                  dot={false}
+                />
+              )}
+              {chartType === "candle" && (
+                <Customized component={makeCandleLayer(chartData)} />
+              )}
+            </ComposedChart>
+          </ResponsiveContainer>
+        )}
+
+        {compare && compareDelta && (
+          <div className="absolute top-2 left-2 bg-background/95 border rounded-md px-3 py-2 shadow-lg text-xs">
+            <div className="font-semibold mb-1">Compare</div>
+            <div className="tabular-nums">
+              {formatNumber(compare.a.price)} → {formatNumber(compare.b.price)}
+            </div>
+            <div
+              className={cn(
+                "tabular-nums font-semibold",
+                compareDelta.d >= 0 ? "text-up" : "text-down"
+              )}
+            >
+              {compareDelta.d >= 0 ? "+" : ""}
+              {formatNumber(compareDelta.d)} ({compareDelta.pct >= 0 ? "+" : ""}
+              {formatNumber(compareDelta.pct)}%)
+            </div>
+          </div>
+        )}
+      </div>
+      {is1D && chartType === "mountain" && (
+        <div className="flex items-center gap-3 text-[10px] text-muted-foreground mt-2 flex-wrap">
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block w-3 h-0.5" style={{ background: isUp ? "hsl(var(--chart-up))" : "hsl(var(--chart-down))" }} />
+            Regular session
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block w-3 h-px border-t border-dashed border-muted-foreground" />
+            After-hours
+          </span>
+          <span className="md:hidden ml-auto">Two-finger pinch to compare</span>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t text-sm">
+        <Stat label="Open" value={formatNumber(quote?.regularMarketOpen)} />
+        <Stat label="Prev Close" value={formatNumber(quote?.regularMarketPreviousClose)} />
+        <Stat label="Day High" value={formatNumber(quote?.regularMarketDayHigh)} />
+        <Stat label="Day Low" value={formatNumber(quote?.regularMarketDayLow)} />
+        <Stat label="52W High" value={formatNumber(quote?.fiftyTwoWeekHigh)} />
+        <Stat label="52W Low" value={formatNumber(quote?.fiftyTwoWeekLow)} />
+        <Stat label="Volume" value={formatLargeNumber(quote?.regularMarketVolume)} />
+        <Stat label="Mkt Cap" value={formatLargeNumber(quote?.marketCap)} />
+      </div>
+    </div>
+  );
+};
+
+const Stat = ({ label, value }: { label: string; value: string }) => (
+  <div>
+    <div className="text-xs text-muted-foreground uppercase tracking-wide">{label}</div>
+    <div className="font-semibold tabular-nums">{value}</div>
+  </div>
+);
