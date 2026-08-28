@@ -312,9 +312,16 @@ Return strict JSON with shape:
     }
 
     const data = await aiRes.json();
-    const args = data?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+    const msg = data?.choices?.[0]?.message ?? {};
+    const raw: string = msg?.tool_calls?.[0]?.function?.arguments ?? msg?.content ?? "{}";
     let parsed: any = {};
-    try { parsed = JSON.parse(args ?? "{}"); } catch { parsed = {}; }
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      const m = raw.match(/\{[\s\S]*\}/);
+      try { parsed = m ? JSON.parse(m[0]) : {}; } catch { parsed = {}; }
+    }
+
     if (!isBeginner) {
       const fallback = `No specific data available for ${companyName}. This may apply more to individual operating companies than to indices, ETFs, or funds.`;
       for (const f of ["whyMoved", "whatItDoes", "predictedRevenue", "revenueGrowth", "earningsGrowth", "margins", "balanceSheet", "moat", "earnings", "forecast", "outlook"]) {
