@@ -8,9 +8,8 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { formatNumber } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, ArrowRight, BookOpen, LineChart, Newspaper, SlidersHorizontal } from "lucide-react";
+import { ArrowLeft, LineChart, Newspaper, SlidersHorizontal } from "lucide-react";
 import { AcademyPrompt } from "@/components/AcademyPrompt";
-import { postsForTicker } from "@/content/blog";
 
 const StockSummary = lazy(() =>
   import("@/components/StockSummary").then((m) => ({ default: m.StockSummary }))
@@ -44,7 +43,6 @@ const StockTicker = () => {
   const title = `${symbol} (${name}) Stock Price & Chart | IntegralStocks`;
   const priceBit = last != null ? `Live price $${formatNumber(last)} (${ch >= 0 ? "+" : ""}${formatNumber(ch)}%).` : "";
   const description = `${name} (${symbol}) live chart plus a plain-English AI breakdown of why the stock is moving today. ${priceBit} Beginner-friendly.`.slice(0, 300);
-  const relatedPosts = postsForTicker(symbol);
 
   return (
     <div className="min-h-screen bg-background">
@@ -117,28 +115,6 @@ const StockTicker = () => {
             <Suspense fallback={<div className="h-32" />}>
               <StockSummary symbol={symbol} />
             </Suspense>
-            <section className="rounded-lg border p-5 bg-card">
-              <h2 className="text-base font-extrabold flex items-center gap-2 mb-3">
-                <BookOpen className="w-4 h-4 text-primary" /> Related articles
-              </h2>
-              <ul className="space-y-2">
-                <li>
-                  <Link
-                    to={`/blog/why-did-${symbol.toLowerCase()}-move-today`}
-                    className="group inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline"
-                  >
-                    Why did {symbol} stock move today? <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                  </Link>
-                </li>
-                {relatedPosts.map((p) => (
-                  <li key={p.slug}>
-                    <Link to={`/blog/${p.slug}`} className="group inline-flex items-center gap-1 text-sm font-semibold hover:text-primary">
-                      {p.title} <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
           </>
         )}
 
@@ -155,12 +131,6 @@ const StockTicker = () => {
 
         {tab === "advanced" && (
           <section className="space-y-4">
-            <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-4 text-sm">
-              <p className="font-bold mb-1">⚠️ Advanced tools</p>
-              <p className="text-muted-foreground">
-                Options are complex derivatives — not for beginners. Learn the basics first in the Learn hub.
-              </p>
-            </div>
             <Suspense fallback={<div className="h-24" />}>
               <OptionsChain symbol={symbol} />
             </Suspense>
