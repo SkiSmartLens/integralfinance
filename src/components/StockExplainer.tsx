@@ -2,13 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/backend";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { formatLargeNumber, formatNumber } from "@/lib/yahoo";
-import { BookOpen } from "lucide-react";
+import { BookOpen, TrendingUp, TrendingDown } from "lucide-react";
 import { Term } from "./Glossary";
 
 interface Explainer {
   whatItDoes: string;
-  whyPeopleBuy: string;
-  whatToWatch: string;
+  positives: string[];
+  negatives: string[];
 }
 
 const cache = new Map<string, Explainer>();
@@ -71,19 +71,26 @@ export const StockExplainer = ({ symbol }: { symbol: string }) => {
       )}
 
       {data && (
-        <div className="space-y-3 text-sm leading-relaxed">
-          <p>
-            <span className="font-semibold">In a nutshell · </span>
-            {data.whatItDoes}
-          </p>
-          <p>
-            <span className="font-semibold">Why people buy it · </span>
-            {data.whyPeopleBuy}
-          </p>
-          <p>
-            <span className="font-semibold">Things to watch · </span>
-            {data.whatToWatch}
-          </p>
+        <div className="space-y-4 text-sm leading-relaxed">
+          {data.whatItDoes && <p className="text-muted-foreground">{data.whatItDoes}</p>}
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div className="rounded-md border border-up/30 bg-up/5 p-3">
+              <p className="font-semibold flex items-center gap-1.5 mb-2 text-up">
+                <TrendingUp className="w-4 h-4" /> Positives
+              </p>
+              <ul className="space-y-1.5 list-disc pl-4">
+                {data.positives?.map((p, i) => <li key={i}>{p}</li>)}
+              </ul>
+            </div>
+            <div className="rounded-md border border-down/30 bg-down/5 p-3">
+              <p className="font-semibold flex items-center gap-1.5 mb-2 text-down">
+                <TrendingDown className="w-4 h-4" /> Negatives
+              </p>
+              <ul className="space-y-1.5 list-disc pl-4">
+                {data.negatives?.map((n, i) => <li key={i}>{n}</li>)}
+              </ul>
+            </div>
+          </div>
         </div>
       )}
 
