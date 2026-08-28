@@ -249,33 +249,28 @@ Return strict JSON with shape:
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
+    const schema = isBeginner ? beginnerSchema : analystSchema;
     const messages = [
-      { role: "system", content: isBeginner
-          ? "You explain stocks to first-time investors in friendly plain English. Output only valid JSON."
-          : "You are a concise equity research analyst writing for beginners. Output only valid JSON." },
+      { role: "system", content: (isBeginner
+          ? "You explain stocks to first-time investors in friendly plain English."
+          : "You are a concise equity research analyst writing for beginners.")
+          + ` Reply with ONLY a single valid JSON object matching this JSON Schema (no markdown, no commentary): ${JSON.stringify(schema)}` },
       { role: "user", content: isBeginner ? beginnerPrompt : analystPrompt },
     ];
-    const tools = [{
-      type: "function",
-      function: {
-        name: "stock_summary",
-        description: "Return structured summary",
-        parameters: isBeginner ? beginnerSchema : analystSchema,
-      },
-    }];
-    const tool_choice = { type: "function", function: { name: "stock_summary" } };
 
+    // JSON mode instead of forced tool calls: Groq models frequently emit a bogus
+    // tool name ("json") when tool_choice is forced, which Groq rejects with a 400.
     const callProvider = (url: string, apiKey: string, model: string) =>
       fetch(url, {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model, messages, tools, tool_choice }),
+        body: JSON.stringify({ model, messages, response_format: { type: "json_object" } }),
       });
 
     // Primary: Groq, then a second Groq model (separate rate-limit bucket),
     // then Lovable AI gateway as the last resort.
     const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-    let aiRes = await callProvider(GROQ_URL, GROQ_API_KEY, "llama-3.1-8b-instant");
+    let aiRes = await callProvider(GROQ_URL, GROQ_API_KEY, "openai/gpt-oss-120b");
 
     // 404/400 = model decommissioned or request rejected by Groq → also fall through.
     const groqUnavailable = (r: Response) =>
@@ -283,13 +278,14 @@ Return strict JSON with shape:
 
     if (groqUnavailable(aiRes)) {
       console.warn("groq primary unavailable", aiRes.status, (await aiRes.clone().text()).slice(0, 500));
-      aiRes = await callProvider(GROQ_URL, GROQ_API_KEY, "openai/gpt-oss-120b");
+      aiRes = await callProvider(GROQ_URL, GROQ_API_KEY, "openai/gpt-oss-20b");
     }
 
     if (groqUnavailable(aiRes) && LOVABLE_API_KEY) {
       console.warn("groq unavailable", aiRes.status, (await aiRes.clone().text()).slice(0, 300), "— falling back to Lovable AI");
       aiRes = await callProvider("https://ai.gateway.lovable.dev/v1/chat/completions", LOVABLE_API_KEY, "google/gemini-3.6-flash");
     }
+
 
 
     if (aiRes.status === 429) {
@@ -316,9 +312,16 @@ Return strict JSON with shape:
     }
 
     const data = await aiRes.json();
-    const args = data?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+    const msg = data?.choices?.[0]?.message ?? {};
+    const raw: string = msg?.tool_calls?.[0]?.function?.arguments ?? msg?.content ?? "{}";
     let parsed: any = {};
-    try { parsed = JSON.parse(args ?? "{}"); } catch { parsed = {}; }
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      const m = raw.match(/\{[\s\S]*\}/);
+      try { parsed = m ? JSON.parse(m[0]) : {}; } catch { parsed = {}; }
+    }
+
     if (!isBeginner) {
       const fallback = `No specific data available for ${companyName}. This may apply more to individual operating companies than to indices, ETFs, or funds.`;
       for (const f of ["whyMoved", "whatItDoes", "predictedRevenue", "revenueGrowth", "earningsGrowth", "margins", "balanceSheet", "moat", "earnings", "forecast", "outlook"]) {
