@@ -39,7 +39,6 @@ const MarketBrief = lazy(() => import("./pages/MarketBrief.tsx"));
 const JargonTranslator = lazy(() => import("./pages/JargonTranslator.tsx"));
 const BlogIndex = lazy(() => import("./pages/BlogIndex.tsx"));
 const BlogPost = lazy(() => import("./pages/BlogPost.tsx"));
-const WhyMoved = lazy(() => import("./pages/WhyMoved.tsx"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -95,7 +94,6 @@ const App = () => (
             <Route path="/learn/portfolio" element={<LearnPortfolio />} />
             <Route path="/learn/advanced" element={<LearnAdvanced />} />
             <Route path="/blog" element={<BlogIndex />} />
-            <Route path="/blog/why-did-:ticker-move-today" element={<WhyMoved />} />
             <Route path="/blog/:slug" element={<BlogPost />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
