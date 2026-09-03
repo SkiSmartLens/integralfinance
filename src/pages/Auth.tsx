@@ -65,18 +65,21 @@ const Auth = () => {
 
   const signIn = async (provider: "google" | "apple") => {
     setLoading(provider);
+    // Return to /auth (a public route) so the redirect lands here and we can
+    // forward the user to the simulator instead of the homepage.
+    const redirectTo = `${window.location.origin}/auth`;
     try {
-      // Return to /auth (a public route) so the redirect lands here and we can
-      // forward the user to the simulator instead of the homepage.
-      const result = await lovable.auth.signInWithOAuth(provider, {
-        redirect_uri: `${window.location.origin}/auth`,
+      // Primary: the backend's own OAuth redirect flow — works on every origin
+      // (preview, published, custom domain).
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo },
       });
-      if (result.error) {
-        toast({ title: "Sign in failed", description: result.error.message, variant: "destructive" });
-        setLoading(null);
-        return;
-      }
+      if (!error) return;
+      // Fallback: Lovable-hosted OAuth helper.
+      const result = await lovable.auth.signInWithOAuth(provider, { redirect_uri: redirectTo });
       if (result.redirected) return;
+      if (result.error) throw result.error;
     } catch (e) {
       toast({
         title: "Sign in failed",
@@ -86,6 +89,7 @@ const Auth = () => {
       setLoading(null);
     }
   };
+
 
 
   return (
