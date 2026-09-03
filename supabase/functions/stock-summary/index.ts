@@ -53,22 +53,27 @@ Deno.serve(async (req) => {
     // Firecrawl web search — real, recent articles about why the stock moved,
     // plus a second pass for bull/bear/analyst-outlook material so the
     // positives/negatives bullets can be grounded and cited too.
-    const fcSearch = (query: string, tbs?: string) =>
+    // Latency: scraping full article markdown is the slowest part, so only the
+    // "why it moved" pass scrapes; the bull/bear pass uses search snippets.
+    // Both are hard-capped so a slow Firecrawl can never stall the response.
+    const fcSearch = (query: string, tbs?: string, scrape = false) =>
       FIRECRAWL_API_KEY
         ? fetch("https://api.firecrawl.dev/v2/search", {
             method: "POST",
             headers: { Authorization: `Bearer ${FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
             body: JSON.stringify({
               query,
-              limit: 5,
+              limit: 3,
               ...(tbs ? { tbs } : {}),
-              scrapeOptions: { formats: ["markdown"], onlyMainContent: true },
+              ...(scrape ? { scrapeOptions: { formats: ["markdown"], onlyMainContent: true } } : {}),
             }),
+            signal: AbortSignal.timeout(9000),
           }).then((r) => (r.ok ? r.json() : null)).catch(() => null)
         : Promise.resolve(null);
 
-    const firecrawlPromise = fcSearch(`${sym} stock why it moved today news`, "qdr:w");
+    const firecrawlPromise = fcSearch(`${sym} stock why it moved today news`, "qdr:w", true);
     const firecrawlCasePromise = fcSearch(`${sym} stock bull case bear case analyst outlook`, "qdr:m");
+
 
 
 
