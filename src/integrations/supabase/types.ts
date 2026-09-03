@@ -206,6 +206,33 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limits: {
+        Row: {
+          bucket: string
+          count: number
+          created_at: string
+          fn: string
+          id: string
+          subject: string
+        }
+        Insert: {
+          bucket: string
+          count?: number
+          created_at?: string
+          fn: string
+          id?: string
+          subject: string
+        }
+        Update: {
+          bucket?: string
+          count?: number
+          created_at?: string
+          fn?: string
+          id?: string
+          subject?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           commission: number
@@ -304,6 +331,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_order_fill: {
+        Args: {
+          _margin_floor?: number
+          _member_id: string
+          _order_id: string
+          _price: number
+          _shares: number
+          _side: Database["public"]["Enums"]["order_side"]
+          _symbol: string
+        }
+        Returns: Json
+      }
+      bump_rate_limit: {
+        Args: {
+          _fn: string
+          _limit?: number
+          _subject: string
+          _window_seconds?: number
+        }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
