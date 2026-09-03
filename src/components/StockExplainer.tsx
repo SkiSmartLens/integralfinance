@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/backend";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { formatLargeNumber, formatNumber } from "@/lib/yahoo";
-import { BookOpen, TrendingUp, TrendingDown } from "lucide-react";
+import { BookOpen } from "lucide-react";
 import { Term } from "./Glossary";
 
 interface Explainer {
