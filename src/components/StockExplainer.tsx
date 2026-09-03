@@ -76,7 +76,7 @@ export const StockExplainer = ({ symbol }: { symbol: string }) => {
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="rounded-md border border-up/30 bg-up/5 p-3">
               <p className="font-semibold flex items-center gap-1.5 mb-2 text-up">
-                <TrendingUp className="w-4 h-4" /> Positives
+                <TrendingUp className="w-4 h-4" />
               </p>
               <ul className="space-y-1.5 list-disc pl-4">
                 {data.positives?.map((p, i) => <li key={i}>{p}</li>)}
@@ -84,7 +84,7 @@ export const StockExplainer = ({ symbol }: { symbol: string }) => {
             </div>
             <div className="rounded-md border border-down/30 bg-down/5 p-3">
               <p className="font-semibold flex items-center gap-1.5 mb-2 text-down">
-                <TrendingDown className="w-4 h-4" /> Negatives
+                <TrendingDown className="w-4 h-4" />{"\n"}
               </p>
               <ul className="space-y-1.5 list-disc pl-4">
                 {data.negatives?.map((n, i) => <li key={i}>{n}</li>)}
