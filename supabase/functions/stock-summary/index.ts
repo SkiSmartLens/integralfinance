@@ -347,7 +347,7 @@ Return strict JSON with shape:
     parsed.grounded = webSources.length > 0;
 
     const body = JSON.stringify(parsed);
-    cache.set(key, { body, exp: Date.now() + 1000 * 60 * 30 });
+    cache.set(key, { body, exp: Date.now() + 1000 * 60 * 120 });
     return new Response(body, {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
