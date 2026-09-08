@@ -5,6 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Analytics } from "@/components/Analytics";
+import { AIChat } from "@/components/AIChat";
 import SpyLanding from "./pages/SpyLanding.tsx";
 const Index = lazy(() => import("./pages/Index.tsx"));
 const Academy = lazy(() => import("./pages/Academy.tsx"));
@@ -99,7 +100,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
-
+        <AIChat />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
