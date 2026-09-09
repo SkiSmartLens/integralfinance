@@ -320,6 +320,15 @@ async function attempt(url: string): Promise<string | null> {
     const own = isHtml ? extractArticle(html) : html.trim().slice(0, 12000);
     if (own && !isJunk(own) && !isNavSoup(own)) return own;
 
+    // Yahoo slug URLs hide the story UUID in the page markup — pull it out and use the content API.
+    if (isYahoo(url)) {
+      const embedded = html.match(/"uuid"\s*:\s*"([0-9a-f-]{36})"/i)?.[1] ?? html.match(UUID_RE)?.[0];
+      if (embedded) {
+        const viaCaas = await yahooCaasByUuid(embedded);
+        if (viaCaas) return viaCaas;
+      }
+    }
+
     const alts = altUrls(html, url);
     if (alts.length) {
       const altRace = firstSuccess([
@@ -331,6 +340,7 @@ async function attempt(url: string): Promise<string | null> {
       if (winner) return winner;
     }
   }
+
   return await proxyRace;
 }
 
