@@ -1,21 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/lib/backend";
+import { fetchStockSummary, getCachedSummary, type StockSummaryData } from "@/lib/stockSummary";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { formatLargeNumber, formatNumber } from "@/lib/yahoo";
 import { BookOpen } from "lucide-react";
 import { Term } from "./Glossary";
 
-interface Explainer {
-  whatItDoes: string;
-  positives: string[];
-  negatives: string[];
-}
-
-const cache = new Map<string, Explainer>();
-
 /** Plain-English "What is this stock?" card aimed at first-time investors. */
 export const StockExplainer = ({ symbol }: { symbol: string }) => {
-  const [data, setData] = useState<Explainer | null>(cache.get(symbol) ?? null);
+  // Shares the same full-mode AI summary (and its request dedupe + cache) that
+  // StockSummary fetches — whatItDoes is already part of that payload, so this
+  // no longer needs its own separate "beginner" AI generation to render one sentence.
+  const [data, setData] = useState<StockSummaryData | null>(getCachedSummary(symbol) ?? null);
   const [loading, setLoading] = useState(false);
   const [visible, setVisible] = useState(false);
   const ref = useRef<HTMLElement>(null);
@@ -34,7 +29,7 @@ export const StockExplainer = ({ symbol }: { symbol: string }) => {
 
   useEffect(() => {
     if (!visible) return;
-    const cached = cache.get(symbol);
+    const cached = getCachedSummary(symbol);
     if (cached) {
       setData(cached);
       return;
@@ -42,15 +37,9 @@ export const StockExplainer = ({ symbol }: { symbol: string }) => {
     let alive = true;
     setData(null);
     setLoading(true);
-    supabase.functions
-      .invoke("stock-summary", { body: { symbol, mode: "beginner" } })
-      .then(({ data }) => {
-        if (!alive || !data) return;
-        if ((data as any).whatItDoes) {
-          cache.set(symbol, data as Explainer);
-          setData(data as Explainer);
-        }
-      })
+    fetchStockSummary(symbol)
+      .then((d) => { if (alive) setData(d); })
+      .catch(() => {})
       .finally(() => alive && setLoading(false));
     return () => {
       alive = false;
