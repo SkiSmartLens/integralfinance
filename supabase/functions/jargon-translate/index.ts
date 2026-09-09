@@ -209,7 +209,7 @@ async function rawFetch(target: string, ua = BROWSER_UA): Promise<string | null>
           Cookie: CONSENT_COOKIE,
         },
         redirect: "manual",
-        signal: AbortSignal.timeout(9000),
+        signal: AbortSignal.timeout(6000),
       });
       if (r.status >= 300 && r.status < 400) {
         const loc = r.headers.get("location");
@@ -405,7 +405,7 @@ Deno.serve(async (req) => {
           stream: true,
           messages: [
             { role: "system", content: SYSTEM },
-            { role: "user", content: `Source URL: ${sourceUrl ?? "(pasted text)"}\n\nSOURCE:\n${source.slice(0, 8000)}` },
+            { role: "user", content: `Source URL: ${sourceUrl ?? "(pasted text)"}\n\nSOURCE:\n${source.slice(0, 6000)}` },
           ],
           temperature: 0.3,
           max_tokens: 1600,
@@ -417,11 +417,18 @@ Deno.serve(async (req) => {
 
     let res: Response | null = null;
     if (GROQ_API_KEY) {
-      res = await call("https://api.groq.com/openai/v1/chat/completions", GROQ_API_KEY, "llama-3.3-70b-versatile");
+      // llama-3.3-70b-versatile is decommissioned on Groq; 8b-instant is also the fastest first token.
+      res = await call("https://api.groq.com/openai/v1/chat/completions", GROQ_API_KEY, "llama-3.1-8b-instant");
+      if (unavailable(res)) {
+        await res.body?.cancel();
+        res = await call("https://api.groq.com/openai/v1/chat/completions", GROQ_API_KEY, "openai/gpt-oss-120b");
+      }
     }
     if ((!res || unavailable(res)) && LOVABLE_API_KEY) {
+      await res?.body?.cancel();
       res = await call("https://ai.gateway.lovable.dev/v1/chat/completions", LOVABLE_API_KEY, "google/gemini-2.5-flash");
     }
+
     if (!res) throw new Error("No AI provider configured");
 
     if (res.status === 429) return new Response(JSON.stringify({ error: "Rate limit, try again shortly." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
