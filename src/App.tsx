@@ -7,7 +7,30 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Analytics } from "@/components/Analytics";
 import { AIChat } from "@/components/AIChat";
 import SpyLanding from "./pages/SpyLanding.tsx";
-const Index = lazy(() => import("./pages/Index.tsx"));
+
+// After a new deploy, a page still running the old build asks for chunk files that
+// no longer exist. Retry once, then reload the app so the newest build is fetched.
+const lazyWithReload = <T extends { default: React.ComponentType<never> }>(
+  factory: () => Promise<T>,
+) =>
+  lazy(() =>
+    factory().catch(async () => {
+      try {
+        return await factory();
+      } catch (err) {
+        const key = "chunk-reload-at";
+        const last = Number(sessionStorage.getItem(key) ?? 0);
+        if (Date.now() - last > 10_000) {
+          sessionStorage.setItem(key, String(Date.now()));
+          window.location.reload();
+        }
+        throw err;
+      }
+    }),
+  );
+
+const Index = lazyWithReload(() => import("./pages/Index.tsx"));
+
 const Academy = lazy(() => import("./pages/Academy.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 const Auth = lazy(() => import("./pages/Auth.tsx"));
