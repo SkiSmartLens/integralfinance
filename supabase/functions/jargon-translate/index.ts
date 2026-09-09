@@ -1,4 +1,10 @@
-import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
 
 
 const UA = "Mozilla/5.0 (compatible; IntegralStocks/1.0)";
@@ -203,7 +209,7 @@ async function rawFetch(target: string, ua = BROWSER_UA): Promise<string | null>
           Cookie: CONSENT_COOKIE,
         },
         redirect: "manual",
-        signal: AbortSignal.timeout(9000),
+        signal: AbortSignal.timeout(6000),
       });
       if (r.status >= 300 && r.status < 400) {
         const loc = r.headers.get("location");
@@ -315,14 +321,13 @@ async function attempt(url: string): Promise<string | null> {
   return await proxyRace;
 }
 
-/** Portals intermittently serve consent shells — one quick retry, then give up. */
+/** One pass only — everything already races in parallel, so a retry just doubles latency. */
 async function fetchArticleText(url: string): Promise<string> {
-  for (let i = 0; i < 2; i++) {
-    const t = await attempt(url);
-    if (t) return t;
-  }
+  const t = await attempt(url);
+  if (t) return t;
   throw new Error("UNREADABLE");
 }
+
 
 
 
@@ -400,23 +405,37 @@ Deno.serve(async (req) => {
           stream: true,
           messages: [
             { role: "system", content: SYSTEM },
-            { role: "user", content: `Source URL: ${sourceUrl ?? "(pasted text)"}\n\nSOURCE:\n${source.slice(0, 8000)}` },
+            { role: "user", content: `Source URL: ${sourceUrl ?? "(pasted text)"}\n\nSOURCE:\n${source.slice(0, 6000)}` },
           ],
           temperature: 0.3,
           max_tokens: 1600,
+          // gpt-oss models burn latency on hidden reasoning tokens unless capped.
+          ...(model.startsWith("openai/gpt-oss") ? { reasoning_effort: "low" } : {}),
         }),
       });
 
     const unavailable = (r: Response) =>
       r.status === 429 || r.status === 402 || r.status === 404 || r.status === 400 || r.status >= 500;
 
+    const tryModel = async (u: string, k: string, model: string): Promise<Response | null> => {
+      const r = await call(u, k, model);
+      if (!unavailable(r)) return r;
+      console.error("provider unavailable", model, r.status, (await r.text()).slice(0, 300));
+      return null;
+    };
+
     let res: Response | null = null;
+    const GROQ = "https://api.groq.com/openai/v1/chat/completions";
     if (GROQ_API_KEY) {
-      res = await call("https://api.groq.com/openai/v1/chat/completions", GROQ_API_KEY, "llama-3.3-70b-versatile");
+      // llama-3.3-70b-versatile is decommissioned on Groq; 8b-instant gives the fastest first token.
+      res = await tryModel(GROQ, GROQ_API_KEY, "llama-3.1-8b-instant");
+      if (!res) res = await tryModel(GROQ, GROQ_API_KEY, "openai/gpt-oss-120b");
     }
-    if ((!res || unavailable(res)) && LOVABLE_API_KEY) {
+    if (!res && LOVABLE_API_KEY) {
       res = await call("https://ai.gateway.lovable.dev/v1/chat/completions", LOVABLE_API_KEY, "google/gemini-2.5-flash");
     }
+
+
     if (!res) throw new Error("No AI provider configured");
 
     if (res.status === 429) return new Response(JSON.stringify({ error: "Rate limit, try again shortly." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });

@@ -10,9 +10,11 @@ import SpyLanding from "./pages/SpyLanding.tsx";
 
 // After a new deploy, a page still running the old build asks for chunk files that
 // no longer exist. Retry once, then reload the app so the newest build is fetched.
-const lazyWithReload = <T extends { default: React.ComponentType<never> }>(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const lazyWithReload = <T extends { default: React.ComponentType<any> }>(
   factory: () => Promise<T>,
 ) =>
+
   lazy(() =>
     factory().catch(async () => {
       try {
