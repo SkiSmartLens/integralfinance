@@ -69,6 +69,7 @@ export const AIChat = () => {
   const [stories, setStories] = useState<NewsItem[]>([]);
   const [lastActions, setLastActions] = useState<AppAction[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const ranActionsRef = useRef<Set<number>>(new Set());
 
   const navigate = useNavigate();
@@ -88,9 +89,12 @@ export const AIChat = () => {
 
   useEffect(() => {
     const onOpen = (e: Event) => {
-      const detail = (e as CustomEvent).detail as { prompt?: string } | undefined;
+      const detail = (e as CustomEvent).detail as { prompt?: string; autoSend?: boolean } | undefined;
       setOpen(true);
-      if (detail?.prompt) setTimeout(() => send(detail.prompt!), 50);
+      if (detail?.prompt) {
+        if (detail.autoSend) setTimeout(() => send(detail.prompt!), 50);
+        else setTimeout(() => { setInput(detail.prompt!); textareaRef.current?.focus(); }, 50);
+      }
     };
     window.addEventListener("integral-ai-open", onOpen);
     return () => window.removeEventListener("integral-ai-open", onOpen);
@@ -287,6 +291,7 @@ export const AIChat = () => {
 
           <form onSubmit={(e) => { e.preventDefault(); send(); }} className="border-t p-2 flex items-end gap-2">
             <textarea
+              ref={textareaRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}

@@ -200,6 +200,10 @@ HARD RULES for positives and negatives (violating these is a failure):
 - When a bullet draws on a RESEARCH article, it MUST end with that article's bracket citation (e.g. [1], [2]), using the SAME numbering as whyMoved. Never cite a number that is not listed above.
 - When there is not enough research to support a specific bullish or bearish claim, do NOT guess: fall back explicitly to the structural financial data above and cite the actual figure (e.g. "Forward P/E of 18.4 vs trailing 24.1 implies expected earnings growth", "Debt/Equity of 162 leaves little cushion").
 - No generic filler ("strong brand", "faces competition", "macro uncertainty") unless it is tied to a cited article or a specific number above.
+- Every bullet has TWO parts in one flowing sentence, not just the fact: (1) the concrete fact/number, and (2) what it actually implies for the investment case — e.g. not "Forward P/E is 18.4" but "Forward P/E of 18.4 vs a trailing 24.1 implies the market already expects mid-teens earnings growth, so the multiple offers little cushion if growth disappoints." A bullet that only restates a fact without stating its consequence is a failure.
+- Order bullets by materiality, most decision-relevant first — the single biggest driver of the bull or bear case leads each list, not the easiest fact to find.
+- Do not restate the same underlying fact in both positives and negatives, and do not pad with a near-duplicate of another bullet in the same list — each bullet must add a distinct piece of the picture (a different metric, catalyst, or article).
+- Where the research or data gives you a genuine counterpoint (e.g. strong revenue growth but deteriorating margins, or a bullish headline but stretched valuation), prefer that nuanced framing over a one-sided claim — real theses usually have tension, not just a clean list of good or bad things.
 - 4-6 bullets each, 1-2 sentences, concrete numbers over adjectives.
 
 
