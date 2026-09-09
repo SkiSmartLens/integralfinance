@@ -1,7 +1,4 @@
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
-import * as http from "node:http";
-import * as https from "node:https";
-import * as zlib from "node:zlib";
 
 
 const UA = "Mozilla/5.0 (compatible; IntegralStocks/1.0)";
@@ -188,134 +185,35 @@ function withConsentParams(target: string): string {
   return target;
 }
 
-/** Pick a validated public IP to pin the connection to (prefers IPv4). */
-async function resolvePublicIp(hostname: string): Promise<{ ip: string; family: 4 | 6 } | null> {
-  try {
-    const v4 = await Deno.resolveDns(hostname, "A");
-    const pub4 = v4.find((a) => !isPrivateIp(a));
-    if (pub4) return { ip: pub4, family: 4 };
-  } catch { /* no A records */ }
-  try {
-    const v6 = await Deno.resolveDns(hostname, "AAAA");
-    const pub6 = v6.find((a) => !isPrivateIp(a));
-    if (pub6) return { ip: pub6, family: 6 };
-  } catch { /* no AAAA records */ }
-  return null;
-}
-
-function decompressBody(body: Buffer, encoding: string | undefined): Buffer {
-  switch ((encoding ?? "").toLowerCase()) {
-    case "gzip":
-    case "x-gzip":
-      return zlib.gunzipSync(body);
-    case "deflate":
-      return zlib.inflateSync(body);
-    case "br":
-      return zlib.brotliDecompressSync(body);
-    default:
-      return body;
-  }
-}
-
-type PinnedResponse = { status: number; headers: Headers; text: string };
-
 /**
- * Single-hop fetch pinned to a pre-validated public IP. Deno's global fetch() re-resolves DNS
- * itself, so validating a hostname with assertFetchable() and then calling fetch() on it leaves
- * a DNS-rebinding gap: an attacker-controlled domain (TTL=0) can answer with a public IP for the
- * validation lookup and a private/internal IP for fetch()'s own lookup. Passing `lookup` pins the
- * connection to the address we already validated; the remoteAddress check after connecting is the
- * authoritative guard and holds even if the runtime doesn't honor the lookup override.
+ * Fetch with manual redirect handling so every hop is re-validated against private IPs
+ * immediately before use (assertFetchable() is called fresh on every hop, right before the
+ * fetch() that uses it, to keep the DNS-rebinding TOCTOU window as small as fetch() allows).
  */
-function pinnedRequest(
-  target: string,
-  headers: Record<string, string>,
-  timeoutMs: number,
-): Promise<PinnedResponse | null> {
-  return new Promise((resolve) => {
-    let u: URL;
-    try { u = new URL(target); } catch { resolve(null); return; }
-    const mod = u.protocol === "https:" ? https : http;
-    const port = u.port ? Number(u.port) : (u.protocol === "https:" ? 443 : 80);
-
-    resolvePublicIp(u.hostname).then((pinned) => {
-      if (!pinned) { resolve(null); return; }
-
-      const req = mod.request({
-        hostname: u.hostname,
-        port,
-        path: u.pathname + u.search,
-        method: "GET",
-        headers: { Host: u.hostname, ...headers },
-        timeout: timeoutMs,
-        // deno-lint-ignore no-explicit-any
-        lookup: (_hostname: string, options: any, cb: any) => {
-          if (options && options.all) cb(null, [{ address: pinned.ip, family: pinned.family }]);
-          else cb(null, pinned.ip, pinned.family);
-        },
-      } as unknown as http.RequestOptions, (res) => {
-        const remote = (res.socket?.remoteAddress ?? "").replace(/^::ffff:/, "");
-        if (!remote || isPrivateIp(remote)) {
-          res.destroy();
-          req.destroy();
-          resolve(null);
-          return;
-        }
-
-        const status = res.statusCode ?? 0;
-        if (status >= 300 && status < 400) {
-          const loc = res.headers.location as string | undefined;
-          res.resume();
-          resolve(loc ? { status, headers: new Headers({ location: loc }), text: "" } : null);
-          return;
-        }
-        if (status < 200 || status >= 300) {
-          res.resume();
-          resolve(null);
-          return;
-        }
-
-        const chunks: Buffer[] = [];
-        res.on("data", (c: Buffer) => chunks.push(c));
-        res.on("end", () => {
-          try {
-            const raw = Buffer.concat(chunks);
-            const body = decompressBody(raw, res.headers["content-encoding"] as string | undefined);
-            resolve({ status, headers: new Headers(), text: body.toString("utf-8") });
-          } catch {
-            resolve(null);
-          }
-        });
-        res.on("error", () => resolve(null));
-      });
-
-      req.on("timeout", () => req.destroy());
-      req.on("error", () => resolve(null));
-      req.end();
-    }).catch(() => resolve(null));
-  });
-}
-
-/** Fetch with manual redirect handling so every hop is re-validated against private IPs. */
 async function rawFetch(target: string, ua = BROWSER_UA): Promise<string | null> {
   let current = withConsentParams(target);
   try {
     for (let hop = 0; hop < 5; hop++) {
       if (!(await assertFetchable(current))) return null;
-      const r = await pinnedRequest(current, {
-        "User-Agent": ua,
-        Accept: "text/html,application/xhtml+xml,text/plain,*/*",
-        "Accept-Language": "en-US,en;q=0.9",
-        Cookie: CONSENT_COOKIE,
-      }, 9000);
-      if (!r) return null;
+      const r = await fetch(current, {
+        headers: {
+          "User-Agent": ua,
+          Accept: "text/html,application/xhtml+xml,text/plain,*/*",
+          "Accept-Language": "en-US,en;q=0.9",
+          Cookie: CONSENT_COOKIE,
+        },
+        redirect: "manual",
+        signal: AbortSignal.timeout(9000),
+      });
       if (r.status >= 300 && r.status < 400) {
         const loc = r.headers.get("location");
+        await r.body?.cancel();
         if (!loc) return null;
         current = new URL(loc, current).href;
         continue;
       }
-      return r.text;
+      if (!r.ok) return null;
+      return await r.text();
     }
     return null;
   } catch {
@@ -432,20 +330,29 @@ async function fetchArticleText(url: string): Promise<string> {
 
 
 
+// Plain-text, delimiter-based output (not JSON) so the response can be streamed to the client
+// token-by-token and rendered live — the client renders everything between ===PLAIN=== and the
+// next marker as it arrives, instead of waiting for one big blocking JSON completion.
 const SYSTEM = `You are the Integral Stocks "Jargon Translator". Rewrite financial content in plain, everyday English that a curious beginner (14+ reading level) can follow. Never dumb down the facts — keep every number, name, date, ticker, and quote. Replace jargon with a simpler phrasing and briefly explain it in parentheses the first time it appears.
 
-Return STRICT JSON matching:
-{
-  "plain": "the full article rewritten in plain English (markdown allowed for headings and bullets)",
-  "glossary": [ { "term": "EBITDA", "meaning": "a company's profit before interest, taxes, and non-cash costs — a rough proxy for cash the operating business throws off" }, ... ],
-  "keyTakeaways": ["1 sentence bullet", "another", "..."]
-}
+Respond in EXACTLY this plain-text format — these section markers, each alone on its own line, in this exact order. No JSON, no code fences, nothing before "===PLAIN===".
+
+===PLAIN===
+the full article rewritten in plain English (markdown allowed for headings and bullets)
+===GLOSSARY===
+Term: one-sentence meaning
+Term: one-sentence meaning
+===TAKEAWAYS===
+- one-sentence bullet
+- one-sentence bullet
+===END===
 
 Rules:
-- 5–8 key takeaways max, each ≤ 20 words.
-- Glossary only includes truly jargon-y terms actually used in the source (max 12).
+- Write the ===PLAIN=== section first, complete, before starting ===GLOSSARY===.
+- 5–8 key takeaways max, each ≤ 20 words, one per line starting with "- ".
+- Glossary: only truly jargon-y terms actually used in the source (max 12), one per line as "Term: meaning". Omit the line entirely for a source with no jargon — do not invent one.
 - Do not invent facts. If the source is thin, keep the rewrite short.
-- Respond with JSON only, no code fences.`;
+- Always include all four markers (===PLAIN===, ===GLOSSARY===, ===TAKEAWAYS===, ===END===) even if a section has nothing under it.`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -490,7 +397,7 @@ Deno.serve(async (req) => {
         headers: { Authorization: `Bearer ${k}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           model,
-          response_format: { type: "json_object" },
+          stream: true,
           messages: [
             { role: "system", content: SYSTEM },
             { role: "user", content: `Source URL: ${sourceUrl ?? "(pasted text)"}\n\nSOURCE:\n${source.slice(0, 8000)}` },
@@ -500,27 +407,37 @@ Deno.serve(async (req) => {
         }),
       });
 
+    const unavailable = (r: Response) =>
+      r.status === 429 || r.status === 402 || r.status === 404 || r.status === 400 || r.status >= 500;
+
     let res: Response | null = null;
     if (GROQ_API_KEY) {
       res = await call("https://api.groq.com/openai/v1/chat/completions", GROQ_API_KEY, "llama-3.3-70b-versatile");
     }
-    if ((!res || !res.ok) && LOVABLE_API_KEY) {
+    if ((!res || unavailable(res)) && LOVABLE_API_KEY) {
       res = await call("https://ai.gateway.lovable.dev/v1/chat/completions", LOVABLE_API_KEY, "google/gemini-2.5-flash");
     }
     if (!res) throw new Error("No AI provider configured");
 
     if (res.status === 429) return new Response(JSON.stringify({ error: "Rate limit, try again shortly." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     if (res.status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    if (!res.ok) {
+    if (!res.ok || !res.body) {
       const body = await res.text();
-      return new Response(JSON.stringify({ error: "AI gateway error", detail: body }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      console.error("ai gateway error", res.status, body.slice(0, 500));
+      return new Response(JSON.stringify({ error: "AI gateway error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    const j = await res.json();
-    const content = j?.choices?.[0]?.message?.content ?? "{}";
-    let parsed: any;
-    try { parsed = JSON.parse(content); } catch { parsed = { plain: content, glossary: [], keyTakeaways: [] }; }
-    return new Response(JSON.stringify({ ...parsed, sourceUrl }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+
+    // Stream the upstream SSE response straight through — the client parses the same
+    // OpenAI-style `data: {...}` delta chunks that AIChat already knows how to consume.
+    return new Response(res.body, {
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "Access-Control-Expose-Headers": "X-Source-Url",
+        ...(sourceUrl ? { "X-Source-Url": encodeURIComponent(sourceUrl) } : {}),
+      },
     });
   } catch (e) {
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "error" }), {

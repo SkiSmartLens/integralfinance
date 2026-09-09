@@ -273,7 +273,10 @@ Return strict JSON with shape:
       fetch(url, {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model, messages, response_format: { type: "json_object" } }),
+        // Cap output length: the analyst schema is detailed (13 fields incl. two 4-6 bullet
+        // lists) but has a natural upper bound — an unbounded max_tokens lets a rambling
+        // completion drag generation time out much further than the content needs.
+        body: JSON.stringify({ model, messages, response_format: { type: "json_object" }, max_tokens: 2200 }),
       });
 
     // Primary: Groq, then a second Groq model (separate rate-limit bucket),
