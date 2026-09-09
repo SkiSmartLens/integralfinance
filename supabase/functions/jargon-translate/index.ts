@@ -1,4 +1,10 @@
-import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
 
 
 const UA = "Mozilla/5.0 (compatible; IntegralStocks/1.0)";
@@ -315,14 +321,13 @@ async function attempt(url: string): Promise<string | null> {
   return await proxyRace;
 }
 
-/** Portals intermittently serve consent shells — one quick retry, then give up. */
+/** One pass only — everything already races in parallel, so a retry just doubles latency. */
 async function fetchArticleText(url: string): Promise<string> {
-  for (let i = 0; i < 2; i++) {
-    const t = await attempt(url);
-    if (t) return t;
-  }
+  const t = await attempt(url);
+  if (t) return t;
   throw new Error("UNREADABLE");
 }
+
 
 
 
