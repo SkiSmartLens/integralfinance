@@ -273,10 +273,12 @@ Return strict JSON with shape:
       fetch(url, {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        // Cap output length: the analyst schema is detailed (13 fields incl. two 4-6 bullet
-        // lists) but has a natural upper bound — an unbounded max_tokens lets a rambling
-        // completion drag generation time out much further than the content needs.
-        body: JSON.stringify({ model, messages, response_format: { type: "json_object" }, max_tokens: 2200 }),
+        // max_tokens is a safety ceiling only, set high enough that a normal response for this
+        // schema never gets near it: in strict JSON mode, truncation produces invalid JSON, which
+        // silently degrades the ENTIRE response to "Analysis unavailable" fallback text for every
+        // field — confirmed live for GOOGL at 2200. Bound worst-case runaway generation without
+        // risking that.
+        body: JSON.stringify({ model, messages, response_format: { type: "json_object" }, max_tokens: 4096 }),
       });
 
     // Primary: Groq, then a second Groq model (separate rate-limit bucket),
