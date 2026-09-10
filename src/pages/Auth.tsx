@@ -56,10 +56,38 @@ const Auth = () => {
       } catch { /* ignore */ }
       nav(dest, { replace: true });
     };
+
+    // Full-page OAuth redirect (live site): the broker returns tokens on the
+    // URL. Consume them, store the session, then clean the address bar.
+    const consumeTokensFromUrl = async () => {
+      const query = new URLSearchParams(window.location.search);
+      const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      const access_token = query.get("access_token") ?? hash.get("access_token");
+      const refresh_token = query.get("refresh_token") ?? hash.get("refresh_token");
+      const err = query.get("error_description") ?? query.get("error") ?? hash.get("error_description");
+      if (err) {
+        toast({ title: "Sign in failed", description: err, variant: "destructive" });
+        window.history.replaceState({}, "", "/auth");
+        return false;
+      }
+      if (!access_token || !refresh_token) return false;
+      const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+      window.history.replaceState({}, "", "/auth");
+      if (error) {
+        toast({ title: "Sign in failed", description: error.message, variant: "destructive" });
+        return false;
+      }
+      return true;
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
       if (session) go();
     });
-    supabase.auth.getSession().then(({ data }) => { if (data.session) go(); });
+    (async () => {
+      if (await consumeTokensFromUrl()) return; // onAuthStateChange fires and redirects
+      const { data } = await supabase.auth.getSession();
+      if (data.session) go();
+    })();
     return () => subscription.unsubscribe();
   }, [nav]);
 
@@ -69,15 +97,9 @@ const Auth = () => {
     // forward the user to the simulator instead of the homepage.
     const redirectTo = `${window.location.origin}/auth`;
     try {
-      // Primary: Lovable-hosted OAuth (shared Google/Apple credentials, works on
-      // the preview, published and custom domains).
       const result = await lovable.auth.signInWithOAuth(provider, { redirect_uri: redirectTo });
       if (result.redirected) return;
-      if (!result.error) return;
-      // Fallback: the backend's own OAuth redirect (used when custom OAuth
-      // credentials are configured for this project).
-      const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo } });
-      if (error) throw error;
+      if (result.error) throw result.error;
     } catch (e) {
 
       toast({
@@ -88,6 +110,7 @@ const Auth = () => {
       setLoading(null);
     }
   };
+
 
 
 
