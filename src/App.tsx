@@ -65,6 +65,7 @@ const MarketBrief = lazyWithReload(() => import("./pages/MarketBrief.tsx"));
 const JargonTranslator = lazyWithReload(() => import("./pages/JargonTranslator.tsx"));
 const BlogIndex = lazyWithReload(() => import("./pages/BlogIndex.tsx"));
 const BlogPost = lazyWithReload(() => import("./pages/BlogPost.tsx"));
+const OAuthBridge = lazyWithReload(() => import("./pages/OAuthBridge.tsx"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -121,6 +122,7 @@ const App = () => (
             <Route path="/learn/advanced" element={<LearnAdvanced />} />
             <Route path="/blog" element={<BlogIndex />} />
             <Route path="/blog/:slug" element={<BlogPost />} />
+            <Route path="/~oauth/*" element={<OAuthBridge />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
