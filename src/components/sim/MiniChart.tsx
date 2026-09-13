@@ -5,8 +5,8 @@ import { formatNumber } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
 
 const RANGES = [
-  { label: "1D", range: "1d", interval: "5m" },
-  { label: "1W", range: "5d", interval: "15m" },
+  { label: "1D", range: "1d", interval: "1m" },
+  { label: "1W", range: "5d", interval: "5m" },
   { label: "1M", range: "1mo", interval: "1d" },
 ] as const;
 

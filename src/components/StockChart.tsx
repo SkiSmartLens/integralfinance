@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 
 const RANGES: { label: string; range: string; interval: string }[] = [
   { label: "Today", range: "1d", interval: "1m" },
-  { label: "5D", range: "5d", interval: "15m" },
+  { label: "5D", range: "5d", interval: "5m" },
   { label: "1M", range: "1mo", interval: "1d" },
   { label: "1Y", range: "1y", interval: "1d" },
   { label: "5Y", range: "5y", interval: "1wk" },
@@ -148,9 +148,9 @@ export const StockChart = ({ symbol }: Props) => {
   // Before regular session (pre-open / weekend), fetch 5d and slice to last session.
   const showPrevSession = is1D && (marketStatus === "pre" || marketStatus === "closed");
   const fetchRange = showPrevSession ? "5d" : r.range;
-  const fetchInterval = showPrevSession ? "5m" : r.interval;
-  const { data, loading, error, refetch } = useLiveChart(symbol, fetchRange, fetchInterval, 3000, is1D && !showPrevSession);
-  const { quotes } = useLiveQuotes([symbol], 2000);
+  const fetchInterval = showPrevSession ? "1m" : r.interval;
+  const { data, loading, error, refetch } = useLiveChart(symbol, fetchRange, fetchInterval, 5000, is1D && !showPrevSession);
+  const { quotes } = useLiveQuotes([symbol], 5000);
   const quote = quotes[0];
 
   // For non-1D ranges, derive change from the chart's first vs last point

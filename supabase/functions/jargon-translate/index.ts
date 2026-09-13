@@ -239,16 +239,10 @@ async function readable(target: string, ua = BROWSER_UA): Promise<string | null>
   return text;
 }
 
-/**
- * Yahoo Finance renders /m/ and /news/ stubs client-side, so scraping the page often yields a
- * consent/nav shell. Its content API returns the full article markup for the story UUID.
- */
-async function yahooCaas(target: string): Promise<string | null> {
-  let u: URL;
-  try { u = new URL(target); } catch { return null; }
-  if (!/(^|\.)yahoo\.com$/.test(u.hostname)) return null;
-  const uuid = u.pathname.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)?.[0];
-  if (!uuid) return null;
+const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
+/** Fetch one Yahoo story by its content-API UUID. */
+async function yahooCaasByUuid(uuid: string): Promise<string | null> {
   const body = await rawFetch(`https://finance.yahoo.com/caas/content/article/?uuid=${uuid}`);
   if (!body) return null;
   try {
@@ -260,6 +254,25 @@ async function yahooCaas(target: string): Promise<string | null> {
     return null;
   }
 }
+
+function isYahoo(target: string): boolean {
+  try { return /(^|\.)yahoo\.com$/.test(new URL(target).hostname); } catch { return false; }
+}
+
+/**
+ * Yahoo Finance renders /m/, /news/ and /markets/ stubs client-side, so scraping the page often
+ * yields a consent/nav shell. Its content API returns the full article markup for the story UUID.
+ * Newer slug URLs (…-180858347.html) carry no UUID in the path — it only appears in the HTML.
+ */
+async function yahooCaas(target: string): Promise<string | null> {
+  if (!isYahoo(target)) return null;
+  let u: URL;
+  try { u = new URL(target); } catch { return null; }
+  const uuid = u.pathname.match(UUID_RE)?.[0];
+  if (!uuid) return null;
+  return await yahooCaasByUuid(uuid);
+}
+
 
 
 function proxies(u: string): string[] {
@@ -307,6 +320,15 @@ async function attempt(url: string): Promise<string | null> {
     const own = isHtml ? extractArticle(html) : html.trim().slice(0, 12000);
     if (own && !isJunk(own) && !isNavSoup(own)) return own;
 
+    // Yahoo slug URLs hide the story UUID in the page markup — pull it out and use the content API.
+    if (isYahoo(url)) {
+      const embedded = html.match(/"uuid"\s*:\s*"([0-9a-f-]{36})"/i)?.[1] ?? html.match(UUID_RE)?.[0];
+      if (embedded) {
+        const viaCaas = await yahooCaasByUuid(embedded);
+        if (viaCaas) return viaCaas;
+      }
+    }
+
     const alts = altUrls(html, url);
     if (alts.length) {
       const altRace = firstSuccess([
@@ -318,6 +340,7 @@ async function attempt(url: string): Promise<string | null> {
       if (winner) return winner;
     }
   }
+
   return await proxyRace;
 }
 

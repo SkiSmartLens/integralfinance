@@ -38,29 +38,6 @@ const NEXT_KEY = "postAuthRedirect";
 const safeNext = (v: string | null) =>
   v && v.startsWith("/") && !v.startsWith("//") ? v : null;
 
-// Lovable's OAuth broker (/~oauth/initiate) only exists behind Lovable's own
-// edge, on domains it actually serves (preview/published *.lovable.app, or a
-// custom domain whose DNS points at Lovable's hosting). On any other domain
-// — a custom domain hosted elsewhere, localhost — that path isn't proxied and
-// falls through to this app's own client-side 404 route.
-const LOVABLE_HOSTED_ZONES = [
-  "lovableproject.com",
-  "lovableproject-dev.com",
-  "lovable.app",
-  "gpt-eng.com",
-  "gptengineer.run",
-];
-
-const isLovableHosted = () => {
-  const host = window.location.hostname;
-  if (LOVABLE_HOSTED_ZONES.some((z) => host === z || host.endsWith(`.${z}`))) return true;
-  try {
-    return window.self !== window.top;
-  } catch {
-    return true;
-  }
-};
-
 const Auth = () => {
   const nav = useNavigate();
   const [loading, setLoading] = useState<"google" | "apple" | null>(null);
@@ -79,10 +56,38 @@ const Auth = () => {
       } catch { /* ignore */ }
       nav(dest, { replace: true });
     };
+
+    // Full-page OAuth redirect (live site): the broker returns tokens on the
+    // URL. Consume them, store the session, then clean the address bar.
+    const consumeTokensFromUrl = async () => {
+      const query = new URLSearchParams(window.location.search);
+      const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      const access_token = query.get("access_token") ?? hash.get("access_token");
+      const refresh_token = query.get("refresh_token") ?? hash.get("refresh_token");
+      const err = query.get("error_description") ?? query.get("error") ?? hash.get("error_description");
+      if (err) {
+        toast({ title: "Sign in failed", description: err, variant: "destructive" });
+        window.history.replaceState({}, "", "/auth");
+        return false;
+      }
+      if (!access_token || !refresh_token) return false;
+      const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+      window.history.replaceState({}, "", "/auth");
+      if (error) {
+        toast({ title: "Sign in failed", description: error.message, variant: "destructive" });
+        return false;
+      }
+      return true;
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
       if (session) go();
     });
-    supabase.auth.getSession().then(({ data }) => { if (data.session) go(); });
+    (async () => {
+      if (await consumeTokensFromUrl()) return; // onAuthStateChange fires and redirects
+      const { data } = await supabase.auth.getSession();
+      if (data.session) go();
+    })();
     return () => subscription.unsubscribe();
   }, [nav]);
 
@@ -92,18 +97,9 @@ const Auth = () => {
     // forward the user to the simulator instead of the homepage.
     const redirectTo = `${window.location.origin}/auth`;
     try {
-      if (isLovableHosted()) {
-        // Primary on Lovable-served domains: Lovable-hosted OAuth (shared
-        // Google/Apple credentials).
-        const result = await lovable.auth.signInWithOAuth(provider, { redirect_uri: redirectTo });
-        if (result.redirected) return;
-        if (!result.error) return;
-      }
-      // Direct Supabase OAuth — used on domains not served by Lovable's edge,
-      // and as a fallback when custom OAuth credentials are configured for
-      // this project.
-      const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo } });
-      if (error) throw error;
+      const result = await lovable.auth.signInWithOAuth(provider, { redirect_uri: redirectTo });
+      if (result.redirected) return;
+      if (result.error) throw result.error;
     } catch (e) {
 
       toast({
@@ -114,6 +110,7 @@ const Auth = () => {
       setLoading(null);
     }
   };
+
 
 
 
