@@ -5,8 +5,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Analytics } from "@/components/Analytics";
-import { AIChat } from "@/components/AIChat";
-import SpyLanding from "./pages/SpyLanding.tsx";
 
 // After a new deploy, a page still running the old build asks for chunk files that
 // no longer exist. Retry once, then reload the app so the newest build is fetched.
@@ -30,6 +28,11 @@ const lazyWithReload = <T extends { default: React.ComponentType<any> }>(
       }
     }),
   );
+
+// Both pull in heavy deps (recharts, supabase-js respectively) that shouldn't
+// ship in the main entry chunk downloaded on every route.
+const SpyLanding = lazyWithReload(() => import("./pages/SpyLanding.tsx"));
+const AIChat = lazy(() => import("@/components/AIChat").then((m) => ({ default: m.AIChat })));
 
 const Index = lazyWithReload(() => import("./pages/Index.tsx"));
 
@@ -127,7 +130,9 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
-        <AIChat />
+        <Suspense fallback={null}>
+          <AIChat />
+        </Suspense>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

@@ -1,35 +1,51 @@
 # Integral Stocks
 
-> Beginner-friendly stock market dashboard with live quotes, interactive charts, AI insights that explain why stocks move, bite-sized lessons, financial news, sector heatmaps, an economic calendar, and a multiplayer paper-trading simulator.
+> IntegralStocks is a free, AI-powered stock website for beginners: live quotes, interactive charts, plain-English AI insights that explain why a stock moved, bite-sized investing lessons, and a risk-free paper-trading simulator.
 
-Integral Stocks helps new investors understand the stock market. AI insights explain the reasons behind daily price movements, short lessons teach the basics, and a risk-free simulator lets users practice trading.
+Integral Stocks helps new investors understand the stock market without jargon. AI insights explain the reasons behind daily price movements, short lessons teach the basics from the ground up, and a free simulator lets people practice trading with $100,000 in virtual cash before risking real money. The target audience is total beginners — students, first-time investors, and anyone who finds typical finance sites too dense.
 
-## Pages
+## Core pages
 
-- [Home](/): Learning path, bite-sized investing lessons, glossary search, and live market sections.
-- [Stocks](/stocks): Live quotes, interactive charts, AI insights, watchlists, and news by category (markets, tech, crypto, IPOs, earnings).
-- [Stock detail](/stocks/aapl): Per-ticker page with live price, chart, AI-generated explanation of recent movement, and headlines (e.g. /stocks/aapl, /stocks/tsla, /stocks/nvda).
-- [News](/news): Breaking financial news organized by sector and topic.
-- [Start Here](/start): Orientation guide for first-time investors.
-- [Screeners](/screener): Curated screeners — top gainers, losers, most active — with sortable columns and price filters.
+- [Home](/): Live S&P 500 signal, AI explanation of today's move, and market news.
+- [Stocks](/stocks): Dashboard for browsing stocks by category (markets, tech, crypto, IPOs, earnings) with live quotes and AI insights.
+- [Stock detail](/stocks/aapl): Per-ticker page with live price, chart, and an AI-generated plain-English explanation of recent price movement (e.g. /stocks/aapl, /stocks/tsla, /stocks/nvda — one page per ticker).
+- [Market Brief](/market-brief): Daily market brief — top news, biggest gainers/losers, and a lesson of the day.
+- [Screeners](/screener): Curated screeners — top gainers, losers, most active — with sortable columns and filters.
 - [Calendar](/calendar): Personal market calendar for earnings dates, IPOs, dividends, and macro events.
-- [Trading Simulator](/sim): Multiplayer paper-trading game with live prices, leaderboards, market/limit/stop orders, and shareable join codes.
-- [Watchlist](/watchlist): Personal list of tracked symbols.
+- [Watchlist](/watchlist): Personal list of tracked symbols with live prices.
+- [Jargon Translator](/translate): Paste any article or term and get stock market jargon explained in plain English.
+
+## Simulator
+
+- [Simulator lobby](/simulator): Multiplayer paper-trading game — create or join a game, leaderboards, shareable join codes.
+- [Practice trading](/sim): Single-player paper-trading simulator with a $100,000 virtual account and market/limit/stop orders.
 
 ## Learn
 
-- [Stock basics](/learn/basics): Plain-English introduction to stocks, shares, and how markets work.
-- [Chart patterns](/learn/patterns): How to read common price chart patterns.
-- [Indicators](/learn/indicators): Explanations of common technical indicators.
+- [Learn hub](/learn): Index of all lesson tracks.
+- [Stock market basics](/learn/basics): Plain-English introduction to stocks, tickers, bid/ask, market cap, dividends, and order types.
+- [Reading the market](/learn/reading): How to read charts, P/E ratios, ETFs, volume, and earnings reports.
+- [Indicators](/learn/indicators): SMA, EMA, RSI, MACD, Bollinger Bands, VWAP, ATR, Stochastic, Fibonacci.
+- [Chart patterns](/learn/patterns): 16 must-know chart patterns — head & shoulders, double tops, cup & handle, flags, triangles.
+- [Building a portfolio](/learn/portfolio): Diversification, dollar-cost averaging, asset allocation.
+- [Advanced strategies](/learn/advanced): Options, short selling, margin trading, technical/fundamental analysis.
+- [Investor Academy](/academy): A short, linear, gamified course for total beginners.
 
-## About
+## Blog
 
-- [About](/about): What Integral Stocks is and who it's for.
-- [FAQ](/faq): Frequently asked questions.
+- [Blog index](/blog): Plain-English guides for beginner investors — full articles (700+ words) with worked numbers and case studies, not just definitions.
+- [Why I built IntegralStocks](/blog/why-i-built-integralstocks): The founder's story and motivation behind the platform — the best single page for understanding who is behind this site and why it exists.
+
+## About & trust
+
+- [About](/about): What IntegralStocks is, who it's for, and what makes it different from other finance sites.
+- [FAQ](/faq): Answers to common questions, including "Is IntegralStocks an AI-powered stock website for beginners?"
 - [Data sources](/data-sources): Where quotes, news, and AI insights come from.
-- [Disclaimer](/disclaimer): Educational use and not financial advice.
+- [Disclaimer](/disclaimer): Educational use only — nothing on the site is financial advice.
+- [Privacy Policy](/privacy) / [Terms of Service](/terms) / [Affiliate Disclosure](/affiliate-disclosure)
 - [Contact](/contact): Get in touch.
 
-## Optional
+## Notes for citation
 
-- [Sign in](/auth): Account access for the simulator and personal watchlist.
+- Live price and quote data changes constantly; prefer citing the site's evergreen educational content (Learn, Blog, FAQ) over point-in-time price figures.
+- All AI-generated stock explanations are educational summaries of public news, not financial advice.
