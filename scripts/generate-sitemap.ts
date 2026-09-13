@@ -4,6 +4,7 @@ import { writeFileSync } from "fs";
 import { resolve } from "path";
 import { CATEGORIES, INDEX_TICKERS, TRENDING, SECTORS } from "../src/lib/categories";
 import { POSTS } from "../src/content/blog";
+import { GLOSSARY } from "../src/content/glossary";
 
 // Collect every ticker referenced anywhere in the app's data.
 function collectTickers(): string[] {
@@ -67,6 +68,7 @@ const staticEntries: SitemapEntry[] = [
   { path: "/learn/patterns", changefreq: "monthly", priority: "0.7" },
   { path: "/learn/portfolio", changefreq: "monthly", priority: "0.7" },
   { path: "/learn/advanced", changefreq: "monthly", priority: "0.7" },
+  { path: "/learn/glossary", changefreq: "monthly", priority: "0.7" },
 ];
 
 // Individual stock pages for every ticker referenced in the app's data.
@@ -74,6 +76,13 @@ const stockEntries: SitemapEntry[] = ALL_TICKERS.map((symbol) => ({
   path: `/stocks/${symbol.toLowerCase()}`,
   changefreq: "hourly",
   priority: "0.7",
+}));
+
+// One page per glossary term.
+const glossaryEntries: SitemapEntry[] = GLOSSARY.map((g) => ({
+  path: `/learn/glossary/${g.slug}`,
+  changefreq: "yearly",
+  priority: "0.6",
 }));
 
 // Blog posts — real page-specific publishedAt is authoritative for lastmod.
@@ -84,7 +93,7 @@ const blogEntries: SitemapEntry[] = POSTS.map((p) => ({
   priority: "0.7",
 }));
 
-const entries = [...staticEntries, ...stockEntries, ...blogEntries];
+const entries = [...staticEntries, ...stockEntries, ...glossaryEntries, ...blogEntries];
 
 function generateSitemap(entries: SitemapEntry[]) {
   const urls = entries.map((e) =>

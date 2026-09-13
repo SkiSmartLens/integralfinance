@@ -30,6 +30,7 @@ Integral Stocks helps new investors understand the stock market without jargon. 
 - [Building a portfolio](/learn/portfolio): Diversification, dollar-cost averaging, asset allocation.
 - [Advanced strategies](/learn/advanced): Options, short selling, margin trading, technical/fundamental analysis.
 - [Investor Academy](/academy): A short, linear, gamified course for total beginners.
+- [Glossary](/learn/glossary): One page per investing term (e.g. /learn/glossary/pe-ratio, /learn/glossary/rsi) — each gives a direct, quotable one-line definition plus a fuller explanation. This is the best target for "what does X mean" queries.
 
 ## Blog
 

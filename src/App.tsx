@@ -62,6 +62,8 @@ const LearnHub = lazyWithReload(() => import("./pages/LearnHub.tsx"));
 const LearnReading = lazyWithReload(() => import("./pages/LearnReading.tsx"));
 const LearnPortfolio = lazyWithReload(() => import("./pages/LearnPortfolio.tsx"));
 const LearnAdvanced = lazyWithReload(() => import("./pages/LearnAdvanced.tsx"));
+const GlossaryIndex = lazyWithReload(() => import("./pages/GlossaryIndex.tsx"));
+const GlossaryTerm = lazyWithReload(() => import("./pages/GlossaryTerm.tsx"));
 const StockTicker = lazyWithReload(() => import("./pages/StockTicker.tsx"));
 const StartHere = lazyWithReload(() => import("./pages/StartHere.tsx"));
 const MarketBrief = lazyWithReload(() => import("./pages/MarketBrief.tsx"));
@@ -123,6 +125,8 @@ const App = () => (
             <Route path="/learn/reading" element={<LearnReading />} />
             <Route path="/learn/portfolio" element={<LearnPortfolio />} />
             <Route path="/learn/advanced" element={<LearnAdvanced />} />
+            <Route path="/learn/glossary" element={<GlossaryIndex />} />
+            <Route path="/learn/glossary/:slug" element={<GlossaryTerm />} />
             <Route path="/blog" element={<BlogIndex />} />
             <Route path="/blog/:slug" element={<BlogPost />} />
             <Route path="/~oauth/*" element={<OAuthBridge />} />

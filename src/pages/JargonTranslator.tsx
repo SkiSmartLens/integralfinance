@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { SEO } from "@/components/SEO";
 import { Header } from "@/components/Header";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -169,7 +169,11 @@ const JargonTranslator = () => {
           <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight">Turn Wall Street speak into plain English</h1>
           <p className="text-muted-foreground mt-2 text-sm md:text-base">
             Paste any financial article or a link. The AI rewrites it for beginners, keeps every number and fact, and gives you a
-            short glossary of the jargon it swapped out.
+            short glossary of the jargon it swapped out. Looking for a specific term instead?{" "}
+            <Link to="/learn/glossary" className="text-primary font-semibold hover:underline">
+              Browse the full glossary
+            </Link>
+            .
           </p>
         </header>
 

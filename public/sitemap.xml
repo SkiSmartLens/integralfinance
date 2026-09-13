@@ -141,6 +141,11 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://integralstocks.com/learn/glossary</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://integralstocks.com/stocks/000001.ss</loc>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
@@ -1179,6 +1184,116 @@
     <loc>https://integralstocks.com/stocks/^vvix</loc>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/what-is-a-stock</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/ticker</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/bid-ask-spread</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/market-cap</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/dividends</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/pe-ratio</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/bull-vs-bear-market</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/market-vs-limit-order</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/diversification</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/what-is-an-etf</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/sma</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/ema</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/golden-cross</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/rsi</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/macd</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/bollinger-bands</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/volume</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/vwap</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/atr</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/stochastic-oscillator</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/support-resistance</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/fibonacci-retracement</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://integralstocks.com/blog/how-to-start-investing-with-100-dollars</loc>

@@ -164,7 +164,8 @@ export default function LearnHub() {
           {[
             { to: "/start", label: "Start Here", desc: "2-question onboarding" },
             { to: "/academy", label: "Academy", desc: "Guided modules" },
-            { to: "/translate", label: "Glossary", desc: "Jargon → plain English" },
+            { to: "/learn/glossary", label: "Glossary", desc: "One-page term definitions" },
+            { to: "/translate", label: "Translator", desc: "Jargon → plain English" },
             { to: "/market-brief", label: "Market Brief", desc: "Today's news, explained" },
           ].map((x) => (
             <Link
