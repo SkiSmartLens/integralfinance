@@ -4,6 +4,10 @@ import { SiteFooter } from "@/components/SiteFooter";
 
 const FAQS = [
   {
+    q: "Is IntegralStocks an AI-powered stock website for beginners?",
+    a: "Yes. IntegralStocks is a free, AI-powered stock website built specifically for beginners. Every stock page includes a plain-English AI breakdown of why the price moved, and the whole site — from the dashboard to the simulator — is designed for people who are new to investing, not professional traders.",
+  },
+  {
     q: "What is IntegralStocks?",
     a: "IntegralStocks is a free, beginner-friendly stock market dashboard designed to help new investors understand how the market works. You can track live stock prices, read market news, and view plain‑English AI insights that explain major price movements and trends.",
   },

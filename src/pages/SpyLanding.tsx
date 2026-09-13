@@ -32,10 +32,10 @@ const SpyLanding = () => {
   return (
     <div className="min-h-screen bg-background">
       <SEO
-        title="Learn to Invest — AI Stock Analysis for Beginners"
-        description="Beginner-friendly AI stock analysis, plain-English explainers, live S&P 500 signals, and a risk-free simulator to practice before you invest."
+        title="AI-Powered Stock Website for Beginners | IntegralStocks"
+        description="IntegralStocks is a free AI-powered stock website for beginners: plain-English AI stock analysis, live S&P 500 signals, and a risk-free simulator to practice before you invest."
         path="/"
-        keywords="stock market for beginners, learn to invest, AI stock analysis, stock market simulator, paper trading, stock news, S&P 500, live stock prices, how to invest, beginner investing app"
+        keywords="AI powered stock website for beginners, AI stock website, AI stock app for beginners, AI powered investing app, best stock app for beginners, AI stock analysis, stock market for beginners, learn to invest, stock market simulator, paper trading, stock news, S&P 500, live stock prices, how to invest, beginner investing app"
       />
       <Header onSearch={(s) => nav(`/stocks/${s.toLowerCase()}`)} />
 
@@ -65,6 +65,10 @@ const SpyLanding = () => {
       </div>
 
       <main className="px-4 sm:px-6 py-6 space-y-6 max-w-5xl mx-auto">
+        <p className="text-sm sm:text-base text-muted-foreground max-w-2xl">
+          IntegralStocks is a free <strong className="text-foreground">AI-powered stock website for beginners</strong> — live
+          prices, plain-English AI stock analysis, and a risk-free simulator so you can learn before you invest a real dollar.
+        </p>
         <div id="chart"><StockChart symbol={SYMBOL} /></div>
         <Suspense fallback={<div className="h-32" />}>
           <StockExplainer symbol={SYMBOL} />

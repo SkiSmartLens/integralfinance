@@ -22,9 +22,9 @@ const About = () => (
       <h1>About IntegralStocks</h1>
 
       <p>
-        IntegralStocks is a free, beginner‑friendly stock market dashboard built to make investing concepts easier to
-        understand. You can track <strong>live stock prices</strong>, browse market news, and—most importantly—learn{" "}
-        <em>why</em> a stock moved through clear, plain‑English AI explanations.
+        IntegralStocks is a free, <strong>AI-powered stock website for beginners</strong>, built to make investing
+        concepts easier to understand. You can track <strong>live stock prices</strong>, browse market news, and—most
+        importantly—learn <em>why</em> a stock moved through clear, plain‑English AI explanations.
       </p>
 
       <h2>Who it's for</h2>

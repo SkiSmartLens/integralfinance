@@ -62,13 +62,24 @@ const StockTicker = () => {
         description={description}
         path={`/stocks/${symbol.toLowerCase()}`}
         keywords={keywords}
-        jsonLd={{
-          "@context": "https://schema.org",
-          "@type": "WebPage",
-          name: title,
-          description,
-          url: `https://integralstocks.com/stocks/${symbol.toLowerCase()}`,
-        }}
+        jsonLd={[
+          {
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            name: title,
+            description,
+            url: `https://integralstocks.com/stocks/${symbol.toLowerCase()}`,
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Home", item: "https://integralstocks.com/" },
+              { "@type": "ListItem", position: 2, name: "Stocks", item: "https://integralstocks.com/stocks" },
+              { "@type": "ListItem", position: 3, name: symbol, item: `https://integralstocks.com/stocks/${symbol.toLowerCase()}` },
+            ],
+          },
+        ]}
       />
       <Header onSearch={(s) => nav(`/stocks/${s.toLowerCase()}`)} />
 

@@ -36,19 +36,30 @@ const BlogPost = () => {
         path={canonicalPath}
         image={`${SITE}${hero.src}`}
         keywords={keywords}
-        jsonLd={{
-          "@context": "https://schema.org",
-          "@type": "BlogPosting",
-          headline: post.title,
-          description: post.description,
-          datePublished: post.publishedAt,
-          dateModified: post.publishedAt,
-          image: `${SITE}${hero.src}`,
-          url: `${SITE}${canonicalPath}`,
-          author: { "@type": "Organization", name: "IntegralStocks" },
-          publisher: { "@type": "Organization", name: "IntegralStocks", logo: { "@type": "ImageObject", url: "https://integralstocks.com/favicon.png" } },
-          mainEntityOfPage: `${SITE}${canonicalPath}`,
-        }}
+        jsonLd={[
+          {
+            "@context": "https://schema.org",
+            "@type": "BlogPosting",
+            headline: post.title,
+            description: post.description,
+            datePublished: post.publishedAt,
+            dateModified: post.publishedAt,
+            image: `${SITE}${hero.src}`,
+            url: `${SITE}${canonicalPath}`,
+            author: { "@type": "Organization", name: "IntegralStocks" },
+            publisher: { "@type": "Organization", name: "IntegralStocks", logo: { "@type": "ImageObject", url: "https://integralstocks.com/favicon.png" } },
+            mainEntityOfPage: `${SITE}${canonicalPath}`,
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Home", item: `${SITE}/` },
+              { "@type": "ListItem", position: 2, name: "Blog", item: `${SITE}/blog` },
+              { "@type": "ListItem", position: 3, name: post.title, item: `${SITE}${canonicalPath}` },
+            ],
+          },
+        ]}
       />
       <Header />
       <main className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-10 flex-1">
