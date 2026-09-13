@@ -38,6 +38,7 @@ const BlogIndex = () => {
         title="Blog — Beginner Investing Guides & Explainers"
         description="Plain-English guides for beginner investors: how to start with $100, how to read a chart, what P/E ratio means, paper trading vs real trading, and more."
         path="/blog"
+        keywords="investing blog, beginner investing guides, how to invest, stock market explained, investing tips"
         jsonLd={{
           "@context": "https://schema.org",
           "@type": "Blog",

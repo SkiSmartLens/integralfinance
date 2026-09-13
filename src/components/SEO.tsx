@@ -7,6 +7,7 @@ interface Props {
   description: string;
   path: string;
   image?: string;
+  keywords?: string | string[];
   jsonLd?: Record<string, any> | Record<string, any>[];
 }
 
@@ -14,14 +15,16 @@ interface Props {
  * Per-route SEO head. Sets title, description, canonical, and og:* tags.
  * Pass `path` starting with "/".
  */
-export const SEO = ({ title, description, path, image, jsonLd }: Props) => {
+export const SEO = ({ title, description, path, image, keywords, jsonLd }: Props) => {
   const url = `${SITE}${path}`;
   const ogImage = image ?? `${SITE}/stocks-hero.webp`;
   const ld = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
+  const keywordsContent = Array.isArray(keywords) ? keywords.join(", ") : keywords;
   return (
     <Helmet>
       <title>{title}</title>
       <meta name="description" content={description} />
+      {keywordsContent ? <meta name="keywords" content={keywordsContent} /> : null}
       <link rel="canonical" href={url} />
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />

@@ -120,7 +120,12 @@ export default function LearnReading() {
 
   return (
     <div className="min-h-screen bg-background">
-      <SEO title="Reading the Market — Integral Stocks" description="Learn to read stock charts, P/E ratios, ETFs, volume, moving averages, and earnings reports." path="/learn/reading" />
+      <SEO
+        title="Reading the Market — Integral Stocks"
+        description="Learn to read stock charts, P/E ratios, ETFs, volume, moving averages, and earnings reports."
+        path="/learn/reading"
+        keywords="how to read stock charts, P/E ratio explained, what is an ETF, trading volume, moving averages, earnings reports explained"
+      />
       <Header />
       <main className="container mx-auto px-4 py-6 max-w-3xl">
         <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">

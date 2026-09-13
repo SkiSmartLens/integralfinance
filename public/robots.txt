@@ -1,9 +1,33 @@
 User-agent: *
 Allow: /
 Disallow: /auth
-Disallow: /settings
 Disallow: /dashboard
-Disallow: /internal/
 Disallow: /sim/trade/
+
+# AI/LLM crawlers used for training data — explicitly allowed to use this
+# site's public content.
+User-agent: Google-Extended
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
 
 Sitemap: https://integralstocks.com/sitemap.xml

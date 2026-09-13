@@ -74,6 +74,7 @@ export default function Screener() {
         title="Stock Screeners — Top Gainers, Losers & Most Active"
         description="Browse curated stock screeners: top gainers, losers, most actives, undervalued growth, small-cap movers, and more — with sortable tables and filters."
         path="/screener"
+        keywords="stock screener, top gainers, top losers, most active stocks, stock filter, growth stocks, small-cap stocks"
         jsonLd={{
           "@context": "https://schema.org",
           "@type": "CollectionPage",

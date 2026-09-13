@@ -161,7 +161,12 @@ const GameLobby = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <SEO title="Play — Choose or Create a Game | Integral Stocks" description="Play the stock simulator solo or with friends. Create a private game, share your join code, or browse public games." path="/sim/lobby" />
+      <SEO
+        title="Play — Choose or Create a Game | Integral Stocks"
+        description="Play the stock simulator solo or with friends. Create a private game, share your join code, or browse public games."
+        path="/simulator"
+        keywords="stock market simulator, virtual trading, paper trading game, practice trading, fantasy stock game, trading simulator for beginners"
+      />
       <Header />
       <PracticeNav />
 

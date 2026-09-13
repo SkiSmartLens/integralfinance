@@ -79,6 +79,7 @@ const Calendar = () => {
         title="Personal Market Calendar — Integral Stocks"
         description="Track your own earnings dates, IPOs, dividends, and macro events on a personal market calendar."
         path="/calendar"
+        keywords="earnings calendar, IPO calendar, dividend calendar, market events, economic calendar"
       />
       <Header />
       <PracticeNav />

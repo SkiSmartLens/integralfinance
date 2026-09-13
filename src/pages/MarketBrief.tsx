@@ -183,6 +183,7 @@ const MarketBrief = () => {
         title="Daily Market Brief — Top News, Gainers & Losers"
         description="Beginner-friendly daily market brief: today's top stock news, biggest gainers and losers, and a lesson of the day tied to what's happening now."
         path="/market-brief"
+        keywords="stock market news, daily market brief, top gainers and losers, stock news today, market news for beginners"
         jsonLd={{
           "@context": "https://schema.org",
           "@type": "WebPage",

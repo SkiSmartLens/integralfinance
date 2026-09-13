@@ -43,6 +43,17 @@ const StockTicker = () => {
   const title = `${symbol} (${name}) Stock Price & Chart | IntegralStocks`;
   const priceBit = last != null ? `Live price $${formatNumber(last)} (${ch >= 0 ? "+" : ""}${formatNumber(ch)}%).` : "";
   const description = `${name} (${symbol}) live chart plus a plain-English AI breakdown of why the stock is moving today. ${priceBit} Beginner-friendly.`.slice(0, 300);
+  const keywords = [
+    symbol,
+    name,
+    `${symbol} stock`,
+    `${symbol} stock price`,
+    `${symbol} stock chart`,
+    `${name} stock`,
+    `${symbol} live quote`,
+    `${symbol} news`,
+    "stock price today",
+  ].join(", ");
 
   return (
     <div className="min-h-screen bg-background">
@@ -50,6 +61,7 @@ const StockTicker = () => {
         title={title}
         description={description}
         path={`/stocks/${symbol.toLowerCase()}`}
+        keywords={keywords}
         jsonLd={{
           "@context": "https://schema.org",
           "@type": "WebPage",

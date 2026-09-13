@@ -64,6 +64,7 @@ const StartHere = () => {
         title="Start Here — Learn to Invest for Beginners | IntegralStocks"
         description="New to investing? Pick your level and goal in 2 taps to get a personalized starting path — lessons, a free simulator, or live market news."
         path="/start"
+        keywords="how to start investing, investing for beginners, where to start investing, beginner investor guide"
       />
       <Header />
       <main className="container mx-auto px-4 py-8 max-w-2xl">

@@ -113,7 +113,12 @@ export default function LearnPortfolio() {
 
   return (
     <div className="min-h-screen bg-background">
-      <SEO title="Building a Portfolio — Integral Stocks" description="Learn diversification, dollar-cost averaging, asset allocation, and long-term investing strategy." path="/learn/portfolio" />
+      <SEO
+        title="Building a Portfolio — Integral Stocks"
+        description="Learn diversification, dollar-cost averaging, asset allocation, and long-term investing strategy."
+        path="/learn/portfolio"
+        keywords="portfolio diversification, dollar-cost averaging, asset allocation, long-term investing strategy, how to build a portfolio"
+      />
       <Header />
       <main className="container mx-auto px-4 py-6 max-w-3xl">
         <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">

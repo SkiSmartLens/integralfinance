@@ -6,7 +6,12 @@ import { LegalHeader, Lead, Section, KeyPoint } from "@/components/legal/LegalBi
 
 const AffiliateDisclosure = () => (
   <div className="min-h-screen bg-background flex flex-col">
-    <SEO title="Affiliate Disclosure — Integral Stocks" description="Integral Stocks may earn commissions from affiliate links. Here's exactly how that works." path="/affiliate-disclosure" />
+    <SEO
+      title="Affiliate Disclosure — Integral Stocks"
+      description="Integral Stocks may earn commissions from affiliate links. Here's exactly how that works."
+      path="/affiliate-disclosure"
+      keywords="affiliate disclosure, affiliate links disclaimer"
+    />
     <Header />
     <main className="flex-1 max-w-3xl mx-auto w-full px-5 sm:px-6 py-12 sm:py-16">
       <LegalHeader icon={<Link2 className="w-3.5 h-3.5" />} title="Affiliate Disclosure" updated="July 2026" />

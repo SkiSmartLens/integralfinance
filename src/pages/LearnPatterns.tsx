@@ -433,6 +433,7 @@ export default function LearnPatterns() {
         title="Learn Stock Chart Patterns — Duolingo-style Lessons"
         description="Master 16 must-know stock chart patterns — head & shoulders, double tops, cup & handle, flags and triangles — with bite-sized lessons and quick quizzes."
         path="/learn/patterns"
+        keywords="stock chart patterns, head and shoulders pattern, double top pattern, cup and handle, flag pattern, triangle pattern, technical analysis patterns"
         jsonLd={{
           "@context": "https://schema.org",
           "@type": "LearningResource",

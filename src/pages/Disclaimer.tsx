@@ -10,6 +10,7 @@ const Disclaimer = () => (
       title="Disclaimer — IntegralStocks"
       description="IntegralStocks provides educational stock market information only. Nothing on the site is investment advice."
       path="/disclaimer"
+      keywords="investment disclaimer, not financial advice, educational stock information"
     />
     <Header />
     <main className="flex-1 max-w-3xl mx-auto w-full px-5 sm:px-6 py-12 sm:py-16">

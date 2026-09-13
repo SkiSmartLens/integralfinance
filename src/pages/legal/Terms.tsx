@@ -6,7 +6,12 @@ import { LegalHeader, Lead, Section, KeyPoint } from "@/components/legal/LegalBi
 
 const Terms = () => (
   <div className="min-h-screen bg-background flex flex-col">
-    <SEO title="Terms of Service — Integral Stocks" description="The terms that govern your use of Integral Stocks, including our No Financial Advice disclaimer." path="/terms" />
+    <SEO
+      title="Terms of Service — Integral Stocks"
+      description="The terms that govern your use of Integral Stocks, including our No Financial Advice disclaimer."
+      path="/terms"
+      keywords="terms of service, terms and conditions, user agreement"
+    />
     <Header />
     <main className="flex-1 max-w-3xl mx-auto w-full px-5 sm:px-6 py-12 sm:py-16">
       <LegalHeader icon={<FileText className="w-3.5 h-3.5" />} title="Terms of Service" updated="July 2026" />

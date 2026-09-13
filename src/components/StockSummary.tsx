@@ -14,7 +14,11 @@ type Summary = StockSummaryData & { positives: string[]; negatives: string[]; ea
 const nameCache = new Map<string, string>();
 
 export const StockSummary = ({ symbol }: { symbol: string }) => {
-  const [data, setData] = useState<Summary | null>((getCachedSummary(symbol) as Summary) ?? null);
+  const [data, setData] = useState<Summary | null>(() => {
+    const priority = getCachedSummary(symbol, "priority");
+    const extended = getCachedSummary(symbol, "extended");
+    return priority || extended ? ({ ...extended, ...priority } as Summary) : null;
+  });
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState<string>(nameCache.get(symbol) ?? "");
@@ -48,21 +52,36 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
   }, [symbol]);
 
   // Fetch AI insights immediately (shared cache + request dedupe).
+  // "priority" carries whyMoved/positives/negatives/whatItDoes/outlook — the
+  // fields rendered first — and "extended" carries the deep-dive fields
+  // (revenue, margins, moat, forecast, ...) rendered further down in collapsed
+  // rows. They're independent AI calls so priority can render as soon as it's
+  // ready instead of waiting on the much larger extended payload.
   useEffect(() => {
     let alive = true;
-    const cached = getCachedSummary(symbol) as Summary | null;
-    if (cached) {
-      setData(cached);
-      setErr(null);
-      return;
-    }
-    setData(null);
     setErr(null);
-    setLoading(true);
-    fetchStockSummary(symbol)
-      .then((d) => { if (alive) setData(d as Summary); })
-      .catch((e: Error) => { if (alive) setErr(e.message); })
-      .finally(() => { if (alive) setLoading(false); });
+    setData(null);
+
+    const cachedPriority = getCachedSummary(symbol, "priority") as Summary | null;
+    if (cachedPriority) {
+      setData((d) => ({ ...d, ...cachedPriority }) as Summary);
+    } else {
+      setLoading(true);
+      fetchStockSummary(symbol, "priority")
+        .then((d) => { if (alive) setData((prev) => ({ ...prev, ...d }) as Summary); })
+        .catch((e: Error) => { if (alive) setErr(e.message); })
+        .finally(() => { if (alive) setLoading(false); });
+    }
+
+    const cachedExtended = getCachedSummary(symbol, "extended") as Summary | null;
+    if (cachedExtended) {
+      setData((d) => ({ ...d, ...cachedExtended }) as Summary);
+    } else {
+      fetchStockSummary(symbol, "extended")
+        .then((d) => { if (alive) setData((prev) => ({ ...prev, ...d }) as Summary); })
+        .catch(() => { /* deep-dive fields are non-critical; fail silently */ });
+    }
+
     return () => { alive = false; };
   }, [symbol]);
 

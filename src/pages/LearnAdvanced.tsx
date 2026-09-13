@@ -54,7 +54,12 @@ export default function LearnAdvanced() {
 
   return (
     <div className="min-h-screen bg-background">
-      <SEO title="Advanced Strategies — Integral Stocks" description="Learn options, short selling, margin trading, technical and fundamental analysis, and pro investing tactics." path="/learn/advanced" />
+      <SEO
+        title="Advanced Strategies — Integral Stocks"
+        description="Learn options, short selling, margin trading, technical and fundamental analysis, and pro investing tactics."
+        path="/learn/advanced"
+        keywords="options trading, short selling explained, margin trading, technical analysis, fundamental analysis, advanced investing strategies"
+      />
       <Header />
       <main className="container mx-auto px-4 py-6 max-w-3xl">
         <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">

@@ -8,6 +8,7 @@ const Contact = () => (
       title="Contact IntegralStocks"
       description="Reach out to IntegralStocks with feedback, bug reports, or general questions."
       path="/contact"
+      keywords="contact IntegralStocks, feedback, support, bug report"
     />
     <Header />
     <main className="container mx-auto px-4 py-10 max-w-3xl prose prose-neutral dark:prose-invert">

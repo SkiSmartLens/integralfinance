@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { SEO } from "@/components/SEO";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -19,18 +19,30 @@ import {
 
 const Index = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { currentModule, isCompleted, progress, allComplete } = useAcademy();
   const checklist = useChecklist();
 
   const doneCount = progress.completed.length;
   const totalModules = ACADEMY_MODULES.length;
 
+  // This component is mounted at both /stocks and /dashboard — self-canonicalize
+  // to whichever URL the visitor is actually on instead of hardcoding one, so a
+  // crawler landing on /stocks (in the sitemap) isn't told to canonicalize to
+  // /dashboard (blocked by robots.txt).
+  const isStocksRoute = location.pathname === "/stocks";
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SEO
-        title="Dashboard — Learn Investing & Practice Trading"
+        title={
+          isStocksRoute
+            ? "Stocks — Live Prices, AI Insights & Watchlist"
+            : "Dashboard — Learn Investing & Practice Trading"
+        }
         description="Your beginner investing dashboard. Follow the Investor Academy, track a watchlist, and practice with $100,000 of virtual cash — free."
-        path="/dashboard"
+        path={isStocksRoute ? "/stocks" : "/dashboard"}
+        keywords="stock dashboard, beginner investing, stock watchlist, learn to invest, virtual trading, investor academy"
       />
       <h1 className="sr-only">IntegralStocks — Beginner investing home</h1>
       <Header onSearch={(s) => navigate(`/stocks/${encodeURIComponent(s.toLowerCase())}`)} />

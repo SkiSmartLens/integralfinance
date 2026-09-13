@@ -8,6 +8,7 @@ const DataSources = () => (
       title="Data Sources & Attribution — IntegralStocks"
       description="Learn where IntegralStocks obtains stock prices, market news, and AI-generated insights."
       path="/data-sources"
+      keywords="stock data sources, market data attribution, where does stock data come from"
     />
     <Header />
     <main className="container mx-auto px-4 py-10 max-w-3xl prose prose-neutral dark:prose-invert">

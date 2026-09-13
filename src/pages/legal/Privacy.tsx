@@ -6,7 +6,12 @@ import { LegalHeader, Lead, Section, KeyPoint } from "@/components/legal/LegalBi
 
 const Privacy = () => (
   <div className="min-h-screen bg-background flex flex-col">
-    <SEO title="Privacy Policy — Integral Stocks" description="How Integral Stocks collects, uses, and protects your personal information." path="/privacy" />
+    <SEO
+      title="Privacy Policy — Integral Stocks"
+      description="How Integral Stocks collects, uses, and protects your personal information."
+      path="/privacy"
+      keywords="privacy policy, data protection, personal information"
+    />
     <Header />
     <main className="flex-1 max-w-3xl mx-auto w-full px-5 sm:px-6 py-12 sm:py-16">
       <LegalHeader icon={<ShieldCheck className="w-3.5 h-3.5" />} title="Privacy Policy" updated="July 2026" />

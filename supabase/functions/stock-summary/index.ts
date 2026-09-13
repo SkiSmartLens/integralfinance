@@ -21,7 +21,16 @@ Deno.serve(async (req) => {
     }
     const sym = symbol.toUpperCase();
     const isBeginner = mode === "beginner";
-    const key = `sum:v5:${isBeginner ? "b:" : ""}${sym}`;
+    // "priority" = whyMoved/positives/negatives/whatItDoes/outlook — the fields the
+    // UI renders first. "extended" = the deep-dive fields (revenue, margins, moat,
+    // forecast, ...) that render further down in collapsed rows. Splitting these into
+    // two independent, parallel AI calls (instead of one call generating all 13
+    // fields serially) lets the client show the insights people actually look at —
+    // why it moved, positives, negatives — without waiting on the rest. Omitting
+    // `mode` keeps the old single-shot "full" behavior for any other caller.
+    const isPriority = mode === "priority";
+    const isExtended = mode === "extended";
+    const key = `sum:v6:${mode ?? "full"}:${sym}`;
     const hit = cache.get(key);
     if (hit && hit.exp > Date.now()) {
       return new Response(hit.body, {
@@ -56,6 +65,10 @@ Deno.serve(async (req) => {
     // Latency: scraping full article markdown is the slowest part, so only the
     // "why it moved" pass scrapes; the bull/bear pass uses search snippets.
     // Both are hard-capped so a slow Firecrawl can never stall the response.
+    // Only whyMoved/positives/negatives (priority + legacy full) cite sources, so
+    // "extended" and "beginner" skip Firecrawl entirely — that's the single
+    // biggest latency item (up to 9s x2) and those modes don't need it.
+    const needsWebResearch = !isBeginner && !isExtended;
     const fcSearch = (query: string, tbs?: string, scrape = false) =>
       FIRECRAWL_API_KEY
         ? fetch("https://api.firecrawl.dev/v2/search", {
@@ -71,8 +84,8 @@ Deno.serve(async (req) => {
           }).then((r) => (r.ok ? r.json() : null)).catch(() => null)
         : Promise.resolve(null);
 
-    const firecrawlPromise = fcSearch(`${sym} stock why it moved today news`, "qdr:w", true);
-    const firecrawlCasePromise = fcSearch(`${sym} stock bull case bear case analyst outlook`, "qdr:m");
+    const firecrawlPromise = needsWebResearch ? fcSearch(`${sym} stock why it moved today news`, "qdr:w", true) : Promise.resolve(null);
+    const firecrawlCasePromise = needsWebResearch ? fcSearch(`${sym} stock bull case bear case analyst outlook`, "qdr:m") : Promise.resolve(null);
 
 
 
@@ -112,33 +125,35 @@ Deno.serve(async (req) => {
     //    text about why the stock moved, plus citable sources for the UI.
     let webContext = "";
     const webSources: { title: string; publisher: string; url: string }[] = [];
-    try {
-      const [fc, fcCase]: any[] = await Promise.all([firecrawlPromise, firecrawlCasePromise]);
-      const pick = (x: any): any[] => x?.data?.web ?? x?.web ?? (Array.isArray(x?.data) ? x.data : []) ?? [];
-      const results: any[] = [...pick(fc).slice(0, 5), ...pick(fcCase).slice(0, 4)];
-      const lines: string[] = [];
-      const seen = new Set<string>();
-      for (const r of results) {
-        const title = (r.title ?? "").toString().trim();
-        const url = (r.url ?? "").toString();
-        if (!title || !url || seen.has(url)) continue;
-        seen.add(url);
-        let host = "";
-        try { host = new URL(url).hostname.replace(/^www\./, ""); } catch { /* ignore */ }
-        const body = (r.markdown ?? r.description ?? r.snippet ?? "")
-          .toString()
-          .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
-          .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
-          .replace(/\s+/g, " ")
-          .trim()
-          .slice(0, 1400);
-        const n = webSources.length + 1;
-        webSources.push({ title, publisher: host || "web", url });
-        lines.push(`[${n}] ${title} — ${host}\n${body}`);
+    if (needsWebResearch) {
+      try {
+        const [fc, fcCase]: any[] = await Promise.all([firecrawlPromise, firecrawlCasePromise]);
+        const pick = (x: any): any[] => x?.data?.web ?? x?.web ?? (Array.isArray(x?.data) ? x.data : []) ?? [];
+        const results: any[] = [...pick(fc).slice(0, 5), ...pick(fcCase).slice(0, 4)];
+        const lines: string[] = [];
+        const seen = new Set<string>();
+        for (const r of results) {
+          const title = (r.title ?? "").toString().trim();
+          const url = (r.url ?? "").toString();
+          if (!title || !url || seen.has(url)) continue;
+          seen.add(url);
+          let host = "";
+          try { host = new URL(url).hostname.replace(/^www\./, ""); } catch { /* ignore */ }
+          const body = (r.markdown ?? r.description ?? r.snippet ?? "")
+            .toString()
+            .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+            .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 1400);
+          const n = webSources.length + 1;
+          webSources.push({ title, publisher: host || "web", url });
+          lines.push(`[${n}] ${title} — ${host}\n${body}`);
+        }
+        if (lines.length) webContext = lines.join("\n\n");
+      } catch (e) {
+        console.warn("firecrawl error", e instanceof Error ? e.message : e);
       }
-      if (lines.length) webContext = lines.join("\n\n");
-    } catch (e) {
-      console.warn("firecrawl error", e instanceof Error ? e.message : e);
     }
 
     const webBlock = webContext
@@ -164,7 +179,7 @@ Return strict JSON: {"whatItDoes": string, "whyPeopleBuy": string, "whatToWatch"
 - whatToWatch: 1-2 sentences on risks specific to ${companyName}. No other company names.
 No disclaimers, no markdown, no jargon.`;
 
-    const analystPrompt = `Stock: ${companyName} (${sym})
+    const quoteBlock = `Stock: ${companyName} (${sym})
 Sector: ${q.sector ?? "?"}  Industry: ${q.industry ?? "?"}
 Price: ${q.regularMarketPrice} ${q.currency ?? ""}
 Change: ${q.regularMarketChangePercent?.toFixed?.(2)}%
@@ -180,16 +195,14 @@ Held by institutions %: ${q.heldPercentInstitutions ?? "?"}
 52w change vs price: low ${q.fiftyTwoWeekLow ?? "?"} / high ${q.fiftyTwoWeekHigh ?? "?"}
 Dividend yield: ${q.trailingAnnualDividendYield ?? q.dividendYield ?? "?"}
 Avg analyst target: ${q.targetMeanPrice ?? "?"}  (low ${q.targetLowPrice ?? "?"} / high ${q.targetHighPrice ?? "?"})
-Recommendation: ${q.averageAnalystRating ?? q.recommendationKey ?? "?"}
+Recommendation: ${q.averageAnalystRating ?? q.recommendationKey ?? "?"}`;
 
-Recent headlines about ${companyName} (${sym}):
-${headlines.join("\n") || "(no recent headlines)"}
-${webBlock}
-CRITICAL: ONLY analyze ${companyName} (${sym}). Do NOT discuss any other ticker or company. Ignore any headline above that is not directly about ${companyName}.
+    const headlinesBlock = `Recent headlines about ${companyName} (${sym}):
+${headlines.join("\n") || "(no recent headlines)"}`;
 
-Produce a DETAILED, in-depth analyst-grade summary. Be specific and quantitative — cite the actual numbers above (% change, margins, P/E, EPS, debt levels, beta, institutional ownership). Plain English, no disclaimers.
+    const scopeGuard = `CRITICAL: ONLY analyze ${companyName} (${sym}). Do NOT discuss any other ticker or company. Ignore any headline above that is not directly about ${companyName}.`;
 
-HARD RULES for whyMoved (violating these is a failure):
+    const priorityHardRules = `HARD RULES for whyMoved (violating these is a failure):
 - NEVER say "broad market action", "no recent headlines", "no news", "market sentiment", "general market conditions", or any similar filler.
 - If a RESEARCH article above is provided, whyMoved MUST be built from it and MUST include at least one bracket citation like [1]. Name the actual catalyst and the reported number (earnings, guidance, analyst action, product/legal/macro event) as reported.
 - Never state a catalyst that is not supported by the research or headlines above. If the research is thin, say what IS known and then explain the rest from the structural data.
@@ -204,7 +217,63 @@ HARD RULES for positives and negatives (violating these is a failure):
 - Order bullets by materiality, most decision-relevant first — the single biggest driver of the bull or bear case leads each list, not the easiest fact to find.
 - Do not restate the same underlying fact in both positives and negatives, and do not pad with a near-duplicate of another bullet in the same list — each bullet must add a distinct piece of the picture (a different metric, catalyst, or article).
 - Where the research or data gives you a genuine counterpoint (e.g. strong revenue growth but deteriorating margins, or a bullish headline but stretched valuation), prefer that nuanced framing over a one-sided claim — real theses usually have tension, not just a clean list of good or bad things.
-- 4-6 bullets each, 1-2 sentences, concrete numbers over adjectives.
+- 4-6 bullets each, 1-2 sentences, concrete numbers over adjectives.`;
+
+    // "priority" — the fields the UI renders first: whyMoved, positives, negatives,
+    // whatItDoes, outlook. Kept together because they're cheap to generate and
+    // WhyItMoved / StockExplainer only need this subset.
+    const priorityPrompt = `${quoteBlock}
+
+${headlinesBlock}
+${webBlock}
+${scopeGuard}
+
+Produce a DETAILED, in-depth analyst-grade summary. Be specific and quantitative — cite the actual numbers above (% change, margins, P/E, EPS, debt levels, beta, institutional ownership). Plain English, no disclaimers.
+
+${priorityHardRules}
+
+Return strict JSON with shape:
+{
+  "whyMoved": string,              // 3-5 sentences, follow the HARD RULES above.
+  "whatItDoes": string,            // 1-2 sentences on the company's business — what they actually sell/do and where their revenue comes from. Required.
+  "positives": [string],           // 4-6 detailed bullets, grounded + cited per the HARD RULES above
+  "negatives": [string],           // 4-6 detailed bullets, grounded + cited per the HARD RULES above
+  "outlook": string                // 2 sentence neutral synthesis
+}`;
+
+    // "extended" — the deep-dive fields rendered further down in collapsed rows.
+    // No citations required here, so this mode skips Firecrawl entirely (see
+    // needsWebResearch above) — it only needs the structural quote data.
+    const extendedPrompt = `${quoteBlock}
+
+${headlinesBlock}
+${scopeGuard}
+
+Produce a DETAILED, in-depth analyst-grade summary. Be specific and quantitative — cite the actual numbers above (% change, margins, P/E, EPS, debt levels, beta, institutional ownership). Plain English, no disclaimers.
+
+Return strict JSON with shape:
+{
+  "predictedRevenue": string,      // a CONCRETE estimated next-fiscal-year TOTAL revenue figure as a dollar amount (e.g. "~$412B" or "~$8.5B"). Base it on the latest reported revenue and the expected growth rate. ALWAYS give a specific number, not a range of words. If genuinely unknown, give your best quantitative estimate and note it is approximate.
+  "revenueGrowth": string,         // 2-3 sentences on historical + expected revenue growth trajectory, cite YoY % if known
+  "earningsGrowth": string,        // 2-3 sentences on EPS trend, beat/miss history, forward growth expectations
+  "margins": string,               // 2-3 sentences on gross/operating/net margin quality vs peers
+  "balanceSheet": string,          // 2-3 sentences on debt levels (cite debtToEquity / totalDebt above), cash position, and leverage manageability. Do not hand-wave — mention the actual debt figure.
+  "moat": string,                  // 2-3 sentences on competitive edge: brand, scale, network effects, switching costs, IP
+  "earnings": string,              // 2-3 sentences on most recent + upcoming earnings event
+  "forecast": string               // 3-4 sentences: 12-month price/business outlook, analyst consensus, key catalysts to watch
+}`;
+
+    // Legacy "full" — all 13 fields in one call, unchanged. Kept for any caller
+    // that still wants a single combined response instead of priority + extended.
+    const analystPrompt = `${quoteBlock}
+
+${headlinesBlock}
+${webBlock}
+${scopeGuard}
+
+Produce a DETAILED, in-depth analyst-grade summary. Be specific and quantitative — cite the actual numbers above (% change, margins, P/E, EPS, debt levels, beta, institutional ownership). Plain English, no disclaimers.
+
+${priorityHardRules}
 
 
 Return strict JSON with shape:
@@ -234,6 +303,31 @@ Return strict JSON with shape:
       },
       required: ["whatItDoes", "whyPeopleBuy", "whatToWatch"],
     };
+    const prioritySchema = {
+      type: "object",
+      properties: {
+        whyMoved: { type: "string" },
+        whatItDoes: { type: "string" },
+        positives: { type: "array", items: { type: "string" } },
+        negatives: { type: "array", items: { type: "string" } },
+        outlook: { type: "string" },
+      },
+      required: ["whyMoved", "whatItDoes", "positives", "negatives", "outlook"],
+    };
+    const extendedSchema = {
+      type: "object",
+      properties: {
+        predictedRevenue: { type: "string" },
+        revenueGrowth: { type: "string" },
+        earningsGrowth: { type: "string" },
+        margins: { type: "string" },
+        balanceSheet: { type: "string" },
+        moat: { type: "string" },
+        earnings: { type: "string" },
+        forecast: { type: "string" },
+      },
+      required: ["predictedRevenue", "revenueGrowth", "earningsGrowth", "margins", "balanceSheet", "moat", "earnings", "forecast"],
+    };
     const analystSchema = {
       type: "object",
       properties: {
@@ -258,13 +352,20 @@ Return strict JSON with shape:
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
-    const schema = isBeginner ? beginnerSchema : analystSchema;
+    const schema = isBeginner ? beginnerSchema : isPriority ? prioritySchema : isExtended ? extendedSchema : analystSchema;
+    const prompt = isBeginner ? beginnerPrompt : isPriority ? priorityPrompt : isExtended ? extendedPrompt : analystPrompt;
+    // Smaller ceilings for the split modes since each now generates far fewer
+    // fields than the legacy 13-field response — a prior full-response run showed
+    // 2200 truncates 13 fields' worth of output, so keep real headroom per call
+    // rather than tune this tightly; the ceiling doesn't cost latency, only the
+    // tokens actually generated do, and each split call generates much less.
+    const maxTokens = isBeginner ? 1200 : isPriority ? 3200 : isExtended ? 2800 : 4096;
     const messages = [
       { role: "system", content: (isBeginner
           ? "You explain stocks to first-time investors in friendly plain English."
           : "You are a concise equity research analyst writing for beginners.")
           + ` Reply with ONLY a single valid JSON object matching this JSON Schema (no markdown, no commentary): ${JSON.stringify(schema)}` },
-      { role: "user", content: isBeginner ? beginnerPrompt : analystPrompt },
+      { role: "user", content: prompt },
     ];
 
     // JSON mode instead of forced tool calls: Groq models frequently emit a bogus
@@ -278,7 +379,7 @@ Return strict JSON with shape:
         // silently degrades the ENTIRE response to "Analysis unavailable" fallback text for every
         // field — confirmed live for GOOGL at 2200. Bound worst-case runaway generation without
         // risking that.
-        body: JSON.stringify({ model, messages, response_format: { type: "json_object" }, max_tokens: 4096 }),
+        body: JSON.stringify({ model, messages, response_format: { type: "json_object" }, max_tokens: maxTokens }),
       });
 
     // Primary: Groq, then a second Groq model (separate rate-limit bucket),
@@ -338,22 +439,32 @@ Return strict JSON with shape:
 
     if (!isBeginner) {
       const fallback = `No specific data available for ${companyName}. This may apply more to individual operating companies than to indices, ETFs, or funds.`;
-      for (const f of ["whyMoved", "whatItDoes", "predictedRevenue", "revenueGrowth", "earningsGrowth", "margins", "balanceSheet", "moat", "earnings", "forecast", "outlook"]) {
+      const stringFields = isPriority
+        ? ["whyMoved", "whatItDoes", "outlook"]
+        : isExtended
+        ? ["predictedRevenue", "revenueGrowth", "earningsGrowth", "margins", "balanceSheet", "moat", "earnings", "forecast"]
+        : ["whyMoved", "whatItDoes", "predictedRevenue", "revenueGrowth", "earningsGrowth", "margins", "balanceSheet", "moat", "earnings", "forecast", "outlook"];
+      for (const f of stringFields) {
         if (!parsed[f] || typeof parsed[f] !== "string" || !parsed[f].trim()) parsed[f] = fallback;
       }
-      if (!Array.isArray(parsed.positives) || !parsed.positives.length) parsed.positives = ["Analysis unavailable right now."];
-      if (!Array.isArray(parsed.negatives) || !parsed.negatives.length) parsed.negatives = ["Analysis unavailable right now."];
+      if (!isExtended) {
+        if (!Array.isArray(parsed.positives) || !parsed.positives.length) parsed.positives = ["Analysis unavailable right now."];
+        if (!Array.isArray(parsed.negatives) || !parsed.negatives.length) parsed.negatives = ["Analysis unavailable right now."];
+      }
     }
-    // Attach real headline sources so the UI can render citations.
-    // Attach citations: researched web articles first (these are what whyMoved's
-    // [1], [2] markers refer to), then the remaining ticker headlines.
-    const seen = new Set<string>();
-    parsed.sources = [...webSources, ...sources].filter((s: any) => {
-      if (!s?.url || seen.has(s.url)) return false;
-      seen.add(s.url);
-      return true;
-    }).slice(0, 10);
-    parsed.grounded = webSources.length > 0;
+    // Attach real headline sources so the UI can render citations. Only the modes
+    // that actually ground claims in Firecrawl/headline research need this —
+    // "extended" has no citations, so skip it there rather than send a sources
+    // array that doesn't correspond to anything in the extended text.
+    if (!isExtended) {
+      const seen = new Set<string>();
+      parsed.sources = [...webSources, ...sources].filter((s: any) => {
+        if (!s?.url || seen.has(s.url)) return false;
+        seen.add(s.url);
+        return true;
+      }).slice(0, 10);
+      parsed.grounded = webSources.length > 0;
+    }
 
     const body = JSON.stringify(parsed);
     cache.set(key, { body, exp: Date.now() + 1000 * 60 * 120 });

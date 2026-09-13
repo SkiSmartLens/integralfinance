@@ -38,6 +38,29 @@ const NEXT_KEY = "postAuthRedirect";
 const safeNext = (v: string | null) =>
   v && v.startsWith("/") && !v.startsWith("//") ? v : null;
 
+// Lovable's OAuth broker (/~oauth/initiate) only exists behind Lovable's own
+// edge, on domains it actually serves (preview/published *.lovable.app, or a
+// custom domain whose DNS points at Lovable's hosting). On any other domain
+// — a custom domain hosted elsewhere, localhost — that path isn't proxied and
+// falls through to this app's own client-side 404 route.
+const LOVABLE_HOSTED_ZONES = [
+  "lovableproject.com",
+  "lovableproject-dev.com",
+  "lovable.app",
+  "gpt-eng.com",
+  "gptengineer.run",
+];
+
+const isLovableHosted = () => {
+  const host = window.location.hostname;
+  if (LOVABLE_HOSTED_ZONES.some((z) => host === z || host.endsWith(`.${z}`))) return true;
+  try {
+    return window.self !== window.top;
+  } catch {
+    return true;
+  }
+};
+
 const Auth = () => {
   const nav = useNavigate();
   const [loading, setLoading] = useState<"google" | "apple" | null>(null);
@@ -69,13 +92,16 @@ const Auth = () => {
     // forward the user to the simulator instead of the homepage.
     const redirectTo = `${window.location.origin}/auth`;
     try {
-      // Primary: Lovable-hosted OAuth (shared Google/Apple credentials, works on
-      // the preview, published and custom domains).
-      const result = await lovable.auth.signInWithOAuth(provider, { redirect_uri: redirectTo });
-      if (result.redirected) return;
-      if (!result.error) return;
-      // Fallback: the backend's own OAuth redirect (used when custom OAuth
-      // credentials are configured for this project).
+      if (isLovableHosted()) {
+        // Primary on Lovable-served domains: Lovable-hosted OAuth (shared
+        // Google/Apple credentials).
+        const result = await lovable.auth.signInWithOAuth(provider, { redirect_uri: redirectTo });
+        if (result.redirected) return;
+        if (!result.error) return;
+      }
+      // Direct Supabase OAuth — used on domains not served by Lovable's edge,
+      // and as a fallback when custom OAuth credentials are configured for
+      // this project.
       const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo } });
       if (error) throw error;
     } catch (e) {

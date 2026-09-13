@@ -130,6 +130,7 @@ export default function LearnHub() {
         title="Learn Investing — Integral Stocks"
         description="Bite-sized investing lessons across 4 tracks: Stock Market Basics, Reading the Market, Building a Portfolio, and Advanced Strategies."
         path="/learn"
+        keywords="learn to invest, stock market basics, how to read stock charts, portfolio building, investing strategies, investing lessons"
       />
       <Header />
 

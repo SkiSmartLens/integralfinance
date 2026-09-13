@@ -256,6 +256,7 @@ export default function LearnBasics() {
         title="Stock Market Basics — Beginner Lessons"
         description="Bite-sized beginner lessons on stocks, tickers, bid/ask, market cap, dividends, P/E, bull vs bear, order types, and ETFs."
         path="/learn/basics"
+        keywords="stock market basics, what is a stock, bid ask spread, market cap explained, dividends explained, bull vs bear market, order types, ETFs explained"
         jsonLd={{
           "@context": "https://schema.org",
           "@type": "LearningResource",

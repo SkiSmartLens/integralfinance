@@ -52,6 +52,7 @@ const WatchlistPage = () => {
         title="Watchlist — Integral Stocks"
         description="Search any stock and add it to your personal watchlist. Live prices and beginner explanations."
         path="/watchlist"
+        keywords="stock watchlist, track stocks, favorite stocks, live stock prices, personal watchlist"
       />
       <Header onSearch={(s) => addAndShow(s)} />
       <Ticker />

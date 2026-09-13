@@ -7,10 +7,12 @@ import { Term } from "./Glossary";
 
 /** Plain-English "What is this stock?" card aimed at first-time investors. */
 export const StockExplainer = ({ symbol }: { symbol: string }) => {
-  // Shares the same full-mode AI summary (and its request dedupe + cache) that
+  // Shares the same "priority" AI summary (and its request dedupe + cache) that
   // StockSummary fetches — whatItDoes is already part of that payload, so this
   // no longer needs its own separate "beginner" AI generation to render one sentence.
-  const [data, setData] = useState<StockSummaryData | null>(getCachedSummary(symbol) ?? null);
+  // Using "priority" (not "full") means this renders as soon as the small,
+  // fast call resolves instead of waiting on the much larger deep-dive fields.
+  const [data, setData] = useState<StockSummaryData | null>(getCachedSummary(symbol, "priority") ?? null);
   const [loading, setLoading] = useState(false);
   const [visible, setVisible] = useState(false);
   const ref = useRef<HTMLElement>(null);
@@ -29,7 +31,7 @@ export const StockExplainer = ({ symbol }: { symbol: string }) => {
 
   useEffect(() => {
     if (!visible) return;
-    const cached = getCachedSummary(symbol);
+    const cached = getCachedSummary(symbol, "priority");
     if (cached) {
       setData(cached);
       return;
@@ -37,7 +39,7 @@ export const StockExplainer = ({ symbol }: { symbol: string }) => {
     let alive = true;
     setData(null);
     setLoading(true);
-    fetchStockSummary(symbol)
+    fetchStockSummary(symbol, "priority")
       .then((d) => { if (alive) setData(d); })
       .catch(() => {})
       .finally(() => alive && setLoading(false));

@@ -259,6 +259,7 @@ export default function LearnIndicators() {
         title="Learn Stock Indicators — RSI, MACD, Moving Averages & More"
         description="Beginner-friendly lessons on the top technical indicators: SMA, EMA, RSI, MACD, Bollinger Bands, VWAP, ATR, Stochastic, and Fibonacci."
         path="/learn/indicators"
+        keywords="RSI indicator, MACD explained, moving averages, Bollinger Bands, VWAP, ATR indicator, stochastic oscillator, Fibonacci retracement, technical indicators"
         jsonLd={{
           "@context": "https://schema.org",
           "@type": "LearningResource",

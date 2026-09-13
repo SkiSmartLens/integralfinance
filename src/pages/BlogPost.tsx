@@ -20,6 +20,13 @@ const BlogPost = () => {
   const related = POSTS.filter((p) => p.slug !== post.slug && p.tags?.some((t) => post.tags?.includes(t))).slice(0, 3);
   const hero = featuredImage(post);
   const canonicalPath = `/blog/${post.slug}`;
+  const keywords = [
+    ...(post.tags ?? []),
+    ...(post.tickers ?? []),
+    ...(post.sectors ?? []),
+    "investing for beginners",
+    "how to invest",
+  ].join(", ");
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -28,6 +35,7 @@ const BlogPost = () => {
         description={post.description}
         path={canonicalPath}
         image={`${SITE}${hero.src}`}
+        keywords={keywords}
         jsonLd={{
           "@context": "https://schema.org",
           "@type": "BlogPosting",

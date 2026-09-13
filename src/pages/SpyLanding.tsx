@@ -35,6 +35,7 @@ const SpyLanding = () => {
         title="Learn to Invest — AI Stock Analysis for Beginners"
         description="Beginner-friendly AI stock analysis, plain-English explainers, live S&P 500 signals, and a risk-free simulator to practice before you invest."
         path="/"
+        keywords="stock market for beginners, learn to invest, AI stock analysis, stock market simulator, paper trading, stock news, S&P 500, live stock prices, how to invest, beginner investing app"
       />
       <Header onSearch={(s) => nav(`/stocks/${s.toLowerCase()}`)} />
 

@@ -23,19 +23,22 @@ export const WhyItMoved = ({
 }) => {
   const bullish = (changePct ?? 0) >= 0;
   const [open, setOpen] = useState(defaultOpen);
-  const [data, setData] = useState<Summary | null>(getCachedSummary(symbol));
+  // "priority" carries whyMoved + outlook (the two fields this card needs) and
+  // renders as soon as the small, fast call resolves — it shares its cache
+  // with StockSummary's priority fetch, so this is often an instant cache hit.
+  const [data, setData] = useState<Summary | null>(getCachedSummary(symbol, "priority"));
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   // Load eagerly so the explanation is already there when the card is opened.
   useEffect(() => {
     let alive = true;
-    const cached = getCachedSummary(symbol);
+    const cached = getCachedSummary(symbol, "priority");
     setData(cached);
     setErr(null);
     if (cached) return;
     setLoading(true);
-    fetchStockSummary(symbol)
+    fetchStockSummary(symbol, "priority")
       .then((d) => { if (alive) setData(d); })
       .catch(() => { if (alive) setErr("Couldn't load an explanation right now."); })
       .finally(() => { if (alive) setLoading(false); });

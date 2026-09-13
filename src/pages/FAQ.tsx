@@ -39,6 +39,7 @@ const FAQ = () => (
       title="FAQ — IntegralStocks (Beginner Stock Market Questions)"
       description="Answers to common questions about IntegralStocks: how it works, where data comes from, AI insights, and the free trading simulator."
       path="/faq"
+      keywords="stock market FAQ, investing questions, how does IntegralStocks work, beginner investor questions"
       jsonLd={{
         "@context": "https://schema.org",
         "@type": "FAQPage",

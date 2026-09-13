@@ -9,6 +9,7 @@ const About = () => (
       title="About IntegralStocks — Stock Market Made Simple for Beginners"
       description="IntegralStocks helps beginners understand stock prices, market news, and why stocks move using plain-English AI insights."
       path="/about"
+      keywords="about IntegralStocks, beginner investing platform, stock market education, AI stock insights"
       jsonLd={{
         "@context": "https://schema.org",
         "@type": "AboutPage",

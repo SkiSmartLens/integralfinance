@@ -15,6 +15,7 @@ const Academy = () => {
         title="Investor Academy — Learn Investing Step by Step"
         description="A short, linear course for total beginners. Unlock one lesson at a time and build real investing skills."
         path="/academy"
+        keywords="investor academy, learn investing step by step, beginner investing course, stock market lessons"
       />
       <Header />
       <main className="flex-1 max-w-3xl mx-auto w-full px-4 sm:px-6 py-10 sm:py-14 space-y-10">

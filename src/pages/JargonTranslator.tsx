@@ -151,6 +151,7 @@ const JargonTranslator = () => {
         title="Stock Market Jargon Explained Simply — Free Translator"
         description="Paste any article or term and get stock market jargon explained simply. Learn what 'market cap', P/E, and 'short squeeze' mean in plain English."
         path="/translate"
+        keywords="stock market jargon, investing terms explained, what does market cap mean, P/E ratio explained, short squeeze explained, finance dictionary"
         jsonLd={{
           "@context": "https://schema.org",
           "@type": "WebApplication",

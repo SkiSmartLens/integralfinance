@@ -238,6 +238,7 @@ const Sim = () => {
         title="Stock Market Simulator for Beginners — Free Virtual Trading"
         description="Free stock market simulator for beginners. Practice paper trading with a virtual account and learn how real orders work — no risk, no signup needed."
         path="/sim"
+        keywords="stock market simulator, free virtual trading, paper trading, practice trading, no-risk investing simulator"
       />
       <h1 className="sr-only">Trading Simulator</h1>
 

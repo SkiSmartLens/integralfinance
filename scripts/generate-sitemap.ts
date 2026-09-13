@@ -37,18 +37,26 @@ interface SitemapEntry {
 const staticEntries: SitemapEntry[] = [
   { path: "/", changefreq: "daily", priority: "1.0" },
   { path: "/stocks", changefreq: "hourly", priority: "0.9" },
-  { path: "/news", changefreq: "hourly", priority: "0.9" },
+  // "/news" is an alias route that self-canonicalizes to "/market-brief" (same
+  // component); only the canonical URL belongs in the sitemap.
   { path: "/screener", changefreq: "daily", priority: "0.8" },
   { path: "/calendar", changefreq: "daily", priority: "0.7" },
   { path: "/start", changefreq: "monthly", priority: "0.8" },
   { path: "/watchlist", changefreq: "weekly", priority: "0.6" },
   { path: "/simulator", changefreq: "weekly", priority: "0.8" },
+  { path: "/academy", changefreq: "monthly", priority: "0.7" },
+  { path: "/academy/1", changefreq: "monthly", priority: "0.5" },
+  { path: "/sim", changefreq: "monthly", priority: "0.6" },
   { path: "/about", changefreq: "monthly", priority: "0.6" },
   { path: "/contact", changefreq: "monthly", priority: "0.5" },
   { path: "/disclaimer", changefreq: "yearly", priority: "0.3" },
   { path: "/data-sources", changefreq: "yearly", priority: "0.3" },
+  { path: "/privacy", changefreq: "yearly", priority: "0.3" },
+  { path: "/terms", changefreq: "yearly", priority: "0.3" },
+  { path: "/affiliate-disclosure", changefreq: "yearly", priority: "0.3" },
   { path: "/faq", changefreq: "monthly", priority: "0.5" },
-  { path: "/auth", changefreq: "yearly", priority: "0.4" },
+  // "/auth" is intentionally omitted: robots.txt disallows it, and a sitemap
+  // should only list URLs crawlers are allowed to index.
   { path: "/market-brief", changefreq: "daily", priority: "0.8" },
   { path: "/translate", changefreq: "monthly", priority: "0.7" },
   { path: "/blog", changefreq: "weekly", priority: "0.8" },
