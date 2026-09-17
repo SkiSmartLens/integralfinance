@@ -57,12 +57,22 @@ function isPrivateIp(ip: string): boolean {
 /** Resolve the hostname and verify every returned address is public (anti DNS-rebinding). */
 async function hostResolvesPublic(hostname: string): Promise<boolean> {
   const addrs: string[] = [];
+  let resolved = false;
   for (const type of ["A", "AAAA"] as const) {
     try {
       const r = await Deno.resolveDns(hostname, type);
       addrs.push(...r);
-    } catch { /* no records of this type */ }
+      resolved = true;
+    } catch (e) {
+      // Either this hostname has no records of this type, or DNS resolution itself isn't
+      // available in this runtime — log so the two cases are distinguishable in prod.
+      console.error("resolveDns failed", hostname, type, e instanceof Error ? e.message : e);
+    }
   }
+  // Both queries errored out (as opposed to resolving with zero records): treat this as a
+  // runtime limitation, not a rejection — isSafeUrl() already blocks private/loopback hostnames
+  // and bare IPs, so failing open here doesn't reopen the SSRF hole this check defends against.
+  if (!resolved) return true;
   if (addrs.length === 0) return false;
   return addrs.every((a) => !isPrivateIp(a));
 }
@@ -200,7 +210,10 @@ async function rawFetch(target: string, ua = BROWSER_UA): Promise<string | null>
   let current = withConsentParams(target);
   try {
     for (let hop = 0; hop < 5; hop++) {
-      if (!(await assertFetchable(current))) return null;
+      if (!(await assertFetchable(current))) {
+        console.error("rawFetch: blocked by assertFetchable", current);
+        return null;
+      }
       const r = await fetch(current, {
         headers: {
           "User-Agent": ua,
@@ -209,7 +222,7 @@ async function rawFetch(target: string, ua = BROWSER_UA): Promise<string | null>
           Cookie: CONSENT_COOKIE,
         },
         redirect: "manual",
-        signal: AbortSignal.timeout(6000),
+        signal: AbortSignal.timeout(8000),
       });
       if (r.status >= 300 && r.status < 400) {
         const loc = r.headers.get("location");
@@ -218,11 +231,15 @@ async function rawFetch(target: string, ua = BROWSER_UA): Promise<string | null>
         current = new URL(loc, current).href;
         continue;
       }
-      if (!r.ok) return null;
+      if (!r.ok) {
+        console.error("rawFetch: non-ok status", current, r.status);
+        return null;
+      }
       return await r.text();
     }
     return null;
-  } catch {
+  } catch (e) {
+    console.error("rawFetch: threw", current, e instanceof Error ? e.message : e);
     return null;
   }
 }

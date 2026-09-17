@@ -65,10 +65,6 @@ const SpyLanding = () => {
       </div>
 
       <main className="px-4 sm:px-6 py-6 space-y-6 max-w-5xl mx-auto">
-        <p className="text-sm sm:text-base text-muted-foreground max-w-2xl">
-          IntegralStocks is a free <strong className="text-foreground">AI-powered stock website for beginners</strong> — live
-          prices, plain-English AI stock analysis, and a risk-free simulator so you can learn before you invest a real dollar.
-        </p>
         <div id="chart"><StockChart symbol={SYMBOL} /></div>
         <Suspense fallback={<div className="h-32" />}>
           <StockExplainer symbol={SYMBOL} />
