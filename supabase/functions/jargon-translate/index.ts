@@ -299,6 +299,11 @@ function proxies(u: string): string[] {
     `https://r.jina.ai/http://${noScheme}`,
     `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(u)}`,
     `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    // Heavily-trafficked news domains (Yahoo Finance in particular) get the free reader
+    // proxies above rate-limited or domain-blocked from shared abuse by other anonymous
+    // users. The Wayback Machine fetches with its own crawler infra, which those sites don't
+    // block, and often has a same-day snapshot of syndicated news articles.
+    `https://web.archive.org/web/2/${u}`,
   ];
 }
 
