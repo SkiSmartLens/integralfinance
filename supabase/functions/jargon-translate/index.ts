@@ -222,7 +222,10 @@ async function rawFetch(target: string, ua = BROWSER_UA): Promise<string | null>
           Cookie: CONSENT_COOKIE,
         },
         redirect: "manual",
-        signal: AbortSignal.timeout(8000),
+        // Wayback Machine's "nearest capture" lookup (used as a proxy fallback) occasionally
+        // takes 10+ seconds under load; the other candidates in the race fail in well under
+        // this, so raising the ceiling only helps the slow-but-successful case.
+        signal: AbortSignal.timeout(12000),
       });
       if (r.status >= 300 && r.status < 400) {
         const loc = r.headers.get("location");
