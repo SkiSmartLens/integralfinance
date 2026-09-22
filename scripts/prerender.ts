@@ -86,9 +86,10 @@ function headOnlyPage(r: Route): string {
 }
 
 // Static utility pages. Deliberately excludes: routes covered by the "full"
-// tier below (glossary, blog, FAQ); "/dashboard" (robots.txt-disallowed, so
-// no compliant crawler ever requests it); "/news" (a non-canonical alias of
-// "/market-brief" — same reason it's left out of sitemap.xml).
+// tier below (glossary, blog, FAQ, about, disclaimer); "/dashboard"
+// (robots.txt-disallowed, so no compliant crawler ever requests it); "/news"
+// (a non-canonical alias of "/market-brief" — same reason it's left out of
+// sitemap.xml).
 const staticRoutes: Route[] = [
   {
     path: "/",
@@ -124,10 +125,8 @@ const staticRoutes: Route[] = [
   { path: "/market-brief", title: "Daily Market Brief — Today in 2 Minutes", description: "A short daily read on what moved the market today and why, written for beginners rather than traders." },
   { path: "/translate", title: "Jargon Translator — Finance Terms in Plain English", description: "Paste any confusing finance sentence and get a plain-English translation instantly. No jargon left behind." },
   { path: "/start", title: "Start Here — Your First Steps in Investing", description: "Two quick questions and we'll point you at the right first lesson, first chart and first practice trade." },
-  { path: "/about", title: "About IntegralStocks", description: "Why we built a beginner-first investing site: live data, plain-English AI explainers and risk-free practice." },
   { path: "/contact", title: "Contact IntegralStocks", description: "Questions, feedback or partnership ideas? Get in touch with the IntegralStocks team." },
   { path: "/data-sources", title: "Data Sources & Methodology", description: "Where our market data comes from, how often it refreshes, and how our AI explanations are grounded." },
-  { path: "/disclaimer", title: "Disclaimer — Not Financial Advice", description: "IntegralStocks is educational. Nothing on this site is financial advice or a recommendation to buy or sell." },
   { path: "/privacy", title: "Privacy Policy — IntegralStocks", description: "How IntegralStocks collects, uses, and protects your data." },
   { path: "/terms", title: "Terms of Service — IntegralStocks", description: "The terms that govern your use of IntegralStocks." },
   { path: "/affiliate-disclosure", title: "Affiliate Disclosure — IntegralStocks", description: "How IntegralStocks discloses affiliate relationships and sponsored links." },
@@ -365,6 +364,89 @@ function glossaryIndexPage() {
         { name: "Glossary", item: `${SITE}/learn/glossary` },
       ]),
     ],
+    bodyHtml,
+  });
+}
+
+// -- About & Disclaimer --
+// Small, fully static pages (no data dependency) — hand-mirrored from
+// src/pages/About.tsx and src/pages/Disclaimer.tsx. Unlike the Learn lesson
+// pages (also static but 200-650 lines of dense JSX each), these are short
+// enough to keep in sync by hand without real drift risk.
+
+function aboutPage() {
+  const bodyHtml = `
+    <div class="min-h-screen bg-background">
+      ${STATIC_HEADER}
+      <main class="container mx-auto px-4 py-10 max-w-3xl">
+        <h1 class="text-3xl font-extrabold tracking-tight mb-4">About IntegralStocks</h1>
+        <p>IntegralStocks is a free, <strong>AI-powered stock website for beginners</strong>, built to make investing concepts easier to understand. You can track <strong>live stock prices</strong>, browse market news, and&mdash;most importantly&mdash;learn <em>why</em> a stock moved through clear, plain-English AI explanations.</p>
+        <h2 class="text-xl font-bold mt-8 mb-2">Who it's for</h2>
+        <p>IntegralStocks is designed for new investors, students, and curious readers who want to understand how the stock market works without dealing with jargon, paywalls, or overly complex charts.</p>
+        <h2 class="text-xl font-bold mt-8 mb-2">What we do differently</h2>
+        <ul class="list-disc pl-6 space-y-1">
+          <li><strong>Plain-English summaries</strong> for every ticker&mdash;what the company does and what drove today's price movement.</li>
+          <li><strong>AI insights</strong> that connect market news to real stock behavior.</li>
+          <li><strong>A free <a href="/simulator">paper-trading simulator</a></strong> so you can practice strategies without risking real money.</li>
+          <li><strong>Curated <a href="/news">market news</a></strong>, <a href="/screener">screeners</a>, and an <a href="/calendar">economic calendar</a> all in one place.</li>
+        </ul>
+        <p class="mt-4">Have feedback? <a href="/contact">Get in touch</a>. You can also read our <a href="/disclaimer">disclaimer</a> and <a href="/data-sources">data sources</a> for more information about how the site works.</p>
+        <hr class="my-8" />
+        <h2 class="text-xl font-bold mt-8 mb-2">Our story, in full</h2>
+        <p>Integral Stocks began with a simple, frustrating observation: the stock market is one of the most important wealth-building tools in the world, yet almost nothing about it is explained in a way a curious beginner can actually understand. Open most finance websites and you are immediately buried under tickers flashing red and green, dense candlestick charts, and a vocabulary that assumes you already have an economics degree. For a teenager or a first-time investor, that wall of jargon sends a clear and discouraging message: <em>this is not for you</em>. We built Integral Stocks to tear that wall down.</p>
+        <p>At its heart, Integral Stocks is a beginner-friendly platform that helps people understand <em>why</em> stocks move, not just <em>that</em> they moved. Anyone can tell you a stock dropped three percent today. What actually helps you learn is understanding the story behind that number &mdash; an earnings report that missed expectations, a new product launch, a shift in interest rates, or simply a wave of market-wide fear. Our AI insights are designed to translate that complexity into plain English, connecting real market news to real price behavior so that every movement becomes a small, digestible lesson rather than a mysterious blip on a chart.</p>
+        <p>We believe the best way to learn investing is to do it &mdash; without the terror of losing real money. That is why our free paper-trading simulator gives you $100,000 in virtual cash to put theory into practice. You can build a portfolio, place trades, make mistakes, and watch what happens, all in a safe environment where the only thing at stake is your understanding. Mistakes made with fake money are some of the most valuable lessons a future investor can have, and we want you to make as many of them as you need before a single real dollar is ever on the line.</p>
+        <p>Our learning path is deliberately short and sequential. Instead of overwhelming you with hundreds of articles, we offer a handful of focused lessons that build on one another: what a stock really is, how the market actually moves, how to read a price chart, the indicators that matter, and the patterns traders watch for. Paired with our plain-English glossary, these lessons are meant to be finished, not just bookmarked. We would rather you truly understand five concepts than feel guilty about fifty you never opened.</p>
+        <p>Integral Stocks is built first and foremost for young people &mdash; students, teens, and anyone building their financial confidence before adulthood. Financial literacy is rarely taught well in schools, and the earlier someone understands how compounding, diversification, and risk work, the more powerful those ideas become over a lifetime. The decades of growth available to a sixteen-year-old who learns to invest wisely simply cannot be matched later, and we want to give that head start to as many people as possible, for free.</p>
+        <p>Everything we do is guided by a few core principles. We keep things honest: we are an educational tool, not a brokerage or a source of financial advice, and we never pretend to predict the future. We keep things accessible: no paywalls hiding the basics, no setup hurdles, no requirement to hand over a bank account just to learn. And we keep things clear: if an explanation needs jargon, we define the jargon, and if a concept can be said simply, we say it simply.</p>
+        <p>The market will always be uncertain, and no website can change that. But we firmly believe that understanding is the antidote to fear. When you grasp the forces moving a stock, the chart stops being intimidating and starts being interesting. Our long-term mission is to raise a generation of investors who are calm, curious, and informed &mdash; people who see a market dip and ask thoughtful questions instead of panicking, and who treat investing as a lifelong skill rather than a gamble. Wherever you are starting from, Integral Stocks is here to help you build your investing brain, one clear idea at a time.</p>
+      </main>
+      ${STATIC_FOOTER}
+    </div>`;
+
+  return fullPage({
+    path: "/about",
+    title: "About IntegralStocks — Stock Market Made Simple for Beginners",
+    description: "IntegralStocks helps beginners understand stock prices, market news, and why stocks move using plain-English AI insights.",
+    keywords: "about IntegralStocks, beginner investing platform, stock market education, AI stock insights",
+    jsonLd: [{ "@context": "https://schema.org", "@type": "AboutPage", name: "About IntegralStocks", url: `${SITE}/about` }],
+    bodyHtml,
+  });
+}
+
+function disclaimerPage() {
+  const bodyHtml = `
+    <div class="min-h-screen bg-background">
+      ${STATIC_HEADER}
+      <main class="container mx-auto px-4 py-10 max-w-3xl">
+        <div class="text-xs font-extrabold uppercase tracking-wider text-primary mb-2">Legal</div>
+        <h1 class="text-3xl font-extrabold tracking-tight mb-1">Disclaimer</h1>
+        <p class="text-sm text-muted-foreground mb-6">Last updated: July 2026</p>
+        <p class="text-xl font-bold leading-snug mb-8">IntegralStocks is a learning tool &mdash; not a broker, not an advisor, and not a source of investment advice.</p>
+
+        <h2 class="text-2xl font-extrabold mt-8 mb-2">Education only</h2>
+        <p>Everything on this site &mdash; stock prices, charts, news summaries, lessons, and AI-generated insights &mdash; exists to help beginners understand how the market works.</p>
+        <p>Nothing here should be interpreted as financial, investment, tax, or legal advice, and nothing here is a recommendation to buy or sell any security.</p>
+        <p class="font-semibold my-4 border-l-4 border-primary bg-accent/60 rounded-r-lg px-4 py-3">Use this site to learn. Make real money decisions with a licensed professional.</p>
+
+        <h2 class="text-2xl font-extrabold mt-8 mb-2">Data may be wrong or delayed</h2>
+        <p>Market data, quotes, and other information shown may be delayed, incomplete, or simply inaccurate. AI-generated summaries can contain errors and omissions.</p>
+        <p>We aim for helpful and reliable information, but we cannot guarantee accuracy, completeness, or timeliness. <strong>Always verify anything important independently.</strong></p>
+
+        <h2 class="text-2xl font-extrabold mt-8 mb-2">The simulator is not real trading</h2>
+        <p>The paper-trading simulator uses simulated money and does not reflect real trading conditions &mdash; real fills, spreads, fees, and slippage all differ.</p>
+        <p>Past performance, whether real, historical, or simulated, is not indicative of future results.</p>
+        <p class="font-semibold my-4 border-l-4 border-primary bg-accent/60 rounded-r-lg px-4 py-3"><span class="block text-[11px] uppercase tracking-wider text-primary mb-1">Our liability</span>IntegralStocks is not responsible for any financial losses, decisions, or actions taken based on information provided on this site.</p>
+      </main>
+      ${STATIC_FOOTER}
+    </div>`;
+
+  return fullPage({
+    path: "/disclaimer",
+    title: "Disclaimer — Not Financial Advice",
+    description: "IntegralStocks is educational. Nothing on this site is financial advice or a recommendation to buy or sell.",
+    keywords: "investment disclaimer, not financial advice, educational stock information",
+    jsonLd: [],
     bodyHtml,
   });
 }
@@ -611,6 +693,11 @@ function main() {
     written++;
   }
 
+  writePage("/about", aboutPage());
+  written++;
+  writePage("/disclaimer", disclaimerPage());
+  written++;
+
   writePage("/faq", faqPage());
   written++;
 
@@ -622,7 +709,7 @@ function main() {
   }
 
   console.log(
-    `prerender: wrote ${written} page(s) (${staticRoutes.length} static, ${tickerRoutes.length}/${collectTickers().length} tickers, ${GLOSSARY.length + 2} glossary, ${POSTS.length + 1} blog, 1 faq)`,
+    `prerender: wrote ${written} page(s) (${staticRoutes.length} static, ${tickerRoutes.length}/${collectTickers().length} tickers, ${GLOSSARY.length + 2} glossary, ${POSTS.length + 1} blog, 1 faq, 2 about/disclaimer)`,
   );
 }
 
