@@ -22,105 +22,77 @@ const About = () => (
       <h1>About IntegralStocks</h1>
 
       <p>
-        IntegralStocks is a free, <strong>AI-powered stock website for beginners</strong>, built to make investing
-        concepts easier to understand. You can track <strong>live stock prices</strong>, browse market news, and—most
-        importantly—learn <em>why</em> a stock moved through clear, plain‑English AI explanations.
+        IntegralStocks is a free stock site for people who don't already speak finance. Track{" "}
+        <strong>live prices</strong>, read the news, and get a plain-English note on <em>why</em> a stock actually
+        moved — no jargon required.
       </p>
 
       <h2>Who it's for</h2>
       <p>
-        IntegralStocks is designed for new investors, students, and curious readers who want to understand how the stock
-        market works without dealing with jargon, paywalls, or overly complex charts.
+        New investors, students, and anyone who wants to understand the market without wading through paywalls or
+        a chart that looks like a cockpit.
       </p>
 
       <h2>What we do differently</h2>
       <ul>
         <li>
-          <strong>Plain‑English summaries</strong> for every ticker—what the company does and what drove today’s price
-          movement.
+          <strong>Plain-English summaries</strong> on every ticker — what the company does, and what moved the
+          price today.
         </li>
         <li>
-          <strong>AI insights</strong> that connect market news to real stock behavior.
+          <strong>AI insights</strong> that tie news to the actual price action.
         </li>
         <li>
-          <strong>
-            A free <Link to="/simulator">paper‑trading simulator</Link>
-          </strong>{" "}
-          so you can practice strategies without risking real money.
+          A free <Link to="/simulator">paper-trading simulator</Link>, so you can practice with fake money before
+          risking real money.
         </li>
         <li>
-          <strong>
-            Curated <Link to="/news">market news</Link>
-          </strong>
-          , <Link to="/screener">screeners</Link>, and an <Link to="/calendar">economic calendar</Link> all in one
-          place.
+          <Link to="/news">Market news</Link>, <Link to="/screener">screeners</Link>, and an{" "}
+          <Link to="/calendar">economic calendar</Link>, all in one place.
         </li>
       </ul>
 
       <p>
-        Have feedback? <Link to="/contact">Get in touch</Link>. You can also read our{" "}
-        <Link to="/disclaimer">disclaimer</Link> and <Link to="/data-sources">data sources</Link> for more information
-        about how the site works.
+        Have feedback? <Link to="/contact">Get in touch</Link>. Our <Link to="/disclaimer">disclaimer</Link> and{" "}
+        <Link to="/data-sources">data sources</Link> page cover how the site actually works.
       </p>
 
       <hr />
 
-      <h2>Our story, in full</h2>
+      <h2>Why we built this</h2>
       <p>
-        Integral Stocks began with a simple, frustrating observation: the stock market is one of the most
-        important wealth-building tools in the world, yet almost nothing about it is explained in a way a curious
-        beginner can actually understand. Open most finance websites and you are immediately buried under tickers
-        flashing red and green, dense candlestick charts, and a vocabulary that assumes you already have an
-        economics degree. For a teenager or a first-time investor, that wall of jargon sends a clear and
-        discouraging message: <em>this is not for you</em>. We built Integral Stocks to tear that wall down.
+        I got tired of finance sites assuming you already had an econ degree. Every "beginner" explainer still
+        buried the point under jargon, and every real-time chart looked like a cockpit dashboard. So I built the
+        site I wish had existed when I first tried to figure out what a P/E ratio was.
       </p>
       <p>
-        At its heart, Integral Stocks is a beginner-friendly platform that helps people understand <em>why</em>
-        stocks move, not just <em>that</em> they moved. Anyone can tell you a stock dropped three percent today.
-        What actually helps you learn is understanding the story behind that number — an earnings report that
-        missed expectations, a new product launch, a shift in interest rates, or simply a wave of market-wide
-        fear. Our AI insights are designed to translate that complexity into plain English, connecting real market
-        news to real price behavior so that every movement becomes a small, digestible lesson rather than a
-        mysterious blip on a chart.
+        The goal isn't to tell you a stock dropped 3% — anyone can do that. It's to say why: a bad earnings call, a
+        product launch, a rate decision, or just the market having a bad day. That's the part that actually teaches
+        you something, so that's the part our AI summaries focus on.
       </p>
       <p>
-        We believe the best way to learn investing is to do it — without the terror of losing real money. That is
-        why our free paper-trading simulator gives you $100,000 in virtual cash to put theory into practice. You
-        can build a portfolio, place trades, make mistakes, and watch what happens, all in a safe environment
-        where the only thing at stake is your understanding. Mistakes made with fake money are some of the most
-        valuable lessons a future investor can have, and we want you to make as many of them as you need before a
-        single real dollar is ever on the line.
+        The simulator exists for the same reason. You get $100,000 in fake money to build a portfolio, place real
+        trades, and mess up without it costing you anything. Losing fake money teaches you more than reading ten
+        articles about risk management ever will.
       </p>
       <p>
-        Our learning path is deliberately short and sequential. Instead of overwhelming you with hundreds of
-        articles, we offer a handful of focused lessons that build on one another: what a stock really is, how the
-        market actually moves, how to read a price chart, the indicators that matter, and the patterns traders
-        watch for. Paired with our plain-English glossary, these lessons are meant to be finished, not just
-        bookmarked. We would rather you truly understand five concepts than feel guilty about fifty you never
-        opened.
+        The lessons are short on purpose. A handful of pages — what a stock is, how to read a chart, which
+        indicators matter, which patterns traders actually watch — instead of a hundred articles you'll never
+        finish. Pair that with the glossary and you can look up anything mid-read.
       </p>
       <p>
-        Integral Stocks is built first and foremost for young people — students, teens, and anyone building their
-        financial confidence before adulthood. Financial literacy is rarely taught well in schools, and the
-        earlier someone understands how compounding, diversification, and risk work, the more powerful those ideas
-        become over a lifetime. The decades of growth available to a sixteen-year-old who learns to invest wisely
-        simply cannot be matched later, and we want to give that head start to as many people as possible, for
-        free.
+        This is built with teenagers and first-time investors in mind especially. Most schools don't teach this
+        stuff, and the earlier you understand compounding and risk, the more it pays off over a lifetime —
+        literally.
       </p>
       <p>
-        Everything we do is guided by a few core principles. We keep things honest: we are an educational tool,
-        not a brokerage or a source of financial advice, and we never pretend to predict the future. We keep
-        things accessible: no paywalls hiding the basics, no setup hurdles, no requirement to hand over a bank
-        account just to learn. And we keep things clear: if an explanation needs jargon, we define the jargon, and
-        if a concept can be said simply, we say it simply.
+        A few rules we hold ourselves to: we're not a brokerage and we don't give financial advice, so we won't
+        pretend to know where the market's headed next. Nothing here is paywalled. And if a concept needs jargon to
+        explain, we define the jargon right there instead of assuming you already know it.
       </p>
       <p>
-        The market will always be uncertain, and no website can change that. But we firmly believe that
-        understanding is the antidote to fear. When you grasp the forces moving a stock, the chart stops being
-        intimidating and starts being interesting. Our long-term mission is to raise a generation of investors who
-        are calm, curious, and informed — people who see a market dip and ask thoughtful questions instead of
-        panicking, and who treat investing as a lifelong skill rather than a gamble. Wherever you are starting
-        from, Integral Stocks is here to help you build your investing brain, one clear idea at a time.
+        Markets are always going to be a little uncertain — that's not something a website fixes. But
+        understanding what's actually happening beats guessing, every time. That's what this site is for.
       </p>
     </main>
     <SiteFooter />
