@@ -158,12 +158,17 @@ function extractArticle(html: string): string {
 
 
 
-/** Pages that are consent walls, bot challenges or nav-only shells are useless to summarize. */
-function isJunk(text: string): boolean {
-  if (text.length < 400) return true;
+/** Text signature of an actual consent/bot-challenge/paywall page, as opposed to merely-short text. */
+function isBotWallText(text: string): boolean {
   return /just a moment|enable javascript and cookies|verifying you are human|attention required|we and our \d+ partners|iab transparency|privacy dashboard|datenschutz|are you a robot|access denied|content is currently unavailable|oops, something went wrong/i.test(
     text.slice(0, 3000),
   );
+}
+
+/** Pages that are consent walls, bot challenges or nav-only shells are useless to summarize. */
+function isJunk(text: string): boolean {
+  if (text.length < 400) return true;
+  return isBotWallText(text);
 }
 
 /** Yahoo (and other syndicators) serve stubs — collect publisher links to follow. */
@@ -202,16 +207,24 @@ function withConsentParams(target: string): string {
 }
 
 /**
+ * Coarse reason a read attempt failed, collected across every candidate in the race so the
+ * client can be told something more useful than a single one-size-fits-all message. Ordered
+ * below (in pickReason) from most to least specific/actionable.
+ */
+type FailReason = "bot_wall" | "blocked" | "no_article" | "timeout" | "unreachable";
+
+/**
  * Fetch with manual redirect handling so every hop is re-validated against private IPs
  * immediately before use (assertFetchable() is called fresh on every hop, right before the
  * fetch() that uses it, to keep the DNS-rebinding TOCTOU window as small as fetch() allows).
  */
-async function rawFetch(target: string, ua = BROWSER_UA): Promise<string | null> {
+async function rawFetch(target: string, ua = BROWSER_UA, reasons?: FailReason[]): Promise<string | null> {
   let current = withConsentParams(target);
   try {
     for (let hop = 0; hop < 5; hop++) {
       if (!(await assertFetchable(current))) {
         console.error("rawFetch: blocked by assertFetchable", current);
+        reasons?.push("unreachable");
         return null;
       }
       const r = await fetch(current, {
@@ -230,32 +243,41 @@ async function rawFetch(target: string, ua = BROWSER_UA): Promise<string | null>
       if (r.status >= 300 && r.status < 400) {
         const loc = r.headers.get("location");
         await r.body?.cancel();
-        if (!loc) return null;
+        if (!loc) { reasons?.push("unreachable"); return null; }
         current = new URL(loc, current).href;
         continue;
       }
       if (!r.ok) {
         console.error("rawFetch: non-ok status", current, r.status);
+        reasons?.push(r.status === 403 || r.status === 401 || r.status === 429 || r.status === 451 ? "blocked" : "unreachable");
         return null;
       }
       return await r.text();
     }
+    reasons?.push("unreachable");
     return null;
   } catch (e) {
     console.error("rawFetch: threw", current, e instanceof Error ? e.message : e);
+    reasons?.push(e instanceof DOMException && e.name === "TimeoutError" ? "timeout" : "unreachable");
     return null;
   }
 }
 
 
-async function readable(target: string, ua = BROWSER_UA): Promise<string | null> {
-  const body = await rawFetch(target, ua);
+async function readable(target: string, ua = BROWSER_UA, reasons?: FailReason[]): Promise<string | null> {
+  const body = await rawFetch(target, ua, reasons);
   if (!body) return null;
   const isHtml = /<\/?(html|body|div|p|article)\b/i.test(body);
   const text = isHtml ? extractArticle(body) : body.trim().slice(0, 12000);
-  if (!text || isJunk(text)) return null;
+  if (!text || isJunk(text)) {
+    reasons?.push(text && isBotWallText(text) ? "bot_wall" : "no_article");
+    return null;
+  }
   // Nav-soup detection only makes sense for scraped HTML; reader output is already clean markdown.
-  if (isHtml && isNavSoup(text)) return null;
+  if (isHtml && isNavSoup(text)) {
+    reasons?.push("no_article");
+    return null;
+  }
   return text;
 }
 
@@ -331,19 +353,20 @@ function firstSuccess(tasks: Array<() => Promise<string | null>>): Promise<strin
 }
 
 /** Race the page itself, its publisher canonicals and every reader proxy at once. */
-async function attempt(url: string): Promise<string | null> {
+async function attempt(url: string, reasons: FailReason[]): Promise<string | null> {
   // Yahoo's own content API is the most reliable source for its stubs — try it first.
   const caas = await yahooCaas(url);
   if (caas) return caas;
 
   // Kick off proxies for the original URL immediately — they don't depend on the direct fetch.
-  const proxyRace = firstSuccess(proxies(url).map((c) => () => readable(c, UA)));
+  const proxyRace = firstSuccess(proxies(url).map((c) => () => readable(c, UA, reasons)));
 
-  const html = await rawFetch(url);
+  const html = await rawFetch(url, undefined, reasons);
   if (html) {
     const isHtml = /<\/?[a-z][\s\S]*>/i.test(html);
     const own = isHtml ? extractArticle(html) : html.trim().slice(0, 12000);
     if (own && !isJunk(own) && !isNavSoup(own)) return own;
+    reasons.push(own && isBotWallText(own) ? "bot_wall" : "no_article");
 
     // Yahoo slug URLs hide the story UUID in the page markup — pull it out and use the content API.
     if (isYahoo(url)) {
@@ -357,8 +380,8 @@ async function attempt(url: string): Promise<string | null> {
     const alts = altUrls(html, url);
     if (alts.length) {
       const altRace = firstSuccess([
-        ...alts.map((a) => () => readable(a)),
-        ...alts.flatMap((a) => proxies(a).map((c) => () => readable(c, UA))),
+        ...alts.map((a) => () => readable(a, undefined, reasons)),
+        ...alts.flatMap((a) => proxies(a).map((c) => () => readable(c, UA, reasons))),
       ]);
       // Publisher pages are the real article — prefer them over syndicator-stub proxies.
       const winner = await altRace;
@@ -369,11 +392,40 @@ async function attempt(url: string): Promise<string | null> {
   return await proxyRace;
 }
 
+/**
+ * Pick the single most useful reason to surface, favoring specific/actionable over generic.
+ * "timeout" ranks last: with many candidates racing, a single slow proxy timing out (while the
+ * real cause was e.g. a dead domain) shouldn't make the message claim the page was just slow —
+ * "unreachable"'s wording already hedges for that case, so it only shows when every candidate's
+ * failure was specifically a timeout.
+ */
+function pickReason(reasons: FailReason[]): FailReason {
+  const order: FailReason[] = ["bot_wall", "blocked", "no_article", "unreachable", "timeout"];
+  return order.find((r) => reasons.includes(r)) ?? "unreachable";
+}
+
+function errorMessageFor(reason: FailReason): string {
+  const tail = "Try copying the article text and pasting it instead.";
+  switch (reason) {
+    case "bot_wall":
+      return `That page is behind a login, paywall, or cookie-consent wall we can't click through automatically. ${tail}`;
+    case "blocked":
+      return `That site is blocking automated readers (it returned an access-denied response). ${tail}`;
+    case "no_article":
+      return `We reached that page but couldn't find a real article on it — it may need JavaScript to load, or isn't an article page. ${tail}`;
+    case "timeout":
+      return `That page took too long to respond and timed out. ${tail}`;
+    default:
+      return `We couldn't reach that page — it may be down, or blocking automated requests. ${tail}`;
+  }
+}
+
 /** One pass only — everything already races in parallel, so a retry just doubles latency. */
 async function fetchArticleText(url: string): Promise<string> {
-  const t = await attempt(url);
+  const reasons: FailReason[] = [];
+  const t = await attempt(url, reasons);
   if (t) return t;
-  throw new Error("UNREADABLE");
+  throw new Error(pickReason(reasons));
 }
 
 
@@ -425,12 +477,10 @@ Deno.serve(async (req) => {
       sourceUrl = url;
       try {
         source = await fetchArticleText(url);
-      } catch {
+      } catch (e) {
+        const reason = e instanceof Error ? (e.message as FailReason) : "unreachable";
         return new Response(
-          JSON.stringify({
-            error:
-              "We couldn’t read that page — it may block automated readers or require a login. Try copying the article text and pasting it instead.",
-          }),
+          JSON.stringify({ error: errorMessageFor(reason) }),
           { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
