@@ -15,7 +15,7 @@ import { WhyItMoved } from "@/components/sim/WhyItMoved";
 import { SimCopilot } from "@/components/sim/SimCopilot";
 import { SafetyMeter } from "@/components/sim/SafetyMeter";
 import { Leaderboard } from "@/components/sim/Leaderboard";
-import { ArrowLeft, LogOut, RefreshCw, Trophy, Copy, LogIn, Users, Lock, Globe, DoorOpen, HelpCircle } from "lucide-react";
+import { ArrowLeft, LogOut, RefreshCw, Trophy, Copy, LogIn, Users, Lock, Globe, DoorOpen, HelpCircle, Loader2 } from "lucide-react";
 import { SimWalkthrough, hasSeenSimWalkthrough } from "@/components/sim/SimWalkthrough";
 import { PostTradeCard } from "@/components/sim/PostTradeCard";
 import { PortfolioBar } from "@/components/sim/PortfolioBar";
@@ -112,17 +112,38 @@ const Sim = () => {
     return () => { alive = false; };
   }, [userId, nav]);
 
+  const [portfolioLoaded, setPortfolioLoaded] = useState(false);
+  const [portfolioError, setPortfolioError] = useState(false);
+
   const reloadPortfolio = async (m = member) => {
     if (!m) return;
-    const [{ data: pos }, { data: fresh }] = await Promise.all([
+    const [posRes, memberRes] = await Promise.all([
       supabase.from("positions").select("*").eq("member_id", m.id),
       supabase.from("game_members").select("*").eq("id", m.id).maybeSingle(),
     ]);
-    setPositions((pos ?? []) as Position[]);
-    if (fresh) setMember(fresh as Member);
+    // On a query error, keep showing the last-known-good data instead of silently
+    // resetting positions to empty — that would make net worth look like just the
+    // cash balance (a fake "loss") until the next successful refresh.
+    if (posRes.error || memberRes.error) {
+      console.error("reloadPortfolio failed", posRes.error, memberRes.error);
+      setPortfolioError(true);
+      return;
+    }
+    setPortfolioError(false);
+    setPortfolioLoaded(true);
+    setPositions((posRes.data ?? []) as Position[]);
+    if (memberRes.data) setMember(memberRes.data as Member);
   };
 
   useEffect(() => { if (member) reloadPortfolio(member); /* eslint-disable-next-line */ }, [member?.id]);
+
+  // Auto-retry a failed refresh instead of leaving the user stuck on stale/wrong numbers.
+  useEffect(() => {
+    if (!portfolioError || !member) return;
+    const t = setTimeout(() => reloadPortfolio(member), 4000);
+    return () => clearTimeout(t);
+    /* eslint-disable-next-line */
+  }, [portfolioError, member?.id]);
 
   // ---- Live quotes ----
   const symbols = useMemo(() => {
@@ -145,8 +166,12 @@ const Sim = () => {
   const marketOpen = states.length ? states.includes("REGULAR") : isUsMarketOpen();
   const nextOpen = nextOpenLabel();
 
+  // Real financial figures should never be computed against a guessed starting
+  // cash — until game/member/positions have all loaded, dataReady stays false
+  // and the UI shows a loading state instead of a flash of "-100%" or similar.
+  const dataReady = !!member && !!game && portfolioLoaded;
   const cash = Number(member?.cash ?? 0);
-  const startingCash = Number(game?.starting_cash ?? 100000);
+  const startingCash = Number(game?.starting_cash ?? 0);
   const buyingPower = startingCash * Number(game?.leverage ?? 1);
   const heldShares = Number(positions.find((p) => p.symbol === selected)?.shares ?? 0);
 
@@ -299,16 +324,29 @@ const Sim = () => {
 
       <main className="max-w-6xl mx-auto px-4 py-5 space-y-5">
         {/* Portfolio header + allocation bar */}
-        <PortfolioBar
-          equity={equity}
-          buyingPower={buyingPower}
-          dayPL={dayPL}
-          marketOpen={marketOpen}
-          totalReturnPct={totalReturnPct}
-          holdings={holdings}
-          onSelect={setSelected}
-        />
-        <SafetyMeter holdings={holdings} cash={cash} equity={equity} />
+        {!dataReady ? (
+          <div className="rounded-3xl border bg-card px-6 py-10 flex items-center justify-center gap-2 text-sm text-muted-foreground shadow-sm">
+            <Loader2 className="w-4 h-4 animate-spin" /> Loading your portfolio…
+          </div>
+        ) : (
+          <>
+            {portfolioError && (
+              <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900/60 px-4 py-2.5 text-xs font-semibold text-amber-800 dark:text-amber-200 flex items-center gap-2">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Couldn't refresh your portfolio — retrying…
+              </div>
+            )}
+            <PortfolioBar
+              equity={equity}
+              buyingPower={buyingPower}
+              dayPL={dayPL}
+              marketOpen={marketOpen}
+              totalReturnPct={totalReturnPct}
+              holdings={holdings}
+              onSelect={setSelected}
+            />
+            <SafetyMeter holdings={holdings} cash={cash} equity={equity} />
+          </>
+        )}
 
 
         {/* Search */}
