@@ -6,7 +6,12 @@ import { BookOpen } from "lucide-react";
 import { Term } from "./Glossary";
 
 /** Plain-English "What is this stock?" card aimed at first-time investors. */
-export const StockExplainer = ({ symbol }: { symbol: string }) => {
+/**
+ * `eager` skips the scroll-into-view wait. Use it wherever StockSummary is on the
+ * same page: that component fetches the same payload immediately anyway, so
+ * waiting only risks the sentence never rendering (e.g. for crawlers).
+ */
+export const StockExplainer = ({ symbol, eager = false }: { symbol: string; eager?: boolean }) => {
   // Shares the same "priority" AI summary (and its request dedupe + cache) that
   // StockSummary fetches — whatItDoes is already part of that payload, so this
   // no longer needs its own separate "beginner" AI generation to render one sentence.
@@ -14,20 +19,20 @@ export const StockExplainer = ({ symbol }: { symbol: string }) => {
   // fast call resolves instead of waiting on the much larger deep-dive fields.
   const [data, setData] = useState<StockSummaryData | null>(getCachedSummary(symbol, "priority") ?? null);
   const [loading, setLoading] = useState(false);
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(eager);
   const ref = useRef<HTMLElement>(null);
   const { quotes } = useLiveQuotes([symbol], 30000);
   const q = quotes[0];
 
   useEffect(() => {
-    if (!ref.current) return;
+    if (eager || !ref.current) return;
     const io = new IntersectionObserver(
       (e) => e.some((x) => x.isIntersecting) && (setVisible(true), io.disconnect()),
       { rootMargin: "150px" }
     );
     io.observe(ref.current);
     return () => io.disconnect();
-  }, []);
+  }, [eager]);
 
   useEffect(() => {
     if (!visible) return;

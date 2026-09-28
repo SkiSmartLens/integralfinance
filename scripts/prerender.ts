@@ -6,7 +6,8 @@
 //
 //  - "Head-only" routes (static utility pages + every ticker page): unique
 //    <title>/description/canonical/og/twitter tags baked in, but the visible
-//    body is left as the shell (loading state + hidden crawler fallback nav).
+//    body is left as the shell (loading state + a per-route h1/summary/nav
+//    fallback that React replaces on load).
 //    Cheap, safe, broad coverage — worthwhile even without real body content
 //    because it gives search snippets a real per-page title/description
 //    instead of one generic pair repeated across every URL.
@@ -21,10 +22,10 @@
 // Ticker pages are hard-capped so the published build can never blow past
 // hosting limits (50,000 files / 3 GiB).
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, resolve } from "path";
-import { CATEGORIES, INDEX_TICKERS, TRENDING, SECTORS } from "../src/lib/categories";
-import { POSTS, renderBody, type BlogPost } from "../src/content/blog";
+import { ALL_TICKERS } from "../src/lib/categories";
+import { POSTS, REDIRECTS, renderBody, type BlogPost } from "../src/content/blog";
 import { GLOSSARY, getGlossaryEntry, type GlossaryEntry } from "../src/content/glossary";
 
 const SITE = "https://integralstocks.com";
@@ -40,9 +41,73 @@ if (!existsSync(shellPath)) {
   process.exit(0);
 }
 const SHELL = readFileSync(shellPath, "utf8");
+const DEFAULT_IMAGE = `${SITE}/stocks-hero.jpg`;
 
+/** Public URL for a path — `^` in index-ticker slugs (e.g. /stocks/^gspc) isn't URL-safe. Files on disk keep the raw path. */
+const urlFor = (path: string) => `${SITE}${path.replace(/\^/g, "%5E")}`;
+
+// Every injected head tag carries data-rh so react-helmet-async replaces it on
+// hydration instead of leaving a second (possibly conflicting) copy behind.
+const RH = `data-rh="true"`;
+
+/** Strip every head tag the prerender (and Helmet) manages from the shell. */
+function stripManagedHead(html: string): string {
+  return html
+    .replace(/<title>[\s\S]*?<\/title>/i, "")
+    .replace(/<meta\s+name="description"[^>]*>/gi, "")
+    .replace(/<meta\s+name="keywords"[^>]*>/gi, "")
+    .replace(/<link\s+rel="canonical"[^>]*>/gi, "")
+    .replace(/<meta\s+property="og:(?!site_name)[^"]*"[^>]*>/gi, "")
+    .replace(/<meta\s+name="twitter:[^"]*"[^>]*>/gi, "");
+}
+
+interface HeadInput {
+  path: string;
+  title: string;
+  description: string;
+  keywords?: string;
+  image?: string;
+  type?: "website" | "article";
+  noindex?: boolean;
+}
+
+function headTags(h: HeadInput): string[] {
+  const url = urlFor(h.path);
+  const image = h.image ?? DEFAULT_IMAGE;
+  return [
+    `<title>${esc(h.title)}</title>`,
+    `<meta name="description" content="${esc(h.description)}" ${RH} />`,
+    h.keywords ? `<meta name="keywords" content="${esc(h.keywords)}" ${RH} />` : "",
+    h.noindex ? `<meta name="robots" content="noindex, follow" ${RH} />` : "",
+    `<link rel="canonical" href="${url}" ${RH} />`,
+    `<meta property="og:title" content="${esc(h.title)}" ${RH} />`,
+    `<meta property="og:description" content="${esc(h.description)}" ${RH} />`,
+    `<meta property="og:url" content="${url}" ${RH} />`,
+    `<meta property="og:type" content="${h.type ?? "website"}" ${RH} />`,
+    `<meta property="og:image" content="${image}" ${RH} />`,
+    `<meta name="twitter:card" content="summary_large_image" ${RH} />`,
+    `<meta name="twitter:title" content="${esc(h.title)}" ${RH} />`,
+    `<meta name="twitter:description" content="${esc(h.description)}" ${RH} />`,
+    `<meta name="twitter:image" content="${image}" ${RH} />`,
+  ].filter(Boolean);
+}
+
+// Blog featured images are Vite-hashed assets (src/content/blogImages.ts picks
+// one per category); find the built file so social previews get the real image.
+const BUILT_ASSETS = existsSync(resolve(DIST, "assets")) ? readdirSync(resolve(DIST, "assets")) : [];
+function blogImageFor(post: BlogPost): string {
+  const cat = post.category ?? "Beginner Basics";
+  const stem = cat.startsWith("Platform") ? "platform" : cat.toLowerCase().replace(/\s+/g, "-");
+  const file = BUILT_ASSETS.find((f) => new RegExp(`^${stem}-[\\w-]+\\.jpg$`).test(f));
+  return file ? `${SITE}/assets/${file}` : DEFAULT_IMAGE;
+}
+
+// Write /foo as dist/foo.html, not dist/foo/index.html. The host (Cloudflare)
+// serves foo.html at /foo, but serves foo/index.html only at /foo/ and 308-
+// redirects /foo there — which contradicted every canonical and sitemap URL
+// (all slashless) and left Google bouncing between the two.
 function writePage(path: string, html: string) {
-  const outPath = path === "/" ? resolve(DIST, "index.html") : resolve(DIST, `.${path}/index.html`);
+  const outPath = path === "/" ? resolve(DIST, "index.html") : resolve(DIST, `.${path}.html`);
   mkdirSync(dirname(outPath), { recursive: true });
   writeFileSync(outPath, html);
 }
@@ -53,35 +118,20 @@ interface Route {
   path: string;
   title: string;
   description: string;
+  noindex?: boolean;
 }
 
-function headFor(r: Route) {
-  const url = `${SITE}${r.path}`;
-  const image = `${SITE}/stocks-hero.webp`;
-  return [
-    `<title>${esc(r.title)}</title>`,
-    `<meta name="description" content="${esc(r.description)}" />`,
-    `<link rel="canonical" href="${url}" />`,
-    `<meta property="og:title" content="${esc(r.title)}" />`,
-    `<meta property="og:description" content="${esc(r.description)}" />`,
-    `<meta property="og:url" content="${url}" />`,
-    `<meta property="og:type" content="website" />`,
-    `<meta property="og:image" content="${image}" />`,
-    `<meta name="twitter:card" content="summary_large_image" />`,
-    `<meta name="twitter:title" content="${esc(r.title)}" />`,
-    `<meta name="twitter:description" content="${esc(r.description)}" />`,
-    `<meta name="twitter:image" content="${image}" />`,
-  ].join("\n    ");
-}
-
-/** Strip the shell's own head tags before injecting route-specific ones — format-agnostic, so it doesn't matter whether the source uses `">` or `" />`. */
 function headOnlyPage(r: Route): string {
-  let html = SHELL.replace(/<title>[\s\S]*?<\/title>/i, "")
-    .replace(/<meta\s+name="description"[^>]*>/gi, "")
-    .replace(/<link\s+rel="canonical"[^>]*>/gi, "")
-    .replace(/<meta\s+property="og:[^"]*"[^>]*>/gi, "")
-    .replace(/<meta\s+name="twitter:[^"]*"[^>]*>/gi, "");
-  html = html.replace(/<\/head>/i, `    ${headFor(r)}\n  </head>`);
+  let html = stripManagedHead(SHELL);
+  // Callback replacers throughout: page text like "$100" must not be read as `$1` backreferences.
+  html = html.replace(/<\/head>/i, () => `    ${headTags(r).join("\n    ")}\n  </head>`);
+  // Swap the shell's generic homepage h1/summary for this route's, so no-JS
+  // crawlers don't see the same heading on every URL.
+  html = html.replace(
+    /(<div data-crawler-fallback[^>]*>)[\s\S]*?(?=<nav>)/,
+    (_, open) =>
+      `${open}\n        <h1>${esc(r.title.replace(/\s*[|—]\s*IntegralStocks$/, ""))}</h1>\n        <p>${esc(r.description)}</p>\n        `,
+  );
   return html;
 }
 
@@ -93,9 +143,9 @@ function headOnlyPage(r: Route): string {
 const staticRoutes: Route[] = [
   {
     path: "/",
-    title: "Learn to Invest — AI Stock Analysis for Beginners",
+    title: "Free AI Investing App for Beginners | IntegralStocks",
     description:
-      "Beginner-friendly AI stock analysis, plain-English explainers, live S&P 500 signals, and a risk-free simulator to practice before you invest.",
+      "IntegralStocks is a free AI investing app for beginners: plain-English AI stock analysis, live S&P 500 signals, and a risk-free simulator to practice before you invest.",
   },
   {
     path: "/stocks",
@@ -117,11 +167,11 @@ const staticRoutes: Route[] = [
   { path: "/learn/advanced", title: "Advanced Investing Tools Explained", description: "Options, derivatives and advanced order types explained in plain English — plus when beginners should skip them." },
   { path: "/academy", title: "Investor Academy — A Guided Course for Beginners", description: "A short, gamified, linear course that takes total beginners from zero to confident with the stock market basics." },
   { path: "/academy/1", title: "Investor Academy: Lesson 1", description: "The first lesson in the Investor Academy — a guided, gamified course for total beginners." },
-  { path: "/simulator", title: "Free Stock Market Simulator for Beginners", description: "Practice trading with virtual cash. Real live prices, zero risk, and AI feedback explaining every trade you make." },
-  { path: "/sim", title: "Practice Trading — $100,000 Paper Trading Account", description: "A free, single-player paper trading simulator with a $100,000 virtual account and market/limit/stop orders." },
+  { path: "/simulator", title: "Free Stock Market Simulator for Beginners | IntegralStocks", description: "Practice trading with $100,000 of virtual cash and real live prices. Play the stock market simulator solo or with friends — free, zero risk." },
+  { path: "/sim", title: "Practice Trading — $100,000 Paper Trading Account", description: "A free, single-player paper trading simulator with a $100,000 virtual account and market/limit/stop orders.", noindex: true },
   { path: "/screener", title: "Stock Screener — Find Stocks by Filter", description: "Filter stocks by price, movement and volume with a simple screener designed for people new to investing." },
   { path: "/calendar", title: "Earnings & Market Calendar", description: "Upcoming earnings dates and market events, with plain-English notes on why each one can move prices." },
-  { path: "/watchlist", title: "Your Stock Watchlist", description: "Track the stocks you care about with live prices and AI explanations of each day's move." },
+  { path: "/watchlist", title: "Your Stock Watchlist", description: "Track the stocks you care about with live prices and AI explanations of each day's move.", noindex: true },
   { path: "/market-brief", title: "Daily Market Brief — Today in 2 Minutes", description: "A short daily read on what moved the market today and why, written for beginners rather than traders." },
   { path: "/translate", title: "Jargon Translator — Finance Terms in Plain English", description: "Paste any confusing finance sentence and get a plain-English translation instantly. No jargon left behind." },
   { path: "/start", title: "Start Here — Your First Steps in Investing", description: "Two quick questions and we'll point you at the right first lesson, first chart and first practice trade." },
@@ -132,19 +182,7 @@ const staticRoutes: Route[] = [
   { path: "/affiliate-disclosure", title: "Affiliate Disclosure — IntegralStocks", description: "How IntegralStocks discloses affiliate relationships and sponsored links." },
 ];
 
-function collectTickers(): string[] {
-  const set = new Set<string>();
-  for (const c of CATEGORIES) {
-    c.symbols?.forEach((s) => set.add(s));
-    c.subTopics?.forEach((st) => st.symbols?.forEach((s) => set.add(s)));
-  }
-  INDEX_TICKERS.forEach((s) => set.add(s));
-  TRENDING.forEach((s) => set.add(s));
-  SECTORS.forEach((s) => set.add(s.symbol));
-  return Array.from(set).sort();
-}
-
-const tickerRoutes: Route[] = collectTickers()
+const tickerRoutes: Route[] = ALL_TICKERS
   .map((symbol) => ({
     path: `/stocks/${symbol.toLowerCase()}`,
     title: `${symbol} Stock Price & Chart | IntegralStocks`,
@@ -189,43 +227,25 @@ interface FullPageInput {
   title: string;
   description: string;
   keywords?: string;
+  image?: string;
+  type?: "website" | "article";
   jsonLd: Record<string, unknown>[];
   bodyHtml: string;
 }
 
 /** Same strip-then-inject approach as headOnlyPage, plus extra JSON-LD and a real body. */
 function fullPage(input: FullPageInput): string {
-  const url = `${SITE}${input.path}`;
-  let html = SHELL.replace(/<title>[\s\S]*?<\/title>/i, "")
-    .replace(/<meta\s+name="description"[^>]*>/gi, "")
-    .replace(/<meta\s+name="keywords"[^>]*>/gi, "")
-    .replace(/<link\s+rel="canonical"[^>]*>/gi, "")
-    .replace(/<meta\s+property="og:[^"]*"[^>]*>/gi, "")
-    .replace(/<meta\s+name="twitter:[^"]*"[^>]*>/gi, "");
-
   const headExtras = [
-    `<title>${esc(input.title)}</title>`,
-    `<meta name="description" content="${esc(input.description)}" />`,
-    input.keywords ? `<meta name="keywords" content="${esc(input.keywords)}" />` : "",
-    `<link rel="canonical" href="${url}" />`,
-    `<meta property="og:title" content="${esc(input.title)}" />`,
-    `<meta property="og:description" content="${esc(input.description)}" />`,
-    `<meta property="og:url" content="${url}" />`,
-    `<meta property="og:type" content="website" />`,
-    `<meta name="twitter:card" content="summary_large_image" />`,
-    `<meta name="twitter:title" content="${esc(input.title)}" />`,
-    `<meta name="twitter:description" content="${esc(input.description)}" />`,
-    ...input.jsonLd.map((obj) => `<script type="application/ld+json">${JSON.stringify(obj)}</script>`),
-  ]
-    .filter(Boolean)
-    .join("\n    ");
-  html = html.replace(/<\/head>/i, `    ${headExtras}\n  </head>`);
+    ...headTags(input),
+    ...input.jsonLd.map((obj) => `<script type="application/ld+json" ${RH}>${JSON.stringify(obj)}</script>`),
+  ].join("\n    ");
+  let html = stripManagedHead(SHELL).replace(/<\/head>/i, () => `    ${headExtras}\n  </head>`);
 
   // Greedy match up to the last </div> before </body>: Vite's build moves the
   // entry <script type="module"> into <head>, so #root's closing div is the
   // last thing in <body>. Greedy [\s\S]* spans the whole nested root block
   // regardless of internal nesting since </body> only occurs once.
-  html = html.replace(/<div id="root">[\s\S]*<\/div>\s*(?=<\/body>)/, `<div id="root">${input.bodyHtml}</div>\n  `);
+  html = html.replace(/<div id="root">[\s\S]*<\/div>\s*(?=<\/body>)/, () => `<div id="root">${input.bodyHtml}</div>\n  `);
 
   return html;
 }
@@ -374,6 +394,21 @@ function glossaryIndexPage() {
 // pages (also static but 200-650 lines of dense JSX each), these are short
 // enough to keep in sync by hand without real drift risk.
 
+const AUTHOR = { "@type": "Person", name: "William Wolenski", url: `${SITE}/about` };
+
+const ABOUT_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "AboutPage",
+  name: "About IntegralStocks",
+  url: `${SITE}/about`,
+  mainEntity: {
+    "@type": "Organization",
+    name: "IntegralStocks",
+    url: `${SITE}/`,
+    founder: AUTHOR,
+  },
+};
+
 function aboutPage() {
   const bodyHtml = `
     <div class="min-h-screen bg-background">
@@ -388,11 +423,12 @@ function aboutPage() {
           <li><strong>Plain-English summaries</strong> on every ticker &mdash; what the company does, and what moved the price today.</li>
           <li><strong>AI insights</strong> that tie news to the actual price action.</li>
           <li>A free <a href="/simulator">paper-trading simulator</a>, so you can practice with fake money before risking real money.</li>
-          <li><a href="/news">Market news</a>, <a href="/screener">screeners</a>, and an <a href="/calendar">economic calendar</a>, all in one place.</li>
+          <li><a href="/market-brief">Market news</a>, <a href="/screener">screeners</a>, and an <a href="/calendar">economic calendar</a>, all in one place.</li>
         </ul>
         <p>Have feedback? <a href="/contact">Get in touch</a>. Our <a href="/disclaimer">disclaimer</a> and <a href="/data-sources">data sources</a> page cover how the site actually works.</p>
         <hr />
         <h2>Why we built this</h2>
+        <p><em>By William Wolenski, founder of IntegralStocks.</em></p>
         <p>I got tired of finance sites assuming you already had an econ degree. Every "beginner" explainer still buried the point under jargon, and every real-time chart looked like a cockpit dashboard. So I built the site I wish had existed when I first tried to figure out what a P/E ratio was.</p>
         <p>The goal isn't to tell you a stock dropped 3% &mdash; anyone can do that. It's to say why: a bad earnings call, a product launch, a rate decision, or just the market having a bad day. That's the part that actually teaches you something, so that's the part our AI summaries focus on.</p>
         <p>The simulator exists for the same reason. You get $100,000 in fake money to build a portfolio, place real trades, and mess up without it costing you anything. Losing fake money teaches you more than reading ten articles about risk management ever will.</p>
@@ -409,7 +445,7 @@ function aboutPage() {
     title: "About IntegralStocks — Stock Market Made Simple for Beginners",
     description: "IntegralStocks helps beginners understand stock prices, market news, and why stocks move using plain-English AI insights.",
     keywords: "about IntegralStocks, beginner investing platform, stock market education, AI stock insights",
-    jsonLd: [{ "@context": "https://schema.org", "@type": "AboutPage", name: "About IntegralStocks", url: `${SITE}/about` }],
+    jsonLd: [ABOUT_JSON_LD],
     bodyHtml,
   });
 }
@@ -637,7 +673,7 @@ function blogPostPage(post: BlogPost) {
       <main class="max-w-3xl mx-auto w-full px-4 sm:px-6 py-10 flex-1">
         <a href="/blog" class="inline-flex items-center gap-1 text-sm text-muted-foreground mb-6">&larr; All posts</a>
         <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight leading-[1.05] mb-4">${esc(post.title)}</h1>
-        <div class="text-xs text-muted-foreground mb-6">${post.readMinutes} min read &middot; ${new Date(post.publishedAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</div>
+        <div class="text-xs text-muted-foreground mb-6">By <a href="/about">William Wolenski</a> &middot; ${post.readMinutes} min read &middot; ${new Date(post.publishedAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</div>
         <article class="prose-like space-y-5 text-base leading-relaxed">
           ${articleHtml}
         </article>
@@ -670,6 +706,8 @@ function blogPostPage(post: BlogPost) {
     title: `${post.title} | Integral Stocks Blog`,
     description: post.description,
     keywords: [...(post.tags ?? []), ...(post.tickers ?? []), ...(post.sectors ?? []), "investing for beginners", "how to invest"].join(", "),
+    image: blogImageFor(post),
+    type: "article",
     jsonLd: [
       {
         "@context": "https://schema.org",
@@ -678,8 +716,9 @@ function blogPostPage(post: BlogPost) {
         description: post.description,
         datePublished: post.publishedAt,
         dateModified: post.publishedAt,
+        image: blogImageFor(post),
         url: `${SITE}${path}`,
-        author: { "@type": "Organization", name: "IntegralStocks" },
+        author: AUTHOR,
         publisher: {
           "@type": "Organization",
           name: "IntegralStocks",
@@ -695,6 +734,29 @@ function blogPostPage(post: BlogPost) {
     ],
     bodyHtml,
   });
+}
+
+// -- Retired blog slugs --
+// The app redirects these client-side, which crawlers only see after rendering
+// the homepage shell. A static page with a 0-second meta refresh (which Google
+// treats as a permanent redirect) plus a canonical to the new post fixes that.
+
+function redirectPage(to: string): string {
+  const url = urlFor(to);
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Moved | IntegralStocks</title>
+    <link rel="canonical" href="${url}" />
+    <meta name="robots" content="noindex, follow" />
+    <meta http-equiv="refresh" content="0; url=${to}" />
+  </head>
+  <body>
+    <p>This article moved to <a href="${to}">${url}</a>.</p>
+  </body>
+</html>
+`;
 }
 
 // ---------- Run ----------
@@ -728,9 +790,13 @@ function main() {
     writePage(`/blog/${post.slug}`, blogPostPage(post));
     written++;
   }
+  for (const [from, to] of Object.entries(REDIRECTS)) {
+    writePage(`/blog/${from}`, redirectPage(`/blog/${to}`));
+    written++;
+  }
 
   console.log(
-    `prerender: wrote ${written} page(s) (${staticRoutes.length} static, ${tickerRoutes.length}/${collectTickers().length} tickers, ${GLOSSARY.length + 2} glossary, ${POSTS.length + 1} blog, 1 faq, 2 about/disclaimer)`,
+    `prerender: wrote ${written} page(s) (${staticRoutes.length} static, ${tickerRoutes.length}/${ALL_TICKERS.length} tickers, ${GLOSSARY.length + 2} glossary, ${POSTS.length + 1} blog, ${Object.keys(REDIRECTS).length} blog redirects, 1 faq, 2 about/disclaimer)`,
   );
 }
 

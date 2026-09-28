@@ -59,13 +59,20 @@ const GameLobby = () => {
   const [code, setCode] = useState("");
   const [joining, setJoining] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [signedOut, setSignedOut] = useState(false);
 
+  // Signed-out visitors (and search crawlers) see the lobby itself; sign-in is
+  // asked for only when they create or join a game. Redirecting here sent
+  // Googlebot to /auth, which robots.txt blocks, so /simulator never indexed.
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) nav("/auth");
-      else setUserId(data.session.user.id);
+      if (data.session) setUserId(data.session.user.id);
+      else {
+        setSignedOut(true);
+        setLoading(false);
+      }
     });
-  }, [nav]);
+  }, []);
 
   const refresh = async (uid: string) => {
     setLoading(true);
@@ -130,7 +137,7 @@ const GameLobby = () => {
   };
 
   const joinPublic = async (game: Game) => {
-    if (!userId) return;
+    if (!userId) return nav("/auth");
     const { error } = await supabase
       .from("game_members")
       .insert({ game_id: game.id, user_id: userId, cash: game.starting_cash });
@@ -143,6 +150,7 @@ const GameLobby = () => {
   const joinByCode = async () => {
     const c = code.trim().toUpperCase();
     if (!c) return;
+    if (!userId) return nav("/auth");
     setJoining(true);
     const { data, error } = await supabase.functions.invoke("join-game", { body: { code: c } });
     setJoining(false);
@@ -162,8 +170,8 @@ const GameLobby = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SEO
-        title="Play — Choose or Create a Game | Integral Stocks"
-        description="Play the stock simulator solo or with friends. Create a private game, share your join code, or browse public games."
+        title="Free Stock Market Simulator for Beginners | IntegralStocks"
+        description="Practice trading with $100,000 of virtual cash and real live prices. Play the stock market simulator solo or with friends — free, zero risk."
         path="/simulator"
         keywords="stock market simulator, virtual trading, paper trading game, practice trading, fantasy stock game, trading simulator for beginners"
       />
@@ -175,11 +183,29 @@ const GameLobby = () => {
           <div className="inline-flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-primary bg-accent px-3 py-1 rounded-full">
             <Trophy className="w-3.5 h-3.5" /> Simulator Lobby
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">How do you want to play?</h1>
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">Free stock market simulator</h1>
           <p className="text-muted-foreground text-lg max-w-2xl">
-            Play solo to practice, or start a private game and invite friends with a join code.
+            Practice with $100,000 of virtual cash and real live prices. Play solo, or start a private game and
+            invite friends with a join code.
           </p>
         </header>
+
+        {signedOut && (
+          <section className="rounded-3xl border-2 border-primary/30 bg-accent/50 p-6 flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex-1">
+              <h2 className="font-extrabold">Sign in to start playing</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                It's free. Your games, cash, and trades are saved to your account.
+              </p>
+            </div>
+            <Link
+              to="/auth"
+              className="h-11 px-6 rounded-2xl bg-primary text-primary-foreground font-extrabold inline-flex items-center justify-center gap-2"
+            >
+              <LogIn className="w-4 h-4" /> Sign in
+            </Link>
+          </section>
+        )}
 
         {/* Your games — first thing you see */}
         {myMemberships.length > 0 && (

@@ -74,7 +74,7 @@ export const CATEGORIES: Category[] = [
       { id: "banks", label: "Big Banks", query: "big banks earnings", symbols: ["JPM","BAC","WFC","C","GS","MS"] },
       { id: "regional", label: "Regionals", query: "regional banks", symbols: ["USB","PNC","TFC","KEY","RF","CFG"] },
       { id: "ins", label: "Insurance", query: "insurance stocks", symbols: ["BRK-B","AIG","MET","PRU","ALL","TRV"] },
-      { id: "pay", label: "Payments", query: "payments fintech", symbols: ["V","MA","PYPL","SQ","AXP"] },
+      { id: "pay", label: "Payments", query: "payments fintech", symbols: ["V","MA","PYPL","XYZ","AXP"] },
     ],
   },
   {
@@ -152,3 +152,17 @@ export const SECTORS: { symbol: string; name: string }[] = [
   { symbol: "XLB", name: "Materials" },
   { symbol: "XLRE", name: "Real Estate" },
 ];
+
+// Every ticker referenced anywhere in the app's data, sorted. Drives the
+// sitemap, build-time prerendering, and which /stocks/:ticker pages are known.
+export const ALL_TICKERS: string[] = (() => {
+  const set = new Set<string>();
+  for (const c of CATEGORIES) {
+    c.symbols?.forEach((s) => set.add(s));
+    c.subTopics?.forEach((st) => st.symbols?.forEach((s) => set.add(s)));
+  }
+  INDEX_TICKERS.forEach((s) => set.add(s));
+  TRENDING.forEach((s) => set.add(s));
+  SECTORS.forEach((s) => set.add(s.symbol));
+  return Array.from(set).sort();
+})();

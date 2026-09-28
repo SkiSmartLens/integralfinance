@@ -22,8 +22,10 @@ export const SiteFooter = () => (
       <div>
         <h3 className="font-extrabold mb-3 uppercase text-xs tracking-wider text-muted-foreground">Learn & Play</h3>
         <ul className="space-y-2">
+          <li><Link to="/learn" className="hover:text-primary transition-colors">Learn Investing</Link></li>
+          <li><Link to="/learn/glossary" className="hover:text-primary transition-colors">Glossary</Link></li>
           <li><Link to="/academy" className="hover:text-primary transition-colors">Investor Academy</Link></li>
-          <li><Link to="/sim/lobby" className="hover:text-primary transition-colors">Trading Simulator</Link></li>
+          <li><Link to="/simulator" className="hover:text-primary transition-colors">Trading Simulator</Link></li>
           <li><Link to="/translate" className="hover:text-primary transition-colors">Jargon Translator</Link></li>
           <li><Link to="/blog" className="hover:text-primary transition-colors">Blog</Link></li>
           <li><Link to="/faq" className="hover:text-primary transition-colors">FAQ</Link></li>

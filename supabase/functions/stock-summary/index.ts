@@ -3,7 +3,105 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
+// Bump when the prompt or response schema changes: invalidates both cache levels.
+const CACHE_VERSION = "v6";
+
+// Level 1: per-instance memory. Level 2: public.stock_summary_cache, shared across
+// instances (edge instances are short-lived, so level 1 alone was mostly cold).
 const cache = new Map<string, { exp: number; body: string }>();
+
+const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const db = SERVICE_ROLE
+  ? createClient(Deno.env.get("SUPABASE_URL")!, SERVICE_ROLE, { auth: { persistSession: false } })
+  : null;
+
+const HOUR = 60 * 60 * 1000;
+const ET_CLOCK = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/New_York",
+  weekday: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
+/** 4:00am–8:00pm ET, Mon–Fri: pre-market through after-hours, when prices and news move. */
+function inTradingDay(d: Date): boolean {
+  const parts = ET_CLOCK.formatToParts(d);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  const weekday = get("weekday");
+  if (weekday === "Sat" || weekday === "Sun") return false;
+  const minutes = (Number(get("hour")) % 24) * 60 + Number(get("minute"));
+  return minutes >= 4 * 60 && minutes < 20 * 60;
+}
+
+/**
+ * When a freshly generated summary goes stale. "Why it moved" content is intraday,
+ * so it lives 2h while anything can move (after-hours earnings included). Overnight
+ * and on weekends nothing changes, so it's held until the next pre-market opens.
+ * "extended" is fundamentals (revenue, margins, moat), which don't move intraday.
+ */
+function expiryFor(mode: string, now = Date.now()): number {
+  if (mode === "extended") return now + 12 * HOUR;
+  if (inTradingDay(new Date(now))) return now + 2 * HOUR;
+  const step = 15 * 60 * 1000;
+  for (let t = now + step; t < now + 72 * HOUR; t += step) {
+    if (inTradingDay(new Date(t))) return t;
+  }
+  return now + 2 * HOUR;
+}
+
+/** Level-2 lookup. Any failure is just a miss — the cache must never break a request. */
+async function readStored(symbol: string, mode: string): Promise<{ body: string; exp: number } | null> {
+  if (!db) return null;
+  try {
+    const { data, error } = await db
+      .from("stock_summary_cache")
+      .select("body, expires_at")
+      .eq("symbol", symbol)
+      .eq("mode", mode)
+      .eq("version", CACHE_VERSION)
+      .gt("expires_at", new Date().toISOString())
+      .abortSignal(AbortSignal.timeout(1500))
+      .maybeSingle();
+    if (error) {
+      console.error("summary cache read failed", error.message);
+      return null;
+    }
+    return data ? { body: JSON.stringify(data.body), exp: Date.parse(data.expires_at) } : null;
+  } catch (e) {
+    console.error("summary cache read threw", e instanceof Error ? e.message : e);
+    return null;
+  }
+}
+
+// Only persist real tickers and known modes, so arbitrary request input can't grow the table.
+const STORABLE_MODES = new Set(["priority", "extended", "beginner", "full"]);
+const STORABLE_SYMBOL = /^[A-Z0-9^=.\-]{1,20}$/;
+
+async function writeStored(symbol: string, mode: string, body: unknown, exp: number) {
+  if (!db || !STORABLE_MODES.has(mode) || !STORABLE_SYMBOL.test(symbol)) return;
+  try {
+    const { error } = await db
+      .from("stock_summary_cache")
+      .upsert(
+        {
+          symbol,
+          mode,
+          version: CACHE_VERSION,
+          body,
+          expires_at: new Date(exp).toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "symbol,mode" },
+      )
+      .abortSignal(AbortSignal.timeout(2000));
+    if (error) console.error("summary cache write failed", error.message);
+  } catch (e) {
+    console.error("summary cache write threw", e instanceof Error ? e.message : e);
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -30,11 +128,19 @@ Deno.serve(async (req) => {
     // `mode` keeps the old single-shot "full" behavior for any other caller.
     const isPriority = mode === "priority";
     const isExtended = mode === "extended";
-    const key = `sum:v6:${mode ?? "full"}:${sym}`;
+    const modeKey = typeof mode === "string" ? mode : "full";
+    const key = `sum:${CACHE_VERSION}:${modeKey}:${sym}`;
     const hit = cache.get(key);
     if (hit && hit.exp > Date.now()) {
       return new Response(hit.body, {
         headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "hit" },
+      });
+    }
+    const stored = await readStored(sym, modeKey);
+    if (stored) {
+      cache.set(key, stored);
+      return new Response(stored.body, {
+        headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "db-hit" },
       });
     }
 
@@ -463,11 +569,13 @@ Return strict JSON with shape:
     const msg = data?.choices?.[0]?.message ?? {};
     const raw: string = msg?.tool_calls?.[0]?.function?.arguments ?? msg?.content ?? "{}";
     let parsed: any = {};
+    // A result that's mostly placeholder text is served, but not cached for hours.
+    let degraded = false;
     try {
       parsed = JSON.parse(raw);
     } catch {
       const m = raw.match(/\{[\s\S]*\}/);
-      try { parsed = m ? JSON.parse(m[0]) : {}; } catch { parsed = {}; }
+      try { parsed = m ? JSON.parse(m[0]) : {}; } catch { parsed = {}; degraded = true; }
     }
 
     if (!isBeginner) {
@@ -477,12 +585,23 @@ Return strict JSON with shape:
         : isExtended
         ? ["predictedRevenue", "revenueGrowth", "earningsGrowth", "margins", "balanceSheet", "moat", "earnings", "forecast"]
         : ["whyMoved", "whatItDoes", "predictedRevenue", "revenueGrowth", "earningsGrowth", "margins", "balanceSheet", "moat", "earnings", "forecast", "outlook"];
+      let fellBack = 0;
       for (const f of stringFields) {
-        if (!parsed[f] || typeof parsed[f] !== "string" || !parsed[f].trim()) parsed[f] = fallback;
+        if (!parsed[f] || typeof parsed[f] !== "string" || !parsed[f].trim()) {
+          parsed[f] = fallback;
+          fellBack++;
+        }
       }
+      if (fellBack > stringFields.length / 2) degraded = true;
       if (!isExtended) {
-        if (!Array.isArray(parsed.positives) || !parsed.positives.length) parsed.positives = ["Analysis unavailable right now."];
-        if (!Array.isArray(parsed.negatives) || !parsed.negatives.length) parsed.negatives = ["Analysis unavailable right now."];
+        if (!Array.isArray(parsed.positives) || !parsed.positives.length) {
+          parsed.positives = ["Analysis unavailable right now."];
+          degraded = true;
+        }
+        if (!Array.isArray(parsed.negatives) || !parsed.negatives.length) {
+          parsed.negatives = ["Analysis unavailable right now."];
+          degraded = true;
+        }
       }
     }
     // Attach real headline sources so the UI can render citations. Only the modes
@@ -500,7 +619,14 @@ Return strict JSON with shape:
     }
 
     const body = JSON.stringify(parsed);
-    cache.set(key, { body, exp: Date.now() + 1000 * 60 * 120 });
+    if (degraded) {
+      // Short memory-only hold so a burst of requests doesn't re-run a failing generation.
+      cache.set(key, { body, exp: Date.now() + 5 * 60 * 1000 });
+    } else {
+      const exp = expiryFor(modeKey);
+      cache.set(key, { body, exp });
+      await writeStored(sym, modeKey, parsed, exp);
+    }
     return new Response(body, {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

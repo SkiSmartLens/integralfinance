@@ -63,7 +63,11 @@ const NewsCard = ({ n, featured = false }: { n: NewsItem; featured?: boolean }) 
       <div className="p-4 pt-3 mt-auto">
         <button
           type="button"
-          onClick={() => navigate(`/translate?url=${encodeURIComponent(n.link)}`)}
+          onClick={() =>
+            navigate(
+              `/translate?url=${encodeURIComponent(n.link)}${n.uuid ? `&uuid=${encodeURIComponent(n.uuid)}` : ""}`,
+            )
+          }
           className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-primary/40 bg-accent/60 px-3 py-2 text-xs font-extrabold text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
         >
           <Sparkles className="w-3.5 h-3.5" /> AI Summarize

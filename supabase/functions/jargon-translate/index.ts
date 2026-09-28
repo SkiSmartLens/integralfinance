@@ -283,12 +283,25 @@ async function readable(target: string, ua = BROWSER_UA, reasons?: FailReason[])
 
 const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
+/**
+ * Headline + summary of a Yahoo story. Partner stubs (Barron's, WSJ, IBD...) carry only
+ * this — the full text is behind the publisher's paywall — so it's what we translate when
+ * nothing fuller can be read, flagged as partial so the client can say so.
+ */
+interface Stub { title: string; summary: string }
+type StubSlot = { value?: Stub };
+
 /** Fetch one Yahoo story by its content-API UUID. */
-async function yahooCaasByUuid(uuid: string): Promise<string | null> {
+async function yahooCaasByUuid(uuid: string, stub?: StubSlot): Promise<string | null> {
   const body = await rawFetch(`https://finance.yahoo.com/caas/content/article/?uuid=${uuid}`);
   if (!body) return null;
   try {
-    const markup = JSON.parse(body)?.items?.[0]?.markup;
+    const item = JSON.parse(body)?.items?.[0];
+    const pd = item?.data?.partnerData;
+    if (stub && !stub.value && typeof pd?.title === "string" && typeof pd?.summary === "string" && pd.summary.trim().length >= 40) {
+      stub.value = { title: pd.title.trim(), summary: pd.summary.trim() };
+    }
+    const markup = item?.markup;
     if (typeof markup !== "string") return null;
     const text = extractArticle(markup);
     return text && !isJunk(text) ? text : null;
@@ -306,13 +319,15 @@ function isYahoo(target: string): boolean {
  * yields a consent/nav shell. Its content API returns the full article markup for the story UUID.
  * Newer slug URLs (…-180858347.html) carry no UUID in the path — it only appears in the HTML.
  */
-async function yahooCaas(target: string): Promise<string | null> {
+async function yahooCaas(target: string, stub: StubSlot, knownUuid?: string): Promise<string | null> {
   if (!isYahoo(target)) return null;
   let u: URL;
   try { u = new URL(target); } catch { return null; }
-  const uuid = u.pathname.match(UUID_RE)?.[0];
+  // News cards pass the story UUID straight from Yahoo's search API, which skips scraping
+  // the page for it — the step most likely to hit a consent wall from a datacenter IP.
+  const uuid = knownUuid ?? u.pathname.match(UUID_RE)?.[0];
   if (!uuid) return null;
-  return await yahooCaasByUuid(uuid);
+  return await yahooCaasByUuid(uuid, stub);
 }
 
 
@@ -353,9 +368,9 @@ function firstSuccess(tasks: Array<() => Promise<string | null>>): Promise<strin
 }
 
 /** Race the page itself, its publisher canonicals and every reader proxy at once. */
-async function attempt(url: string, reasons: FailReason[]): Promise<string | null> {
+async function attempt(url: string, reasons: FailReason[], stub: StubSlot, uuid?: string): Promise<string | null> {
   // Yahoo's own content API is the most reliable source for its stubs — try it first.
-  const caas = await yahooCaas(url);
+  const caas = await yahooCaas(url, stub, uuid);
   if (caas) return caas;
 
   // Kick off proxies for the original URL immediately — they don't depend on the direct fetch.
@@ -372,7 +387,7 @@ async function attempt(url: string, reasons: FailReason[]): Promise<string | nul
     if (isYahoo(url)) {
       const embedded = html.match(/"uuid"\s*:\s*"([0-9a-f-]{36})"/i)?.[1] ?? html.match(UUID_RE)?.[0];
       if (embedded) {
-        const viaCaas = await yahooCaasByUuid(embedded);
+        const viaCaas = await yahooCaasByUuid(embedded, stub);
         if (viaCaas) return viaCaas;
       }
     }
@@ -421,10 +436,12 @@ function errorMessageFor(reason: FailReason): string {
 }
 
 /** One pass only — everything already races in parallel, so a retry just doubles latency. */
-async function fetchArticleText(url: string): Promise<string> {
+async function fetchArticleText(url: string, uuid?: string): Promise<{ text: string; partial: boolean }> {
   const reasons: FailReason[] = [];
-  const t = await attempt(url, reasons);
-  if (t) return t;
+  const stub: StubSlot = {};
+  const t = await attempt(url, reasons, stub, uuid);
+  if (t) return { text: t, partial: false };
+  if (stub.value) return { text: `${stub.value.title}\n\n${stub.value.summary}`, partial: true };
   throw new Error(pickReason(reasons));
 }
 
@@ -465,9 +482,10 @@ Deno.serve(async (req) => {
   try {
 
 
-    const { text, url } = (await req.json()) as { text?: string; url?: string };
+    const { text, url, uuid } = (await req.json()) as { text?: string; url?: string; uuid?: string };
     let source = (text ?? "").trim();
     let sourceUrl: string | undefined;
+    let partial = false;
     if (!source && url) {
       if (!(await assertFetchable(url))) {
         return new Response(JSON.stringify({ error: "URL is not allowed. Provide a public https URL." }), {
@@ -476,7 +494,8 @@ Deno.serve(async (req) => {
       }
       sourceUrl = url;
       try {
-        source = await fetchArticleText(url);
+        const storyUuid = typeof uuid === "string" && new RegExp(`^${UUID_RE.source}$`, "i").test(uuid) ? uuid : undefined;
+        ({ text: source, partial } = await fetchArticleText(url, storyUuid));
       } catch (e) {
         const reason = e instanceof Error ? (e.message as FailReason) : "unreachable";
         return new Response(
@@ -552,8 +571,9 @@ Deno.serve(async (req) => {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
-        "Access-Control-Expose-Headers": "X-Source-Url",
+        "Access-Control-Expose-Headers": "X-Source-Url, X-Source-Partial",
         ...(sourceUrl ? { "X-Source-Url": encodeURIComponent(sourceUrl) } : {}),
+        ...(partial ? { "X-Source-Partial": "1" } : {}),
       },
     });
   } catch (e) {

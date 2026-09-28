@@ -1,12 +1,13 @@
 import { lazy, Suspense, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Header } from "@/components/Header";
-import { SEO } from "@/components/SEO";
+import { SEO, canonicalPath } from "@/components/SEO";
 import { StockChart } from "@/components/StockChart";
 import { StockExplainer } from "@/components/StockExplainer";
 import { SiteFooter } from "@/components/SiteFooter";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { formatNumber } from "@/lib/yahoo";
+import { ALL_TICKERS } from "@/lib/categories";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, LineChart, Newspaper, SlidersHorizontal } from "lucide-react";
 import { AcademyPrompt } from "@/components/AcademyPrompt";
@@ -33,12 +34,18 @@ const StockTicker = () => {
   const { ticker = "AAPL" } = useParams();
   const symbol = ticker.toUpperCase();
   const nav = useNavigate();
-  const { quotes } = useLiveQuotes([symbol], 8000);
+  const { quotes, loading, error } = useLiveQuotes([symbol], 8000);
   const q = quotes[0];
   const name = q?.longName || q?.shortName || symbol;
   const last = q?.regularMarketPrice;
   const ch = Number(q?.regularMarketChangePercent ?? 0);
   const [tab, setTab] = useState<TabId>("overview");
+  // The proxy answers an unknown symbol with a 404 stub instead of a quote —
+  // keep that soft-404 out of the index. Known tickers and other fetch errors
+  // never count, so a flaky data source can't deindex real pages.
+  const unknownSymbol =
+    !loading && !error && !ALL_TICKERS.includes(symbol) && (!q || (last == null && /404/.test(q.error ?? "")));
+  const pageUrl = `https://integralstocks.com${canonicalPath(`/stocks/${symbol.toLowerCase()}`)}`;
 
   const title = `${symbol} (${name}) Stock Price & Chart | IntegralStocks`;
   const priceBit = last != null ? `Live price $${formatNumber(last)} (${ch >= 0 ? "+" : ""}${formatNumber(ch)}%).` : "";
@@ -62,13 +69,14 @@ const StockTicker = () => {
         description={description}
         path={`/stocks/${symbol.toLowerCase()}`}
         keywords={keywords}
+        noindex={unknownSymbol}
         jsonLd={[
           {
             "@context": "https://schema.org",
             "@type": "WebPage",
             name: title,
             description,
-            url: `https://integralstocks.com/stocks/${symbol.toLowerCase()}`,
+            url: pageUrl,
           },
           {
             "@context": "https://schema.org",
@@ -76,7 +84,7 @@ const StockTicker = () => {
             itemListElement: [
               { "@type": "ListItem", position: 1, name: "Home", item: "https://integralstocks.com/" },
               { "@type": "ListItem", position: 2, name: "Stocks", item: "https://integralstocks.com/stocks" },
-              { "@type": "ListItem", position: 3, name: symbol, item: `https://integralstocks.com/stocks/${symbol.toLowerCase()}` },
+              { "@type": "ListItem", position: 3, name: symbol, item: pageUrl },
             ],
           },
         ]}
@@ -134,7 +142,7 @@ const StockTicker = () => {
           <>
             <div id="chart"><StockChart symbol={symbol} /></div>
             <AcademyPrompt moduleId={2} hint="Learn: how to read a stock chart" />
-            <StockExplainer symbol={symbol} />
+            <StockExplainer symbol={symbol} eager />
             <Suspense fallback={<div className="h-32" />}>
               <StockSummary symbol={symbol} />
             </Suspense>

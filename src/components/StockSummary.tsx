@@ -122,7 +122,7 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
       {data && (
         <div className="space-y-2">
           {data.whyMoved && (
-            <CollapsibleRow icon={<Zap className="w-4 h-4 text-primary" />} title="Why did this stock move today?">
+            <CollapsibleRow icon={<Zap className="w-4 h-4 text-primary" />} title="Why did this stock move today?" defaultOpen>
               <p className="text-sm leading-relaxed"><CitedText text={data.whyMoved} sources={data.sources} /></p>
               {data.sources && data.sources.length > 0 && (
                 <p className="text-[11px] text-muted-foreground mt-2">Grounded in live web articles — tap a number to read the source.</p>
@@ -227,12 +227,14 @@ const CollapsibleRow = ({
     <div className="bg-muted/40 rounded-md overflow-hidden">
       <button
         onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
         className="w-full flex items-center justify-between gap-2 p-3 text-left font-semibold"
       >
         <span className="flex items-center gap-2">{icon} {title}</span>
         <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", open && "rotate-180")} />
       </button>
-      {open && <div className="px-3 pb-3 -mt-1">{children}</div>}
+      {/* Always in the DOM (just hidden when collapsed) so search engines index the insight text. */}
+      <div hidden={!open} className="px-3 pb-3 -mt-1">{children}</div>
     </div>
   );
 };

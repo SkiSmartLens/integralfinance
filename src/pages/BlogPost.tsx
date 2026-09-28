@@ -35,6 +35,7 @@ const BlogPost = () => {
         description={post.description}
         path={canonicalPath}
         image={`${SITE}${hero.src}`}
+        type="article"
         keywords={keywords}
         jsonLd={[
           {
@@ -46,7 +47,7 @@ const BlogPost = () => {
             dateModified: post.publishedAt,
             image: `${SITE}${hero.src}`,
             url: `${SITE}${canonicalPath}`,
-            author: { "@type": "Organization", name: "IntegralStocks" },
+            author: { "@type": "Person", name: "William Wolenski", url: `${SITE}/about` },
             publisher: { "@type": "Organization", name: "IntegralStocks", logo: { "@type": "ImageObject", url: "https://integralstocks.com/favicon.png" } },
             mainEntityOfPage: `${SITE}${canonicalPath}`,
           },
@@ -72,6 +73,10 @@ const BlogPost = () => {
         </span>
         <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-[1.05] mb-4">{post.title}</h1>
         <div className="text-xs text-muted-foreground mb-6 flex items-center gap-2">
+          <span>
+            By <Link to="/about" className="font-semibold hover:text-foreground">William Wolenski</Link>
+          </span>
+          <span>·</span>
           <Clock className="w-3.5 h-3.5" />
           <span>{post.readMinutes} min read</span>
           <span>·</span>

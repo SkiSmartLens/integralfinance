@@ -260,10 +260,10 @@ const Sim = () => {
   return (
     <div className="min-h-screen bg-background">
       <SEO
-        title="Stock Market Simulator for Beginners — Free Virtual Trading"
-        description="Free stock market simulator for beginners. Practice paper trading with a virtual account and learn how real orders work — no risk, no signup needed."
+        title="Your Simulator Game | IntegralStocks"
+        description="Your paper-trading game: $100,000 of virtual cash, live prices, and market, limit, and stop orders."
         path="/sim"
-        keywords="stock market simulator, free virtual trading, paper trading, practice trading, no-risk investing simulator"
+        noindex
       />
       <h1 className="sr-only">Trading Simulator</h1>
 

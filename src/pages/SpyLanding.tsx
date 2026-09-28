@@ -32,19 +32,32 @@ const SpyLanding = () => {
   return (
     <div className="min-h-screen bg-background">
       <SEO
-        title="AI-Powered Stock Website for Beginners | IntegralStocks"
-        description="IntegralStocks is a free AI-powered stock website for beginners: plain-English AI stock analysis, live S&P 500 signals, and a risk-free simulator to practice before you invest."
+        title="Free AI Investing App for Beginners | IntegralStocks"
+        description="IntegralStocks is a free AI investing app for beginners: plain-English AI stock analysis, live S&P 500 signals, and a risk-free simulator to practice before you invest."
         path="/"
-        keywords="AI powered stock website for beginners, AI stock website, AI stock app for beginners, AI powered investing app, best stock app for beginners, AI stock analysis, stock market for beginners, learn to invest, stock market simulator, paper trading, stock news, S&P 500, live stock prices, how to invest, beginner investing app"
+        keywords="AI investing app for beginners, AI investing app, AI investing basics, AI powered stock website for beginners, AI stock website, AI stock app for beginners, AI powered investing app, best stock app for beginners, AI stock analysis, stock market for beginners, learn to invest, stock market simulator, paper trading, stock news, S&P 500, live stock prices, how to invest, beginner investing app"
       />
-      <Header onSearch={(s) => nav(`/stocks/${s.toLowerCase()}`)} />
+      <Header onSearch={(s) => nav(`/stocks/${encodeURIComponent(s.toLowerCase())}`)} />
+
+      <section className="px-4 sm:px-6 pt-6 pb-4 max-w-5xl mx-auto">
+        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight">
+          Free AI investing app for beginners
+        </h1>
+        <p className="mt-2 text-muted-foreground max-w-2xl leading-relaxed">
+          See why the market moved today in plain English, learn the basics in short{" "}
+          <Link to="/learn" className="text-primary font-semibold hover:underline">lessons</Link>, and practice with
+          $100,000 of virtual cash in the{" "}
+          <Link to="/simulator" className="text-primary font-semibold hover:underline">simulator</Link> before you
+          risk real money.
+        </p>
+      </section>
 
       <div className="border-b bg-gradient-to-r from-card via-card to-muted/30">
         <div className="px-4 sm:px-6 py-3 flex items-center gap-3 flex-wrap max-w-5xl mx-auto">
           <span className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-primary bg-accent px-2.5 py-1 rounded-full">
             <LineChart className="w-3.5 h-3.5" /> Market Signals
           </span>
-          <h1 className="text-2xl font-extrabold tracking-tight">{name} <span className="text-muted-foreground font-bold">({SYMBOL})</span></h1>
+          <h2 className="text-2xl font-extrabold tracking-tight">{name} <span className="text-muted-foreground font-bold">({SYMBOL})</span></h2>
           <div className="ml-auto flex items-center gap-3">
             {last != null && (
               <>
@@ -55,7 +68,7 @@ const SpyLanding = () => {
               </>
             )}
             <Link
-              to="/dashboard"
+              to="/stocks"
               className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-extrabold hover:opacity-90 transition-opacity"
             >
               Dashboard <ArrowRight className="w-4 h-4" />
@@ -67,7 +80,7 @@ const SpyLanding = () => {
       <main className="px-4 sm:px-6 py-6 space-y-6 max-w-5xl mx-auto">
         <div id="chart"><StockChart symbol={SYMBOL} /></div>
         <Suspense fallback={<div className="h-32" />}>
-          <StockExplainer symbol={SYMBOL} />
+          <StockExplainer symbol={SYMBOL} eager />
         </Suspense>
         <Suspense fallback={<div className="h-32" />}>
           <StockSummary symbol={SYMBOL} />
@@ -83,7 +96,7 @@ const SpyLanding = () => {
 
         <div className="sm:hidden pt-2">
           <Link
-            to="/dashboard"
+            to="/stocks"
             className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-full bg-primary text-primary-foreground text-sm font-extrabold"
           >
             Open Dashboard <ArrowRight className="w-4 h-4" />

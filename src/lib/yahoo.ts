@@ -33,6 +33,8 @@ async function callProxy(params: Record<string, string>): Promise<any> {
 
 export interface Quote {
   symbol: string;
+  /** Set by the proxy when the upstream lookup failed, e.g. "HTTP 404" for an unknown symbol. */
+  error?: string;
   shortName?: string;
   longName?: string;
   regularMarketPrice?: number;

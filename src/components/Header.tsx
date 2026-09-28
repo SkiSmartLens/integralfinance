@@ -8,7 +8,6 @@ import logo from "@/assets/logo.webp";
 type EnrichedResult = SearchQuote & { price?: number; changePct?: number };
 
 const NAV_LINKS = [
-  { to: "/dashboard", label: "Dashboard" },
   { to: "/stocks", label: "Stocks" },
   { to: "/market-brief", label: "News" },
   { to: "/learn", label: "Learn" },
@@ -81,7 +80,7 @@ export const Header = ({ onSearch }: Props) => {
     setOpen(false);
     setResults([]);
     if (onSearch) onSearch(s);
-    else nav(`/?symbol=${s}`);
+    else nav(`/stocks/${encodeURIComponent(s.toLowerCase())}`);
   };
 
   return (

@@ -15,6 +15,12 @@ const About = () => (
         "@type": "AboutPage",
         name: "About IntegralStocks",
         url: "https://integralstocks.com/about",
+        mainEntity: {
+          "@type": "Organization",
+          name: "IntegralStocks",
+          url: "https://integralstocks.com/",
+          founder: { "@type": "Person", name: "William Wolenski", url: "https://integralstocks.com/about" },
+        },
       }}
     />
     <Header />
@@ -47,7 +53,7 @@ const About = () => (
           risking real money.
         </li>
         <li>
-          <Link to="/news">Market news</Link>, <Link to="/screener">screeners</Link>, and an{" "}
+          <Link to="/market-brief">Market news</Link>, <Link to="/screener">screeners</Link>, and an{" "}
           <Link to="/calendar">economic calendar</Link>, all in one place.
         </li>
       </ul>
@@ -60,6 +66,9 @@ const About = () => (
       <hr />
 
       <h2>Why we built this</h2>
+      <p>
+        <em>By William Wolenski, founder of IntegralStocks.</em>
+      </p>
       <p>
         I got tired of finance sites assuming you already had an econ degree. Every "beginner" explainer still
         buried the point under jargon, and every real-time chart looked like a cockpit dashboard. So I built the

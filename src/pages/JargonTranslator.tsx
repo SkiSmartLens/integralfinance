@@ -26,13 +26,15 @@ interface Result {
   glossary: { term: string; meaning: string }[];
   keyTakeaways: string[];
   sourceUrl?: string;
+  /** Only the headline + summary could be read (e.g. the article is paywalled). */
+  partial?: boolean;
   error?: string;
 }
 
 // Parses the streamed, delimiter-based response as it grows. While a section's closing marker
 // hasn't arrived yet, its content is still shown live (partial), which is what makes the "in
 // plain English" panel fill in in real time instead of appearing all at once at the end.
-function parseChunk(acc: string): Omit<Result, "sourceUrl" | "error"> {
+function parseChunk(acc: string): Omit<Result, "sourceUrl" | "partial" | "error"> {
   const plain = (acc.match(/===PLAIN===([\s\S]*?)(?:===GLOSSARY===|$)/)?.[1] ?? "").trim();
   const glossaryRaw = (acc.match(/===GLOSSARY===([\s\S]*?)(?:===TAKEAWAYS===|$)/)?.[1] ?? "").trim();
   const takeawaysRaw = (acc.match(/===TAKEAWAYS===([\s\S]*?)(?:===END===|$)/)?.[1] ?? "").trim();
@@ -62,6 +64,8 @@ function parseChunk(acc: string): Omit<Result, "sourceUrl" | "error"> {
 const JargonTranslator = () => {
   const [params] = useSearchParams();
   const prefillUrl = params.get("url") ?? "";
+  // Yahoo story ID from a news card, so the backend can read the article directly.
+  const prefillUuid = params.get("uuid") ?? undefined;
   const [mode, setMode] = useState<"text" | "url">(prefillUrl ? "url" : "text");
   const [text, setText] = useState("");
   const [url, setUrl] = useState(prefillUrl);
@@ -69,7 +73,7 @@ const JargonTranslator = () => {
   const [streaming, setStreaming] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
 
-  const run = useCallback(async (body: { text?: string; url?: string }) => {
+  const run = useCallback(async (body: { text?: string; url?: string; uuid?: string }) => {
     setLoading(true);
     setStreaming(false);
     setResult(null);
@@ -92,8 +96,9 @@ const JargonTranslator = () => {
 
       const sourceUrlHeader = res.headers.get("X-Source-Url");
       const sourceUrl = sourceUrlHeader ? decodeURIComponent(sourceUrlHeader) : undefined;
+      const partial = res.headers.get("X-Source-Partial") === "1";
       setStreaming(true);
-      setResult({ plain: "", glossary: [], keyTakeaways: [], sourceUrl });
+      setResult({ plain: "", glossary: [], keyTakeaways: [], sourceUrl, partial });
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -116,7 +121,7 @@ const JargonTranslator = () => {
             const delta = j?.choices?.[0]?.delta?.content;
             if (delta) {
               acc += delta;
-              setResult((prev) => ({ ...parseChunk(acc), sourceUrl: prev?.sourceUrl }));
+              setResult((prev) => ({ ...parseChunk(acc), sourceUrl: prev?.sourceUrl, partial: prev?.partial }));
             }
           } catch { /* ignore partial/non-JSON lines */ }
         }
@@ -135,13 +140,14 @@ const JargonTranslator = () => {
       autoRan.current = prefillUrl;
       setMode("url");
       setUrl(prefillUrl);
-      run({ url: prefillUrl });
+      run({ url: prefillUrl, uuid: prefillUuid });
     }
-  }, [prefillUrl, run]);
+  }, [prefillUrl, prefillUuid, run]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await run(mode === "url" ? { url } : { text });
+    // The story ID only applies to the link it came with, not one the user typed.
+    await run(mode === "url" ? { url, uuid: url === prefillUrl ? prefillUuid : undefined } : { text });
   };
 
 
@@ -238,6 +244,12 @@ const JargonTranslator = () => {
             {result.plain && (
               <article className="bg-card border rounded-lg p-4 md:p-6">
                 <h2 className="flex items-center gap-2 font-bold mb-3"><Languages className="w-4 h-4 text-primary" /> In plain English</h2>
+                {result.partial && (
+                  <p className="text-xs bg-muted/60 border rounded-md p-2.5 mb-3 text-muted-foreground">
+                    Only the headline and summary were available. The full article is behind the publisher’s paywall, so
+                    open the source link for the whole story.
+                  </p>
+                )}
                 <div className="prose prose-sm max-w-none whitespace-pre-wrap text-sm leading-relaxed">
                   {result.plain}
                   {streaming && <span className="inline-block w-1.5 h-4 ml-0.5 bg-primary/70 animate-pulse align-middle" />}
