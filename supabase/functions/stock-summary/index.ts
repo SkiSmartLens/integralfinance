@@ -426,8 +426,8 @@ Return strict JSON with shape:
       // Out of Lovable credits → report as a temporary rate limit instead of a hard credits error.
       if (lov.status === 402 || lov.status === 403) {
         console.error("lovable fallback unavailable", lov.status);
-        return new Response(JSON.stringify({ error: "Rate limit, try again shortly." }), {
-          status: 429,
+        return new Response(JSON.stringify({ error: "Rate limit, try again shortly.", unavailable: true }), {
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
@@ -439,14 +439,14 @@ Return strict JSON with shape:
     if (aiRes.status === 429) {
       const t = await aiRes.text();
       console.error("ai 429", t);
-      return new Response(JSON.stringify({ error: "Rate limit, try again shortly." }), {
-        status: 429,
+      return new Response(JSON.stringify({ error: "Rate limit, try again shortly.", unavailable: true }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     if (aiRes.status === 402) {
-      return new Response(JSON.stringify({ error: "AI credits exhausted. Add credits in Settings → Workspace → Usage." }), {
-        status: 402,
+      return new Response(JSON.stringify({ error: "Rate limit, try again shortly.", unavailable: true }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

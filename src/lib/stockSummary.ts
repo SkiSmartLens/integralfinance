@@ -74,6 +74,9 @@ export function fetchStockSummary(symbol: string, mode?: string): Promise<StockS
         }
         throw new Error(msg);
       }
+      if ((data as { unavailable?: boolean; error?: string })?.unavailable) {
+        throw new Error((data as { error?: string }).error || "Rate limit, try again shortly.");
+      }
       const result = data as StockSummaryData;
       mem.set(key, result);
       persist(key, result);

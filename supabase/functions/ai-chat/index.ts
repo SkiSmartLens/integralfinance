@@ -304,8 +304,8 @@ Deno.serve(async (req) => {
       });
     }
     if (aiRes.status === 402) {
-      return new Response(JSON.stringify({ error: "AI credits exhausted." }), {
-        status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return new Response(JSON.stringify({ error: "Too many requests right now. Please try again in a moment." }), {
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     if (!aiRes.ok || !aiRes.body) {
