@@ -359,7 +359,7 @@ Return strict JSON with shape:
     // 2200 truncates 13 fields' worth of output, so keep real headroom per call
     // rather than tune this tightly; the ceiling doesn't cost latency, only the
     // tokens actually generated do, and each split call generates much less.
-    const maxTokens = isBeginner ? 1200 : isPriority ? 3200 : isExtended ? 2800 : 4096;
+    const maxTokens = isBeginner ? 1000 : isPriority ? 2200 : isExtended ? 2000 : 3500;
     const messages = [
       { role: "system", content: (isBeginner
           ? "You explain stocks to first-time investors in friendly plain English."
@@ -384,21 +384,54 @@ Return strict JSON with shape:
 
     // Primary: Groq, then a second Groq model (separate rate-limit bucket),
     // then Lovable AI gateway as the last resort.
+    // Groq's free tier caps tokens-per-minute (prompt + max_tokens count), so
+    // on a short 429 we wait the suggested time and retry once, and on a flaky
+    // JSON-validation 400 we retry once, before falling through.
     const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-    let aiRes = await callProvider(GROQ_URL, GROQ_API_KEY, "openai/gpt-oss-120b");
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const callGroq = async (model: string) => {
+      let r = await callProvider(GROQ_URL, GROQ_API_KEY, model);
+      if (r.status === 429 || r.status === 400) {
+        const body = await r.clone().text();
+        let waitMs = 0;
+        if (r.status === 429) {
+          const m = body.match(/try again in ([\d.]+)s/i);
+          const secs = m ? parseFloat(m[1]) : Number(r.headers.get("retry-after") ?? "0");
+          if (secs > 0 && secs <= 12) waitMs = Math.ceil(secs * 1000) + 250;
+        } else if (/json_validate_failed/.test(body)) {
+          waitMs = 1;
+        }
+        if (waitMs) {
+          console.warn("groq retry", model, r.status, body.slice(0, 200));
+          await sleep(waitMs);
+          r = await callProvider(GROQ_URL, GROQ_API_KEY, model);
+        }
+      }
+      return r;
+    };
 
     // 404/400 = model decommissioned or request rejected by Groq → also fall through.
     const groqUnavailable = (r: Response) =>
       r.status === 429 || r.status === 402 || r.status === 404 || r.status === 400 || r.status >= 500;
 
+    let aiRes = await callGroq("openai/gpt-oss-20b");
     if (groqUnavailable(aiRes)) {
       console.warn("groq primary unavailable", aiRes.status, (await aiRes.clone().text()).slice(0, 500));
-      aiRes = await callProvider(GROQ_URL, GROQ_API_KEY, "openai/gpt-oss-20b");
+      aiRes = await callGroq("openai/gpt-oss-120b");
     }
 
     if (groqUnavailable(aiRes) && LOVABLE_API_KEY) {
       console.warn("groq unavailable", aiRes.status, (await aiRes.clone().text()).slice(0, 300), "— falling back to Lovable AI");
-      aiRes = await callProvider("https://ai.gateway.lovable.dev/v1/chat/completions", LOVABLE_API_KEY, "google/gemini-3.6-flash");
+      const lov = await callProvider("https://ai.gateway.lovable.dev/v1/chat/completions", LOVABLE_API_KEY, "google/gemini-3.6-flash");
+      // Out of Lovable credits → report as a temporary rate limit instead of a hard credits error.
+      if (lov.status === 402 || lov.status === 403) {
+        console.error("lovable fallback unavailable", lov.status);
+        return new Response(JSON.stringify({ error: "Rate limit, try again shortly.", unavailable: true }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      aiRes = lov;
     }
 
 
@@ -406,14 +439,14 @@ Return strict JSON with shape:
     if (aiRes.status === 429) {
       const t = await aiRes.text();
       console.error("ai 429", t);
-      return new Response(JSON.stringify({ error: "Rate limit, try again shortly." }), {
-        status: 429,
+      return new Response(JSON.stringify({ error: "Rate limit, try again shortly.", unavailable: true }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     if (aiRes.status === 402) {
-      return new Response(JSON.stringify({ error: "AI credits exhausted. Add credits in Settings → Workspace → Usage." }), {
-        status: 402,
+      return new Response(JSON.stringify({ error: "Rate limit, try again shortly.", unavailable: true }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
