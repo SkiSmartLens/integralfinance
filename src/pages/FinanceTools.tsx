@@ -6,6 +6,7 @@ import { SEO } from "@/components/SEO";
 import { SiteFooter } from "@/components/SiteFooter";
 import { PiggyBank, Shield, Percent, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getGlossaryEntry } from "@/content/glossary";
 
 const TOOL_NAV = [
   { id: "compound-interest", label: "Compound Interest" },
@@ -73,6 +74,7 @@ function ToolCard({
   title,
   desc,
   formula,
+  related,
   children,
 }: {
   id: string;
@@ -80,8 +82,13 @@ function ToolCard({
   title: string;
   desc: string;
   formula: string;
+  related?: string[];
   children: React.ReactNode;
 }) {
+  const relatedEntries = (related ?? [])
+    .map((slug) => getGlossaryEntry(slug))
+    .filter((e): e is NonNullable<typeof e> => !!e);
+
   return (
     <section id={id} className="bg-card border rounded-lg p-4 md:p-6 scroll-mt-20">
       <div className="flex items-center gap-2 mb-1">
@@ -91,6 +98,20 @@ function ToolCard({
       <p className="text-sm text-muted-foreground mb-4">{desc}</p>
       {children}
       <p className="text-xs text-muted-foreground mt-4 pt-3 border-t">{formula}</p>
+      {relatedEntries.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2">
+          <span className="text-xs text-muted-foreground">Related:</span>
+          {relatedEntries.map((e) => (
+            <Link
+              key={e.slug}
+              to={`/learn/glossary/${e.slug}`}
+              className="text-xs font-semibold text-primary hover:underline"
+            >
+              {e.term}
+            </Link>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -125,6 +146,7 @@ function CompoundInterestCalculator() {
       title="Compound Interest Calculator"
       desc="See how a starting amount plus regular contributions grows over time with compounding."
       formula="Balance compounds monthly at rate ÷ 12, plus your contribution added at the end of every month."
+      related={["index-fund", "diversification"]}
     >
       <div className="grid sm:grid-cols-2 gap-3 mb-4">
         <NumField label="Starting amount" value={principal} onChange={setPrincipal} prefix="$" />
@@ -201,6 +223,7 @@ function PositionSizeCalculator() {
       title="Position Size Calculator"
       desc="Figure out how many shares to buy so a stop-loss hit only costs a fixed % of your account."
       formula="Shares = (account × risk%) ÷ |entry − stop|, rounded down so you never risk more than you set."
+      related={["stop-loss-order", "volatility"]}
     >
       <div className="grid sm:grid-cols-2 gap-3 mb-4">
         <NumField label="Account size" value={account} onChange={setAccount} prefix="$" />
@@ -232,6 +255,7 @@ function DividendYieldCalculator() {
       title="Dividend Yield Calculator"
       desc="Check a stock's dividend yield and what it would pay you per year for a given number of shares."
       formula="Yield = annual dividend per share ÷ share price. Annual income = dividend per share × shares owned."
+      related={["dividends", "blue-chip-stock"]}
     >
       <div className="grid sm:grid-cols-3 gap-3 mb-4">
         <NumField label="Share price" value={price} onChange={setPrice} prefix="$" />
@@ -265,6 +289,7 @@ function ProfitLossCalculator() {
       title="Profit / Loss Calculator"
       desc="Work out the gain or loss on a trade after fees, in both dollars and percent."
       formula="Net P/L = (sell − buy) × shares − fees. Return % = net P/L ÷ total cost."
+      related={["short-selling", "stop-loss-order"]}
     >
       <div className="grid sm:grid-cols-2 gap-3 mb-4">
         <NumField label="Buy price" value={buy} onChange={setBuy} prefix="$" />

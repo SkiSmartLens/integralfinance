@@ -5,20 +5,62 @@ import { Header } from "@/components/Header";
 import { SiteFooter } from "@/components/SiteFooter";
 import { supabase } from "@/integrations/supabase/client";
 import { Sparkles, Languages, BookOpen, ListChecks, Loader2, Copy, Check } from "lucide-react";
+import { GLOSSARY } from "@/content/glossary";
 
-// Inline **bold** only — the only inline markup the model is asked to use.
-function renderInline(text: string, keyPrefix: string): ReactNode[] {
+// One or two searchable keys per glossary entry — "EPS (Earnings Per Share)" becomes both
+// "EPS" and "Earnings Per Share" so either form found in translated text can be linked.
+const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const GLOSSARY_LINKS = GLOSSARY.flatMap((g) => {
+  const paren = g.term.match(/^(.+?)\s*\(([^)]+)\)$/);
+  const keys = paren ? [paren[1].trim(), paren[2].trim()] : [g.term];
+  return keys.map((key) => ({ key, slug: g.slug, term: g.term }));
+}).sort((a, b) => b.key.length - a.key.length); // longest key wins when multiple match at one spot
+const GLOSSARY_TERM_RE = new RegExp(`\\b(${GLOSSARY_LINKS.map((l) => escapeRegExp(l.key)).join("|")})\\b`, "gi");
+
+// Links the first mention of each recognized glossary term to its definition page.
+// `linked` is shared across the whole response so a term is only ever linked once, not on
+// every repeated mention.
+function linkGlossaryTerms(text: string, linked: Set<string>, keyPrefix: string): ReactNode[] {
+  const parts: ReactNode[] = [];
+  let last = 0;
+  let i = 0;
+  for (const m of text.matchAll(GLOSSARY_TERM_RE)) {
+    const hit = GLOSSARY_LINKS.find((l) => l.key.toLowerCase() === m[1].toLowerCase());
+    if (!hit || linked.has(hit.slug)) continue;
+    const index = m.index ?? 0;
+    if (index > last) parts.push(text.slice(last, index));
+    parts.push(
+      <Link
+        key={`${keyPrefix}-g${i++}`}
+        to={`/learn/glossary/${hit.slug}`}
+        title={`What does ${hit.term} mean?`}
+        className="underline decoration-dotted decoration-muted-foreground/70 underline-offset-2 hover:text-primary"
+      >
+        {m[1]}
+      </Link>,
+    );
+    linked.add(hit.slug);
+    last = index + m[0].length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return parts.length ? parts : [text];
+}
+
+// Inline **bold** — the only inline markup the model is asked to use — plus, when `linked` is
+// given, auto-links the first mention of each recognized glossary term (skipped for headings).
+function renderInline(text: string, keyPrefix: string, linked?: Set<string>): ReactNode[] {
   const parts: ReactNode[] = [];
   const re = /\*\*(.+?)\*\*/g;
   let last = 0;
   let i = 0;
   let m: RegExpExecArray | null;
+  const plain = (s: string, k: string) => (linked ? linkGlossaryTerms(s, linked, k) : [s]);
   while ((m = re.exec(text))) {
-    if (m.index > last) parts.push(text.slice(last, m.index));
+    if (m.index > last) parts.push(...plain(text.slice(last, m.index), `${keyPrefix}-t${i}`));
     parts.push(<strong key={`${keyPrefix}-${i++}`}>{m[1]}</strong>);
     last = re.lastIndex;
   }
-  if (last < text.length) parts.push(text.slice(last));
+  if (last < text.length) parts.push(...plain(text.slice(last), `${keyPrefix}-t${i}`));
   return parts;
 }
 
@@ -32,10 +74,12 @@ function renderPlain(text: string): ReactNode[] {
   let para: string[] = [];
   let list: string[] = [];
   let key = 0;
+  // Shared across the whole article so each glossary term links only on its first mention.
+  const linked = new Set<string>();
 
   const flushPara = () => {
     const joined = para.join(" ").trim();
-    if (joined) blocks.push(<p key={`p${key++}`} className="mb-3 last:mb-0">{renderInline(joined, `p${key}`)}</p>);
+    if (joined) blocks.push(<p key={`p${key++}`} className="mb-3 last:mb-0">{renderInline(joined, `p${key}`, linked)}</p>);
     para = [];
   };
   const flushList = () => {
@@ -43,7 +87,7 @@ function renderPlain(text: string): ReactNode[] {
       blocks.push(
         <ul key={`ul${key++}`} className="list-disc pl-5 mb-3 space-y-1">
           {list.map((item, i) => (
-            <li key={i}>{renderInline(item, `li${key}-${i}`)}</li>
+            <li key={i}>{renderInline(item, `li${key}-${i}`, linked)}</li>
           ))}
         </ul>,
       );
