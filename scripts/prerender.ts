@@ -174,6 +174,7 @@ const staticRoutes: Route[] = [
   { path: "/watchlist", title: "Your Stock Watchlist", description: "Track the stocks you care about with live prices and AI explanations of each day's move.", noindex: true },
   { path: "/market-brief", title: "Daily Market Brief — Today in 2 Minutes", description: "A short daily read on what moved the market today and why, written for beginners rather than traders." },
   { path: "/translate", title: "Jargon Translator — Finance Terms in Plain English", description: "Paste any confusing finance sentence and get a plain-English translation instantly. No jargon left behind." },
+  { path: "/tools", title: "Free Finance Calculators — Compound Interest, Position Size & More", description: "Free investing calculators: compound interest, position sizing, dividend yield, and profit/loss — all client-side, no sign-up required." },
   { path: "/start", title: "Start Here — Your First Steps in Investing", description: "Two quick questions and we'll point you at the right first lesson, first chart and first practice trade." },
   { path: "/contact", title: "Contact IntegralStocks", description: "Questions, feedback or partnership ideas? Get in touch with the IntegralStocks team." },
   { path: "/data-sources", title: "Data Sources & Methodology", description: "Where our market data comes from, how often it refreshes, and how our AI explanations are grounded." },
@@ -203,6 +204,7 @@ const STATIC_HEADER = `
     <a href="/learn/glossary">Glossary</a>
     <a href="/blog">Blog</a>
     <a href="/translate">Jargon Translator</a>
+    <a href="/tools">Finance Tools</a>
     <a href="/faq">FAQ</a>
     <a href="/about">About</a>
   </nav>
@@ -332,8 +334,38 @@ function glossaryTermPage(entry: GlossaryEntry) {
   });
 }
 
+const GLOSSARY_CATEGORY_LABEL: Record<GlossaryEntry["category"], string> = {
+  basics: "Basics",
+  trading: "Trading",
+  indicators: "Indicators",
+  fundamentals: "Fundamentals",
+};
+const GLOSSARY_CATEGORY_ORDER: GlossaryEntry["category"][] = ["basics", "trading", "indicators", "fundamentals"];
+
 function glossaryIndexPage() {
   const sorted = [...GLOSSARY].sort((a, b) => a.term.localeCompare(b.term));
+  // No JS here, so there's no interactive tab filter like the live page — just
+  // group everything under its category heading so the structure still matches.
+  const sections = GLOSSARY_CATEGORY_ORDER.map((cat) => {
+    const terms = sorted.filter((g) => g.category === cat);
+    if (!terms.length) return "";
+    return `
+        <section class="mb-8">
+          <h2 class="text-sm font-extrabold uppercase tracking-wider text-muted-foreground mb-3">${GLOSSARY_CATEGORY_LABEL[cat]}</h2>
+          <div class="grid sm:grid-cols-2 gap-3">
+            ${terms
+              .map(
+                (g) =>
+                  `<a href="/learn/glossary/${g.slug}" class="block border rounded-lg p-4 hover:bg-accent transition-colors">
+              <div class="font-bold mb-1">${esc(g.term)}</div>
+              <div class="text-sm text-muted-foreground">${esc(g.short)}</div>
+            </a>`,
+              )
+              .join("\n            ")}
+          </div>
+        </section>`;
+  }).join("");
+
   const bodyHtml = `
     <div class="min-h-screen bg-background flex flex-col">
       ${STATIC_HEADER}
@@ -342,18 +374,8 @@ function glossaryIndexPage() {
           <a href="/learn" class="hover:text-foreground transition-colors">&larr; Learn</a>
         </div>
         <h1 class="text-3xl font-extrabold tracking-tight mb-2">Stock Market Glossary</h1>
-        <p class="text-muted-foreground mb-8">Plain-English definitions for the investing terms you'll run into most often. Tap any term for a full one-page explanation.</p>
-        <div class="grid sm:grid-cols-2 gap-3">
-          ${sorted
-            .map(
-              (g) =>
-                `<a href="/learn/glossary/${g.slug}" class="block border rounded-lg p-4 hover:bg-accent transition-colors">
-            <div class="font-bold mb-1">${esc(g.term)}</div>
-            <div class="text-sm text-muted-foreground">${esc(g.short)}</div>
-          </a>`,
-            )
-            .join("\n          ")}
-        </div>
+        <p class="text-muted-foreground mb-8">${GLOSSARY.length} terms, one page each. Search or filter by category.</p>
+        ${sections}
       </main>
       ${STATIC_FOOTER}
     </div>`;

@@ -166,6 +166,7 @@ export default function LearnHub() {
             { to: "/academy", label: "Academy", desc: "Guided modules" },
             { to: "/learn/glossary", label: "Glossary", desc: "One-page term definitions" },
             { to: "/translate", label: "Translator", desc: "Jargon → plain English" },
+            { to: "/tools", label: "Finance Tools", desc: "Compound interest & more" },
             { to: "/market-brief", label: "Market Brief", desc: "Today's news, explained" },
           ].map((x) => (
             <Link

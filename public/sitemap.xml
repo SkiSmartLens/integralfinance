@@ -91,6 +91,11 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://integralstocks.com/tools</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://integralstocks.com/blog</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
@@ -1282,6 +1287,96 @@
   </url>
   <url>
     <loc>https://integralstocks.com/learn/glossary/fibonacci-retracement</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/stop-loss-order</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/short-selling</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/short-squeeze</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/beta</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/52-week-high-low</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/eps</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/ipo</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/blue-chip-stock</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/volatility</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/index-fund</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/circuit-breaker</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/after-hours-trading</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/stock-split</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/buyback</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/float</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/book-value</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/candlestick-chart</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://integralstocks.com/learn/glossary/liquidity</loc>
     <changefreq>yearly</changefreq>
     <priority>0.6</priority>
   </url>

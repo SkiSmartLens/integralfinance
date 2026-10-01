@@ -11,10 +11,17 @@ export interface GlossaryEntry {
   term: string;
   short: string;
   body: string;
-  category: "basics" | "indicators";
+  category: "basics" | "trading" | "indicators" | "fundamentals";
   learnMore: { label: string; to: string };
   related: string[]; // slugs
 }
+
+export const CATEGORY_LABEL: Record<GlossaryEntry["category"], string> = {
+  basics: "Basics",
+  trading: "Trading",
+  indicators: "Indicators",
+  fundamentals: "Fundamentals",
+};
 
 export const GLOSSARY: GlossaryEntry[] = [
   {
@@ -59,7 +66,7 @@ export const GLOSSARY: GlossaryEntry[] = [
       "Market capitalization = share price × total shares outstanding. It tells you the company's size: small-cap (under $2B), mid-cap ($2B–$10B), large-cap (over $10B), mega-cap (over $200B). Bigger usually means less volatile.",
     category: "basics",
     learnMore: { label: "Stock Market Basics", to: "/learn/basics" },
-    related: ["what-is-a-stock", "pe-ratio"],
+    related: ["what-is-a-stock", "pe-ratio", "eps"],
   },
   {
     slug: "dividends",
@@ -81,7 +88,7 @@ export const GLOSSARY: GlossaryEntry[] = [
       "Price-to-earnings ratio = share price ÷ earnings per share. A P/E of 20 means investors pay $20 today for every $1 of yearly profit. Higher P/E often means investors expect strong future growth — but it can also signal overvaluation.",
     category: "basics",
     learnMore: { label: "Stock Market Basics", to: "/learn/basics" },
-    related: ["market-cap", "dividends"],
+    related: ["market-cap", "dividends", "eps"],
   },
   {
     slug: "bull-vs-bear-market",
@@ -258,6 +265,204 @@ export const GLOSSARY: GlossaryEntry[] = [
     category: "indicators",
     learnMore: { label: "Stock Indicators", to: "/learn/indicators" },
     related: ["support-resistance"],
+  },
+  {
+    slug: "stop-loss-order",
+    term: "Stop-Loss Order",
+    short:
+      "A stop-loss order automatically sells a stock once it drops to a price you set, capping how much you can lose on a trade.",
+    body:
+      "A stop-loss order automatically sells a stock once it falls to a price you choose, capping your downside without you having to watch the screen all day. A $50 stock with a stop at $45 sells on its own if it falls that far — your loss is capped near 10%, fees and slippage aside.",
+    category: "trading",
+    learnMore: { label: "Advanced Strategies", to: "/learn/advanced" },
+    related: ["short-selling", "atr"],
+  },
+  {
+    slug: "short-selling",
+    term: "Short Selling",
+    short:
+      "Short selling means borrowing shares to sell now, hoping to buy them back later at a lower price and pocket the difference — it profits when a stock falls.",
+    body:
+      "Short selling flips the usual order: you borrow shares and sell them first, hoping to buy them back later at a lower price and return them, pocketing the difference. It profits when a stock falls, but losses are theoretically unlimited since a stock's price can keep rising.",
+    category: "trading",
+    learnMore: { label: "Advanced Strategies", to: "/learn/advanced" },
+    related: ["short-squeeze", "stop-loss-order"],
+  },
+  {
+    slug: "short-squeeze",
+    term: "Short Squeeze",
+    short:
+      "A short squeeze happens when a heavily shorted stock rises sharply, forcing short sellers to buy shares to cover their position — which pushes the price up even further.",
+    body:
+      "When a lot of investors have shorted a stock and it starts rising instead of falling, short sellers rush to buy shares back to limit their losses (called 'covering'). That buying pressure pushes the price up even more, which forces more shorts to cover — a feedback loop that can send a stock sharply higher in days.",
+    category: "trading",
+    learnMore: { label: "Advanced Strategies", to: "/learn/advanced" },
+    related: ["short-selling", "float"],
+  },
+  {
+    slug: "beta",
+    term: "Beta",
+    short:
+      "Beta measures how much a stock tends to move compared to the overall market — a beta of 1.5 means it typically moves 50% more than the market, up or down.",
+    body:
+      "Beta measures a stock's volatility relative to the market (usually the S&P 500, set at 1.0). A beta of 1.5 means the stock typically swings 50% more than the market in both directions; a beta of 0.5 means it's calmer. High-beta stocks amplify both gains and losses.",
+    category: "fundamentals",
+    learnMore: { label: "Advanced Strategies", to: "/learn/advanced" },
+    related: ["volatility", "atr"],
+  },
+  {
+    slug: "52-week-high-low",
+    term: "52-Week High/Low",
+    short:
+      "A stock's 52-week high and low are the highest and lowest prices it has traded at over the past year — quick reference points for where the current price stands.",
+    body:
+      "The 52-week high and low are the highest and lowest prices a stock has hit in the trailing year. Traders use them as quick reference points — a stock near its 52-week high shows strength, while one near its low may be out of favor or genuinely in trouble.",
+    category: "trading",
+    learnMore: { label: "Reading the Market", to: "/learn/reading" },
+    related: ["support-resistance", "volatility"],
+  },
+  {
+    slug: "eps",
+    term: "EPS (Earnings Per Share)",
+    short:
+      "EPS is a company's profit divided by its number of outstanding shares — it's the per-share profit figure that feeds directly into the P/E ratio.",
+    body:
+      "Earnings per share = net income ÷ shares outstanding. It's the per-share slice of a company's profit, and it's the denominator in the P/E ratio (price ÷ EPS). Rising EPS over time is one of the clearest signs a company is actually growing, not just its stock price.",
+    category: "fundamentals",
+    learnMore: { label: "Advanced Strategies", to: "/learn/advanced" },
+    related: ["pe-ratio", "market-cap"],
+  },
+  {
+    slug: "ipo",
+    term: "IPO (Initial Public Offering)",
+    short:
+      "An IPO is the first time a private company sells shares to the public, listing on an exchange so anyone can buy in.",
+    body:
+      "An IPO (Initial Public Offering) is how a private company 'goes public' — it sells shares to public investors for the first time and lists on an exchange like the NYSE or NASDAQ. IPO stocks can be volatile early on since there's little trading history yet to anchor the price.",
+    category: "basics",
+    learnMore: { label: "Stock Market Basics", to: "/learn/basics" },
+    related: ["what-is-a-stock", "ticker"],
+  },
+  {
+    slug: "blue-chip-stock",
+    term: "Blue-Chip Stock",
+    short:
+      "A blue-chip stock is shares in a large, well-established, financially stable company — think Apple, Coca-Cola, or Johnson & Johnson.",
+    body:
+      "Blue-chip stocks belong to large, well-established, financially sound companies with a long track record — think Apple, Coca-Cola, or Johnson & Johnson. They're generally less volatile than smaller companies and often pay steady dividends, though they rarely grow as fast as newer, smaller companies.",
+    category: "basics",
+    learnMore: { label: "Stock Market Basics", to: "/learn/basics" },
+    related: ["market-cap", "dividends"],
+  },
+  {
+    slug: "volatility",
+    term: "Volatility",
+    short:
+      "Volatility measures how much and how fast a stock's price swings up and down — high volatility means bigger, faster moves in both directions.",
+    body:
+      "Volatility measures how much a stock's price swings over time. A highly volatile stock might move 5% in a single day; a low-volatility stock might barely move 0.5%. Volatility isn't inherently bad — it just means bigger potential gains and bigger potential losses.",
+    category: "fundamentals",
+    learnMore: { label: "Advanced Strategies", to: "/learn/advanced" },
+    related: ["beta", "atr", "bollinger-bands"],
+  },
+  {
+    slug: "index-fund",
+    term: "Index Fund",
+    short:
+      "An index fund is a fund built to track a market index like the S&P 500 exactly, rather than trying to beat it — low cost, broad diversification, no stock-picking.",
+    body:
+      "An index fund simply holds the same stocks as a market index (like the S&P 500) in the same proportions, aiming to match its return rather than beat it. Because there's no active stock-picking, fees are usually very low — a big reason index funds are a popular long-term default.",
+    category: "basics",
+    learnMore: { label: "Stock Market Basics", to: "/learn/basics" },
+    related: ["what-is-an-etf", "diversification"],
+  },
+  {
+    slug: "circuit-breaker",
+    term: "Circuit Breaker",
+    short:
+      "A circuit breaker is an automatic, exchange-wide trading halt triggered when the market falls too far too fast, giving traders a pause to react.",
+    body:
+      "Exchanges use circuit breakers to automatically halt trading market-wide when prices fall sharply in a short time — 7%, 13%, and 20% drops in the S&P 500 each trigger a different level of halt. They exist to stop panic-driven crashes from spiraling further.",
+    category: "trading",
+    learnMore: { label: "Reading the Market", to: "/learn/reading" },
+    related: ["bull-vs-bear-market", "volatility"],
+  },
+  {
+    slug: "after-hours-trading",
+    term: "Pre-Market & After-Hours Trading",
+    short:
+      "Pre-market and after-hours trading happen outside the normal 9:30am–4:00pm ET session — prices can move sharply on lower volume before most investors can react.",
+    body:
+      "Regular trading runs 9:30am–4:00pm ET, but some brokers allow pre-market (as early as 4am) and after-hours (until 8pm) trading too. Volume is much thinner in these windows, so prices can swing harder on the same news — earnings are usually released right before or after the regular session for this reason.",
+    category: "trading",
+    learnMore: { label: "Reading the Market", to: "/learn/reading" },
+    related: ["ticker", "volume"],
+  },
+  {
+    slug: "stock-split",
+    term: "Stock Split",
+    short:
+      "A stock split divides each existing share into multiple shares, lowering the price per share without changing what the company is actually worth.",
+    body:
+      "In a 2-for-1 stock split, every share you own becomes two, and the price per share is cut in half — your total investment value doesn't change. Companies split shares mainly to make the price look more accessible to smaller investors; it has no effect on the company's underlying value.",
+    category: "basics",
+    learnMore: { label: "Stock Market Basics", to: "/learn/basics" },
+    related: ["what-is-a-stock", "market-cap"],
+  },
+  {
+    slug: "buyback",
+    term: "Stock Buyback",
+    short:
+      "A buyback is when a company repurchases its own shares from the market, shrinking the share count and boosting earnings per share for everyone who stays in.",
+    body:
+      "A buyback (share repurchase) is a company using its own cash to buy back its shares from the market. With fewer shares outstanding, each remaining share represents a slightly bigger ownership stake and often a higher EPS — some see it as a sign of confidence, others as a lack of better investment ideas.",
+    category: "fundamentals",
+    learnMore: { label: "Advanced Strategies", to: "/learn/advanced" },
+    related: ["eps", "dividends"],
+  },
+  {
+    slug: "float",
+    term: "Float (Shares Outstanding)",
+    short:
+      "A stock's float is the number of shares actually available for public trading, excluding shares held by insiders or locked up long-term.",
+    body:
+      "Float is the portion of a company's total shares that's actually free to trade on the open market — it excludes shares held by insiders, founders, or governments that rarely change hands. A 'low-float' stock has relatively few tradable shares, which can make its price swing much harder on the same amount of buying or selling.",
+    category: "trading",
+    learnMore: { label: "Reading the Market", to: "/learn/reading" },
+    related: ["volume", "short-squeeze"],
+  },
+  {
+    slug: "book-value",
+    term: "Book Value",
+    short:
+      "Book value is what a company would theoretically be worth if it sold all its assets and paid off all its debts — its assets minus its liabilities.",
+    body:
+      "Book value = total assets − total liabilities, essentially a company's net worth on paper. Dividing by shares outstanding gives book value per share, which some investors compare to the stock price (price-to-book ratio) to gauge whether a stock is cheap relative to its hard assets.",
+    category: "fundamentals",
+    learnMore: { label: "Advanced Strategies", to: "/learn/advanced" },
+    related: ["eps", "market-cap"],
+  },
+  {
+    slug: "candlestick-chart",
+    term: "Candlestick Chart",
+    short:
+      "A candlestick chart shows a stock's open, high, low, and close for each period as a single 'candle,' making price patterns easier to read at a glance than a plain line chart.",
+    body:
+      "Each candlestick shows four prices for a period: open, high, low, and close. The 'body' is the gap between open and close (green/white if it closed higher, red/black if lower); the thin 'wicks' show the high and low. Stacking candles side by side reveals patterns traders use to read momentum and reversals.",
+    category: "indicators",
+    learnMore: { label: "Reading the Market", to: "/learn/reading" },
+    related: ["support-resistance", "volume"],
+  },
+  {
+    slug: "liquidity",
+    term: "Liquidity",
+    short:
+      "Liquidity is how easily a stock can be bought or sold without moving its price — highly liquid stocks trade often with tight bid-ask spreads.",
+    body:
+      "A liquid stock has lots of buyers and sellers at any given moment, so you can trade in or out at a fair price without moving the market yourself. Illiquid stocks — often small-caps with low volume — can have wide bid-ask spreads and big price jumps on even modest-sized orders.",
+    category: "trading",
+    learnMore: { label: "Reading the Market", to: "/learn/reading" },
+    related: ["bid-ask-spread", "volume"],
   },
 ];
 

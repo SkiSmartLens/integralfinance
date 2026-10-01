@@ -68,6 +68,7 @@ const StockTicker = lazyWithReload(() => import("./pages/StockTicker.tsx"));
 const StartHere = lazyWithReload(() => import("./pages/StartHere.tsx"));
 const MarketBrief = lazyWithReload(() => import("./pages/MarketBrief.tsx"));
 const JargonTranslator = lazyWithReload(() => import("./pages/JargonTranslator.tsx"));
+const FinanceTools = lazyWithReload(() => import("./pages/FinanceTools.tsx"));
 const BlogIndex = lazyWithReload(() => import("./pages/BlogIndex.tsx"));
 const BlogPost = lazyWithReload(() => import("./pages/BlogPost.tsx"));
 const OAuthBridge = lazyWithReload(() => import("./pages/OAuthBridge.tsx"));
@@ -101,6 +102,7 @@ const App = () => (
             <Route path="/academy/:id" element={<AcademyModule />} />
             <Route path="/market-brief" element={<MarketBrief />} />
             <Route path="/translate" element={<JargonTranslator />} />
+            <Route path="/tools" element={<FinanceTools />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/sim" element={<Sim />} />
             <Route path="/sim/lobby" element={<GameLobby />} />
