@@ -1,10 +1,18 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import { Header } from "@/components/Header";
 import { SEO } from "@/components/SEO";
 import { SiteFooter } from "@/components/SiteFooter";
 import { PiggyBank, Shield, Percent, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const TOOL_NAV = [
+  { id: "compound-interest", label: "Compound Interest" },
+  { id: "position-size", label: "Position Size" },
+  { id: "dividend-yield", label: "Dividend Yield" },
+  { id: "profit-loss", label: "Profit / Loss" },
+];
 
 const money = (n: number) =>
   isFinite(n) ? n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }) : "—";
@@ -60,24 +68,29 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: "up
 }
 
 function ToolCard({
+  id,
   icon: Icon,
   title,
   desc,
+  formula,
   children,
 }: {
+  id: string;
   icon: typeof PiggyBank;
   title: string;
   desc: string;
+  formula: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="bg-card border rounded-lg p-4 md:p-6">
+    <section id={id} className="bg-card border rounded-lg p-4 md:p-6 scroll-mt-20">
       <div className="flex items-center gap-2 mb-1">
         <Icon className="w-4 h-4 text-primary" />
         <h2 className="font-bold">{title}</h2>
       </div>
       <p className="text-sm text-muted-foreground mb-4">{desc}</p>
       {children}
+      <p className="text-xs text-muted-foreground mt-4 pt-3 border-t">{formula}</p>
     </section>
   );
 }
@@ -88,18 +101,30 @@ function CompoundInterestCalculator() {
   const [rate, setRate] = useState(8);
   const [years, setYears] = useState(20);
 
-  const months = Math.max(0, Math.round(years * 12));
+  const yearsInt = Math.max(0, Math.min(60, Math.round(years)));
   const monthlyRate = rate / 100 / 12;
-  let balance = principal;
-  for (let i = 0; i < months; i++) balance = balance * (1 + monthlyRate) + monthly;
-  const contributed = principal + monthly * months;
+
+  const series = useMemo(() => {
+    const points = [{ year: 0, balance: principal }];
+    let balance = principal;
+    for (let y = 1; y <= yearsInt; y++) {
+      for (let m = 0; m < 12; m++) balance = balance * (1 + monthlyRate) + monthly;
+      points.push({ year: y, balance: Math.round(balance) });
+    }
+    return points;
+  }, [principal, monthly, monthlyRate, yearsInt]);
+
+  const balance = series[series.length - 1].balance;
+  const contributed = principal + monthly * yearsInt * 12;
   const interest = balance - contributed;
 
   return (
     <ToolCard
+      id="compound-interest"
       icon={PiggyBank}
       title="Compound Interest Calculator"
       desc="See how a starting amount plus regular contributions grows over time with compounding."
+      formula="Balance compounds monthly at rate ÷ 12, plus your contribution added at the end of every month."
     >
       <div className="grid sm:grid-cols-2 gap-3 mb-4">
         <NumField label="Starting amount" value={principal} onChange={setPrincipal} prefix="$" />
@@ -107,6 +132,48 @@ function CompoundInterestCalculator() {
         <NumField label="Annual return" value={rate} onChange={setRate} suffix="%" />
         <NumField label="Years" value={years} onChange={setYears} suffix="yrs" />
       </div>
+      {yearsInt > 0 && (
+        <div className="h-36 w-full mb-4">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={series} margin={{ top: 4, right: 4, left: 4, bottom: 0 }}>
+              <defs>
+                <linearGradient id="compound-growth" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <XAxis
+                dataKey="year"
+                tickFormatter={(v) => `Yr ${v}`}
+                tick={{ fontSize: 11 }}
+                tickLine={false}
+                axisLine={false}
+                minTickGap={30}
+              />
+              <Tooltip
+                cursor={{ stroke: "hsl(var(--muted-foreground))", strokeWidth: 1, strokeDasharray: "3 3" }}
+                contentStyle={{
+                  borderRadius: 10,
+                  border: "1px solid hsl(var(--border))",
+                  background: "hsl(var(--card))",
+                  fontSize: 12,
+                }}
+                labelFormatter={(v) => `Year ${v}`}
+                formatter={(v: number) => [money(v), "Balance"]}
+              />
+              <Area
+                type="monotone"
+                dataKey="balance"
+                stroke="hsl(var(--primary))"
+                strokeWidth={2}
+                fill="url(#compound-growth)"
+                isAnimationActive={false}
+                dot={false}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-3">
         <Stat label="Future value" value={money(balance)} tone="up" />
         <Stat label="Total contributed" value={money(contributed)} />
@@ -129,9 +196,11 @@ function PositionSizeCalculator() {
 
   return (
     <ToolCard
+      id="position-size"
       icon={Shield}
       title="Position Size Calculator"
       desc="Figure out how many shares to buy so a stop-loss hit only costs a fixed % of your account."
+      formula="Shares = (account × risk%) ÷ |entry − stop|, rounded down so you never risk more than you set."
     >
       <div className="grid sm:grid-cols-2 gap-3 mb-4">
         <NumField label="Account size" value={account} onChange={setAccount} prefix="$" />
@@ -158,9 +227,11 @@ function DividendYieldCalculator() {
 
   return (
     <ToolCard
+      id="dividend-yield"
       icon={Percent}
       title="Dividend Yield Calculator"
       desc="Check a stock's dividend yield and what it would pay you per year for a given number of shares."
+      formula="Yield = annual dividend per share ÷ share price. Annual income = dividend per share × shares owned."
     >
       <div className="grid sm:grid-cols-3 gap-3 mb-4">
         <NumField label="Share price" value={price} onChange={setPrice} prefix="$" />
@@ -189,9 +260,11 @@ function ProfitLossCalculator() {
 
   return (
     <ToolCard
+      id="profit-loss"
       icon={TrendingUp}
       title="Profit / Loss Calculator"
       desc="Work out the gain or loss on a trade after fees, in both dollars and percent."
+      formula="Net P/L = (sell − buy) × shares − fees. Return % = net P/L ÷ total cost."
     >
       <div className="grid sm:grid-cols-2 gap-3 mb-4">
         <NumField label="Buy price" value={buy} onChange={setBuy} prefix="$" />
@@ -221,7 +294,19 @@ const FinanceTools = () => (
         <Link to="/learn" className="hover:text-foreground transition-colors">← Learn</Link>
       </div>
       <h1 className="text-3xl font-extrabold tracking-tight mb-2">Finance Tools</h1>
-      <p className="text-muted-foreground mb-8">Four calculators, all running in your browser — nothing saved, nothing sent anywhere.</p>
+      <p className="text-muted-foreground mb-4">Four calculators, all running in your browser — nothing saved, nothing sent anywhere.</p>
+
+      <div className="flex flex-wrap gap-2 mb-8">
+        {TOOL_NAV.map((t) => (
+          <a
+            key={t.id}
+            href={`#${t.id}`}
+            className="px-3 py-1.5 rounded-lg text-sm font-semibold border bg-card text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
+          >
+            {t.label}
+          </a>
+        ))}
+      </div>
 
       <div className="space-y-4">
         <CompoundInterestCalculator />

@@ -1,10 +1,85 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { SEO } from "@/components/SEO";
 import { Header } from "@/components/Header";
 import { SiteFooter } from "@/components/SiteFooter";
 import { supabase } from "@/integrations/supabase/client";
-import { Sparkles, Languages, BookOpen, ListChecks, Loader2 } from "lucide-react";
+import { Sparkles, Languages, BookOpen, ListChecks, Loader2, Copy, Check } from "lucide-react";
+
+// Inline **bold** only — the only inline markup the model is asked to use.
+function renderInline(text: string, keyPrefix: string): ReactNode[] {
+  const parts: ReactNode[] = [];
+  const re = /\*\*(.+?)\*\*/g;
+  let last = 0;
+  let i = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text))) {
+    if (m.index > last) parts.push(text.slice(last, m.index));
+    parts.push(<strong key={`${keyPrefix}-${i++}`}>{m[1]}</strong>);
+    last = re.lastIndex;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return parts;
+}
+
+// The model is told markdown headings/bullets are allowed, but the response is streamed as
+// plain text — without this, a literal "**" or "- " shows up in the rendered output instead
+// of being formatted. Re-run on the full accumulated text each render, so it self-corrects
+// once a markdown marker that was mid-stream (e.g. an unclosed "**") completes.
+function renderPlain(text: string): ReactNode[] {
+  const lines = text.split("\n");
+  const blocks: ReactNode[] = [];
+  let para: string[] = [];
+  let list: string[] = [];
+  let key = 0;
+
+  const flushPara = () => {
+    const joined = para.join(" ").trim();
+    if (joined) blocks.push(<p key={`p${key++}`} className="mb-3 last:mb-0">{renderInline(joined, `p${key}`)}</p>);
+    para = [];
+  };
+  const flushList = () => {
+    if (list.length) {
+      blocks.push(
+        <ul key={`ul${key++}`} className="list-disc pl-5 mb-3 space-y-1">
+          {list.map((item, i) => (
+            <li key={i}>{renderInline(item, `li${key}-${i}`)}</li>
+          ))}
+        </ul>,
+      );
+    }
+    list = [];
+  };
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    // The model mostly uses a whole-line "**Section Title**" instead of a real "#" heading —
+    // treat a line that's bold start-to-finish as a heading too, not inline text.
+    const headingText = line.match(/^#{1,6}\s+(.*)$/)?.[1] ?? line.match(/^\*\*([^*]+)\*\*$/)?.[1];
+    const bullet = line.match(/^[-*]\s+(.*)$/);
+    if (!line) {
+      flushPara();
+      flushList();
+    } else if (headingText != null) {
+      flushPara();
+      flushList();
+      blocks.push(
+        <h3 key={`h${key++}`} className="font-bold text-base mt-4 mb-2 first:mt-0">
+          {renderInline(headingText, `h${key}`)}
+        </h3>,
+      );
+    } else if (bullet) {
+      flushPara();
+      list.push(bullet[1]);
+    } else {
+      flushList();
+      para.push(line);
+    }
+  }
+  flushPara();
+  flushList();
+  return blocks;
+}
 
 const env = import.meta.env as Record<string, string | undefined>;
 const normalizeUrl = (value?: string) => {
@@ -72,6 +147,7 @@ const JargonTranslator = () => {
   const [loading, setLoading] = useState(false);
   const [streaming, setStreaming] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const run = useCallback(async (body: { text?: string; url?: string; uuid?: string }) => {
     setLoading(true);
@@ -243,15 +319,33 @@ const JargonTranslator = () => {
           <section className="mt-6 space-y-4">
             {result.plain && (
               <article className="bg-card border rounded-lg p-4 md:p-6">
-                <h2 className="flex items-center gap-2 font-bold mb-3"><Languages className="w-4 h-4 text-primary" /> In plain English</h2>
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <h2 className="flex items-center gap-2 font-bold"><Languages className="w-4 h-4 text-primary" /> In plain English</h2>
+                  {!streaming && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(result.plain);
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 1500);
+                        } catch { /* clipboard unavailable */ }
+                      }}
+                      className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copied ? "Copied" : "Copy"}
+                    </button>
+                  )}
+                </div>
                 {result.partial && (
                   <p className="text-xs bg-muted/60 border rounded-md p-2.5 mb-3 text-muted-foreground">
                     Only the headline and summary were available. The full article is behind the publisher’s paywall, so
                     open the source link for the whole story.
                   </p>
                 )}
-                <div className="prose prose-sm max-w-none whitespace-pre-wrap text-sm leading-relaxed">
-                  {result.plain}
+                <div className="max-w-none text-sm leading-relaxed">
+                  {renderPlain(result.plain)}
                   {streaming && <span className="inline-block w-1.5 h-4 ml-0.5 bg-primary/70 animate-pulse align-middle" />}
                 </div>
                 {result.sourceUrl && (
