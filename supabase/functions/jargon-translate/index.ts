@@ -249,7 +249,10 @@ async function rawFetch(target: string, ua = BROWSER_UA, reasons?: FailReason[])
       }
       if (!r.ok) {
         console.error("rawFetch: non-ok status", current, r.status);
-        reasons?.push(r.status === 403 || r.status === 401 || r.status === 429 || r.status === 451 ? "blocked" : "unreachable");
+        // 402 shows up here as publishers' answer to AI/bot scraping (e.g. Cloudflare's
+        // pay-per-crawl, or People Inc.'s sites like Investopedia) — a deliberate "pay or go
+        // away" response to automated readers, same intent as 401/403/429/451.
+        reasons?.push(r.status === 403 || r.status === 401 || r.status === 429 || r.status === 451 || r.status === 402 ? "blocked" : "unreachable");
         return null;
       }
       return await r.text();
@@ -337,13 +340,16 @@ function proxies(u: string): string[] {
   return [
     `https://r.jina.ai/${u}`,
     `https://r.jina.ai/http://${noScheme}`,
-    `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(u)}`,
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
     // Heavily-trafficked news domains (Yahoo Finance in particular) get the free reader
     // proxies above rate-limited or domain-blocked from shared abuse by other anonymous
     // users. The Wayback Machine fetches with its own crawler infra, which those sites don't
     // block, and often has a same-day snapshot of syndicated news articles.
     `https://web.archive.org/web/2/${u}`,
+    // codetabs.com and allorigins.win used to live here too, but both have gone dark (codetabs
+    // answers every request with its own 503; allorigins hangs until the connection times out) —
+    // confirmed against totally unrelated URLs, so it's the services themselves, not the target
+    // sites. Racing two guaranteed-dead candidates only added up to ~12s of pure latency to every
+    // single read, so they're gone rather than left in "just in case."
   ];
 }
 
