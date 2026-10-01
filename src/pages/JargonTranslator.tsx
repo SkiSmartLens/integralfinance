@@ -166,14 +166,14 @@ function parseChunk(acc: string): Omit<Result, "sourceUrl" | "partial" | "error"
         .flatMap((line) => {
           const idx = line.indexOf(":");
           if (idx < 0) return [];
-          return [{ term: line.slice(0, idx).replace(/^[-*]\s*/, "").trim(), meaning: line.slice(idx + 1).trim() }];
+          return [{ term: line.slice(0, idx).replace(/^[-*]\s+/, "").trim(), meaning: line.slice(idx + 1).trim() }];
         })
     : [];
 
   const keyTakeaways = takeawaysRaw
     ? takeawaysRaw
         .split("\n")
-        .map((l) => l.replace(/^[-*]\s*/, "").trim())
+        .map((l) => l.replace(/^[-*]\s+/, "").trim())
         .filter(Boolean)
     : [];
 
@@ -406,7 +406,7 @@ const JargonTranslator = () => {
               <div className="bg-card border rounded-lg p-4">
                 <h2 className="flex items-center gap-2 font-bold mb-2"><ListChecks className="w-4 h-4 text-primary" /> Key takeaways</h2>
                 <ul className="text-sm space-y-1.5 list-disc pl-5">
-                  {result.keyTakeaways.map((k, i) => <li key={i}>{k}</li>)}
+                  {result.keyTakeaways.map((k, i) => <li key={i}>{renderInline(k, `tk${i}`)}</li>)}
                 </ul>
               </div>
             )}
@@ -416,8 +416,8 @@ const JargonTranslator = () => {
                 <dl className="text-sm space-y-2">
                   {result.glossary.map((g, i) => (
                     <div key={i}>
-                      <dt className="font-semibold">{g.term}</dt>
-                      <dd className="text-muted-foreground">{g.meaning}</dd>
+                      <dt className="font-semibold">{renderInline(g.term, `gt${i}`)}</dt>
+                      <dd className="text-muted-foreground">{renderInline(g.meaning, `gm${i}`)}</dd>
                     </div>
                   ))}
                 </dl>
