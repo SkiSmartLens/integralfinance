@@ -58,8 +58,6 @@ export type Database = {
           is_public: boolean
           join_code: string
           leverage: number
-          max_position_pct: number | null
-          min_price: number | null
           name: string
           starting_cash: number
         }
@@ -74,8 +72,6 @@ export type Database = {
           is_public?: boolean
           join_code?: string
           leverage?: number
-          max_position_pct?: number | null
-          min_price?: number | null
           name: string
           starting_cash?: number
         }
@@ -90,8 +86,6 @@ export type Database = {
           is_public?: boolean
           join_code?: string
           leverage?: number
-          max_position_pct?: number | null
-          min_price?: number | null
           name?: string
           starting_cash?: number
         }
