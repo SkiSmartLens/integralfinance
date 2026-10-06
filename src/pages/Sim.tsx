@@ -15,7 +15,7 @@ import { WhyItMoved } from "@/components/sim/WhyItMoved";
 import { SimCopilot } from "@/components/sim/SimCopilot";
 import { SafetyMeter } from "@/components/sim/SafetyMeter";
 import { Leaderboard } from "@/components/sim/Leaderboard";
-import { ArrowLeft, LogOut, RefreshCw, Trophy, Copy, Check, Share2, LogIn, Users, Lock, Globe, DoorOpen, HelpCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, LogOut, RefreshCw, Trophy, Copy, Check, Share2, LogIn, Users, Lock, Globe, DoorOpen, HelpCircle, Loader2, UserCog } from "lucide-react";
 import { SimWalkthrough, hasSeenSimWalkthrough } from "@/components/sim/SimWalkthrough";
 import { PostTradeCard } from "@/components/sim/PostTradeCard";
 import { PortfolioBar } from "@/components/sim/PortfolioBar";
@@ -63,6 +63,7 @@ const Sim = () => {
   const [placing, setPlacing] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [walkOpen, setWalkOpen] = useState(false);
+  const [displayName, setDisplayName] = useState<string | null>(null);
   const [lastTrade, setLastTrade] = useState<
     | { symbol: string; side: "buy" | "sell" | "short" | "cover"; shares: number; price?: number }
     | null
@@ -88,6 +89,29 @@ const Sim = () => {
     });
     return () => subscription.unsubscribe();
   }, [nav]);
+
+  // ---- Your own display name (shown on leaderboards) ----
+  useEffect(() => {
+    if (!userId) return;
+    supabase
+      .from("profiles")
+      .select("display_name")
+      .eq("user_id", userId)
+      .maybeSingle()
+      .then(({ data }) => setDisplayName((data as any)?.display_name ?? null));
+  }, [userId]);
+
+  const editDisplayName = async () => {
+    if (!userId) return;
+    const next = prompt("Your display name (shown on leaderboards)", displayName ?? "");
+    if (next == null) return;
+    const trimmed = next.trim().slice(0, 40);
+    if (!trimmed) return;
+    const { error } = await supabase.from("profiles").update({ display_name: trimmed }).eq("user_id", userId);
+    if (error) return toast({ title: "Couldn't update name", description: error.message, variant: "destructive" });
+    setDisplayName(trimmed);
+    toast({ title: "Name updated" });
+  };
 
   // ---- Load active game (no auto-create) ----
   useEffect(() => {
@@ -310,6 +334,14 @@ const Sim = () => {
               title="Refresh"
             >
               <RefreshCw className="w-4 h-4" />
+            </button>
+            <button
+              onClick={editDisplayName}
+              className="h-9 w-9 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors flex items-center justify-center"
+              title="Edit your display name"
+              aria-label="Edit your display name"
+            >
+              <UserCog className="w-4 h-4" />
             </button>
             <button
               onClick={() => setWalkOpen(true)}
