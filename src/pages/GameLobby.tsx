@@ -35,6 +35,8 @@ interface Game {
   duration_days: number | null;
   created_by: string;
   ends_at: string | null;
+  min_price: number | null;
+  max_position_pct: number | null;
 }
 interface Member {
   id: string;
@@ -393,6 +395,8 @@ const GameLobby = () => {
                     {g.allow_short && <span>· Shorting on</span>}
                     {Number(g.leverage) > 1 && <span>· {Number(g.leverage)}× leverage</span>}
                     {g.duration_days && <span>· {g.duration_days}-day</span>}
+                    {g.min_price != null && <span>· Min ${Number(g.min_price)}/share</span>}
+                    {g.max_position_pct != null && <span>· Max {Number(g.max_position_pct)}% per stock</span>}
                   </div>
                   <button
                     onClick={() => joinPublic(g)}

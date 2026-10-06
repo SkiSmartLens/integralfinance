@@ -5,7 +5,7 @@ import { Header } from "@/components/Header";
 import { SEO } from "@/components/SEO";
 import { SiteFooter } from "@/components/SiteFooter";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Loader2, Globe, Lock, TrendingDown, Zap, Clock, Wallet } from "lucide-react";
+import { ArrowLeft, Loader2, Globe, Lock, TrendingDown, Zap, Clock, Wallet, ShieldAlert, PieChart } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const DURATIONS = [
@@ -17,6 +17,18 @@ const DURATIONS = [
 
 const LEVERAGES = [1, 2, 3, 5];
 const CASH_OPTIONS = [10_000, 100_000, 1_000_000];
+const MIN_PRICES = [
+  { label: "None", value: null },
+  { label: "$1", value: 1 },
+  { label: "$5", value: 5 },
+  { label: "$10", value: 10 },
+];
+const MAX_POSITIONS = [
+  { label: "None", value: null },
+  { label: "25%", value: 25 },
+  { label: "50%", value: 50 },
+  { label: "100%", value: 100 },
+];
 
 const CreateGame = () => {
   const nav = useNavigate();
@@ -33,6 +45,10 @@ const CreateGame = () => {
   const [durationDays, setDurationDays] = useState<number | null>(isFriends ? 30 : null);
   const [customDuration, setCustomDuration] = useState(false);
   const [commission, setCommission] = useState(0);
+  const [minPrice, setMinPrice] = useState<number | null>(null);
+  const [customMinPrice, setCustomMinPrice] = useState(false);
+  const [maxPositionPct, setMaxPositionPct] = useState<number | null>(null);
+  const [customMaxPosition, setCustomMaxPosition] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const create = async () => {
@@ -57,6 +73,8 @@ const CreateGame = () => {
         duration_days: durationDays,
         ends_at: endsAt,
         is_public: isFriends ? isPublic : false,
+        min_price: minPrice,
+        max_position_pct: maxPositionPct,
         created_by: uid,
       } as any)
       .select()
@@ -237,6 +255,76 @@ const CreateGame = () => {
             </p>
           </Field>
 
+          {/* Minimum stock price */}
+          <Field label="Minimum stock price" icon={<ShieldAlert className="w-4 h-4" />}>
+            <div className="grid grid-cols-5 gap-2">
+              {MIN_PRICES.map((m) => (
+                <Toggle
+                  key={m.label}
+                  active={!customMinPrice && minPrice === m.value}
+                  onClick={() => { setCustomMinPrice(false); setMinPrice(m.value); }}
+                  title={m.label}
+                />
+              ))}
+              <Toggle
+                active={customMinPrice}
+                onClick={() => { setCustomMinPrice(true); setMinPrice(minPrice ?? 15); }}
+                title="Custom"
+              />
+            </div>
+            {customMinPrice && (
+              <div className="relative mt-2">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-muted-foreground">$</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={minPrice ?? ""}
+                  onChange={(e) => setMinPrice(Math.max(0, Number(e.target.value) || 0))}
+                  placeholder="Minimum price per share"
+                  className="w-full h-12 pl-8 pr-4 rounded-2xl bg-muted/60 border-2 border-transparent focus:border-primary/50 outline-none font-bold tabular-nums"
+                />
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground mt-2">
+              Blocks new buys and shorts below this price — classic anti-penny-stock rule. Doesn't stop selling out of a position.
+            </p>
+          </Field>
+
+          {/* Max position size */}
+          <Field label="Max position size" icon={<PieChart className="w-4 h-4" />}>
+            <div className="grid grid-cols-5 gap-2">
+              {MAX_POSITIONS.map((m) => (
+                <Toggle
+                  key={m.label}
+                  active={!customMaxPosition && maxPositionPct === m.value}
+                  onClick={() => { setCustomMaxPosition(false); setMaxPositionPct(m.value); }}
+                  title={m.label}
+                />
+              ))}
+              <Toggle
+                active={customMaxPosition}
+                onClick={() => { setCustomMaxPosition(true); setMaxPositionPct(maxPositionPct ?? 10); }}
+                title="Custom"
+              />
+            </div>
+            {customMaxPosition && (
+              <div className="relative mt-2">
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={maxPositionPct ?? ""}
+                  onChange={(e) => setMaxPositionPct(Math.min(100, Math.max(1, Number(e.target.value) || 1)))}
+                  placeholder="Max % of starting capital per stock"
+                  className="w-full h-12 pl-4 pr-10 rounded-2xl bg-muted/60 border-2 border-transparent focus:border-primary/50 outline-none font-bold tabular-nums"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-muted-foreground">%</span>
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground mt-2">
+              Caps how much of your starting capital can sit in one stock — forces diversification instead of going all-in.
+            </p>
+          </Field>
 
           {/* Shorting */}
           <Field label="Advanced features">

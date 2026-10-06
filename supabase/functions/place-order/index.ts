@@ -39,12 +39,15 @@ Deno.serve(async (req) => {
     if (mErr || !member || member.user_id !== user.id) return json({ error: "not your portfolio" }, 403);
 
     const { data: game } = await userClient
-      .from("games").select("allow_short, starting_cash, leverage").eq("id", member.game_id).single();
+      .from("games").select("allow_short, starting_cash, leverage, min_price, max_position_pct").eq("id", member.game_id).single();
     const allowShort = !!(game as any)?.allow_short;
     // Margin: leveraged games let cash go negative down to the borrowed amount.
     const startingCash = Number((game as any)?.starting_cash ?? 0);
     const leverage = Number((game as any)?.leverage ?? 1) || 1;
     const marginFloor = -Math.max(0, startingCash * (leverage - 1));
+    const minPrice = (game as any)?.min_price != null ? Number((game as any).min_price) : null;
+    const maxPositionPct = (game as any)?.max_position_pct != null ? Number((game as any).max_position_pct) : null;
+    const rules = { marginFloor, minPrice, maxPositionPct, startingCash };
 
     // ---- Release orders that were queued for the open ----
     if (body.action === "run_queued") {
@@ -59,7 +62,7 @@ Deno.serve(async (req) => {
       for (const o of queued ?? []) {
         const q = await getQuote(o.symbol);
         if (!isMarketOpen(q.state) || !q.price) break; // still closed — leave queued
-        const r = await fillOrder(svc, member_id, o, q.price, marginFloor);
+        const r = await fillOrder(svc, member_id, o, q.price, rules);
         results.push({ id: o.id, ...r });
       }
       return json({ ok: true, processed: results });
@@ -139,7 +142,7 @@ Deno.serve(async (req) => {
     }
     if (!willFill) return json({ ok: true, order: ord, queued: true });
 
-    const res = await fillOrder(svc, member_id, ord, fillPrice, marginFloor);
+    const res = await fillOrder(svc, member_id, ord, fillPrice, rules);
     if (res.error) return json({ error: res.error }, 400);
     return json({ ok: true, order: ord, filled: true, price: fillPrice });
   } catch (e) {
@@ -181,8 +184,18 @@ function isMarketOpen(marketState?: string) {
   return weekday !== "Sat" && weekday !== "Sun" && minutes >= 9 * 60 + 30 && minutes < 16 * 60;
 }
 
+interface FillRules {
+  marginFloor?: number;
+  /** No tradable price below this — blocks opening/adding exposure, never blocks closing it. */
+  minPrice?: number | null;
+  /** Max % of starting capital a single symbol's notional may reach when opening/adding exposure. */
+  maxPositionPct?: number | null;
+  startingCash?: number;
+}
+
 /** Applies cash/position effects for an order row and marks it filled. */
-async function fillOrder(svc: any, member_id: string, ord: any, fillPrice: number, marginFloor = 0) {
+async function fillOrder(svc: any, member_id: string, ord: any, fillPrice: number, rules: FillRules = {}) {
+  const marginFloor = rules.marginFloor ?? 0;
   const { data: member } = await svc
     .from("game_members").select("id, cash").eq("id", member_id).single();
   if (!member) return { error: "portfolio not found" };
@@ -203,10 +216,29 @@ async function fillOrder(svc: any, member_id: string, ord: any, fillPrice: numbe
     return { error: msg };
   };
 
+  // Rules below only gate opening/adding exposure (buy, short) — you can
+  // always close a position, even one that no longer fits the game's rules
+  // (e.g. a stock that gapped below the min price overnight).
+  const checkEntryRules = async (newNotionalShares: number) => {
+    if (rules.minPrice && fillPrice < rules.minPrice) {
+      return `This game requires stocks priced at least $${rules.minPrice.toFixed(2)} — ${symbol} is $${fillPrice.toFixed(2)}.`;
+    }
+    if (rules.maxPositionPct && rules.startingCash) {
+      const cap = rules.startingCash * (rules.maxPositionPct / 100);
+      const notional = newNotionalShares * fillPrice;
+      if (notional > cap) {
+        return `That would put $${notional.toFixed(0)} in ${symbol} — this game caps a single stock at ${rules.maxPositionPct}% of starting capital ($${cap.toFixed(0)}).`;
+      }
+    }
+    return null;
+  };
+
   if (side === "buy") {
+    const newShares = cur + shares;
+    const entryErr = await checkEntryRules(newShares);
+    if (entryErr) return await fail(entryErr);
     if (Number(member.cash) - cost < marginFloor) return await fail("insufficient buying power");
     if (cur < 0) return await fail("you have a short position — use COVER");
-    const newShares = cur + shares;
     const newAvg = cur > 0 ? (cur * curAvg + cost) / newShares : fillPrice;
     if (pos) await svc.from("positions").update({ shares: newShares, avg_cost: newAvg }).eq("id", pos.id);
     else await svc.from("positions").insert({ member_id, symbol, shares, avg_cost: fillPrice });
@@ -218,10 +250,12 @@ async function fillOrder(svc: any, member_id: string, ord: any, fillPrice: numbe
     else await svc.from("positions").update({ shares: newShares }).eq("id", pos!.id);
     await svc.from("game_members").update({ cash: Number(member.cash) + cost }).eq("id", member_id);
   } else if (side === "short") {
+    const absNew = Math.abs(cur - shares);
+    const entryErr = await checkEntryRules(absNew);
+    if (entryErr) return await fail(entryErr);
     if (cur > 0) return await fail("you have a long position — SELL first");
     const newShares = cur - shares;
     const absOld = Math.abs(cur);
-    const absNew = Math.abs(newShares);
     const newAvg = absOld > 0 ? (absOld * curAvg + shares * fillPrice) / absNew : fillPrice;
     if (pos) await svc.from("positions").update({ shares: newShares, avg_cost: newAvg }).eq("id", pos.id);
     else await svc.from("positions").insert({ member_id, symbol, shares: -shares, avg_cost: fillPrice });
