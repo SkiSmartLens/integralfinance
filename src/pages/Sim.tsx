@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/backend";
+import { inviteLink } from "./GameLobby";
 import { SEO } from "@/components/SEO";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -281,7 +282,7 @@ const Sim = () => {
 
   const shareInvite = async () => {
     if (!game) return;
-    const url = `${window.location.origin}/sim/join/${game.join_code}`;
+    const url = inviteLink(game.join_code);
     if (navigator.share) {
       try {
         await navigator.share({ title: `Join "${game.name}" on Integral Stocks`, url });

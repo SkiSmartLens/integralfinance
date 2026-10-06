@@ -49,7 +49,11 @@ const setActiveGame = (id: string) => {
   try { localStorage.setItem("activeSimGame", id); } catch {}
 };
 
-export const inviteLink = (code: string) => `${window.location.origin}/sim/join/${code}`;
+// Always the real domain, never window.location.origin — invite links get
+// shared with other people, so they must not point at whatever preview/editor
+// origin the game creator happened to be viewing from.
+const SITE = "https://integralstocks.com";
+export const inviteLink = (code: string) => `${SITE}/sim/join/${code}`;
 
 interface AdminGame extends Game {
   players: { user_id: string; cash: number; name: string }[];

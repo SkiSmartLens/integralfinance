@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/lib/backend";
+import { inviteLink } from "./GameLobby";
 import { Header } from "@/components/Header";
 import { SEO } from "@/components/SEO";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -90,7 +91,7 @@ const CreateGame = () => {
     setSaving(false);
     const isPrivateFriendsGame = isFriends && !(g as any).is_public;
     if (isPrivateFriendsGame) {
-      const link = `${window.location.origin}/sim/join/${(g as any).join_code}`;
+      const link = inviteLink((g as any).join_code);
       try {
         await navigator.clipboard.writeText(link);
         toast({ title: "Game created! Invite link copied.", description: "Paste it to friends — opening it signs them in and adds them to this game." });
