@@ -42,6 +42,7 @@ const Auth = lazyWithReload(() => import("./pages/Auth.tsx"));
 const Sim = lazyWithReload(() => import("./pages/Sim.tsx"));
 const GameLobby = lazyWithReload(() => import("./pages/GameLobby.tsx"));
 const CreateGame = lazyWithReload(() => import("./pages/CreateGame.tsx"));
+const JoinGame = lazyWithReload(() => import("./pages/JoinGame.tsx"));
 const AcademyModule = lazyWithReload(() => import("./pages/AcademyModule.tsx"));
 const Privacy = lazyWithReload(() => import("./pages/legal/Privacy.tsx"));
 const Terms = lazyWithReload(() => import("./pages/legal/Terms.tsx"));
@@ -107,6 +108,7 @@ const App = () => (
             <Route path="/sim" element={<Sim />} />
             <Route path="/sim/lobby" element={<GameLobby />} />
             <Route path="/sim/create" element={<CreateGame />} />
+            <Route path="/sim/join/:code" element={<JoinGame />} />
             <Route path="/simulator" element={<GameLobby />} />
             <Route path="/sim/trade/:symbol" element={<Trade />} />
             <Route path="/privacy" element={<Privacy />} />

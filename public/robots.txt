@@ -3,6 +3,7 @@ Allow: /
 Disallow: /auth
 Disallow: /dashboard
 Disallow: /sim/trade/
+Disallow: /sim/join/
 
 # AI/LLM crawlers used for training data — explicitly allowed to use this
 # site's public content.

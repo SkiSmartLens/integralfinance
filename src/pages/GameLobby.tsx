@@ -14,6 +14,8 @@ import {
   Globe,
   Lock,
   Copy,
+  Check,
+  Share2,
   Trophy,
   Loader2,
   ArrowRight,
@@ -44,6 +46,8 @@ interface Member {
 const setActiveGame = (id: string) => {
   try { localStorage.setItem("activeSimGame", id); } catch {}
 };
+
+export const inviteLink = (code: string) => `${window.location.origin}/sim/join/${code}`;
 
 interface AdminGame extends Game {
   players: { user_id: string; cash: number; name: string }[];
@@ -236,6 +240,7 @@ const GameLobby = () => {
                     >
                       Enter
                     </button>
+                    {!m.game.is_public && <InviteLinkButton code={m.game.join_code} gameName={m.game.name} />}
                     <button
                       onClick={() => leaveGame(m.id)}
                       className="h-10 px-3 rounded-xl border-2 text-muted-foreground hover:text-rose-600 hover:border-rose-300 text-sm font-bold"
@@ -422,6 +427,40 @@ const CopyCode = ({ code }: { code: string }) => {
       title="Copy join code"
     >
       <Copy className="w-3 h-3" /> {copied ? "Copied!" : code}
+    </button>
+  );
+};
+
+const InviteLinkButton = ({ code, gameName }: { code: string; gameName: string }) => {
+  const [copied, setCopied] = useState(false);
+  const share = async () => {
+    const url = inviteLink(code);
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `Join "${gameName}" on Integral Stocks`, url });
+        return;
+      } catch {
+        // User cancelled the share sheet, or the browser doesn't support it
+        // for this context — fall through to clipboard copy.
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {}
+  };
+  return (
+    <button
+      onClick={share}
+      className={cn(
+        "h-10 px-3 rounded-xl border-2 text-sm font-bold inline-flex items-center gap-1.5",
+        copied ? "border-emerald-500 text-emerald-700 bg-emerald-50" : "hover:border-primary",
+      )}
+      title="Share an invite link — opens join page, signs them in, adds them to this game"
+    >
+      {copied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+      {copied ? "Copied!" : "Invite"}
     </button>
   );
 };

@@ -70,7 +70,18 @@ const CreateGame = () => {
       .insert({ game_id: g.id, user_id: uid, cash: startingCash });
     try { localStorage.setItem("activeSimGame", g.id); } catch {}
     setSaving(false);
-    toast({ title: "Game created!", description: isFriends && !(g as any).is_public ? `Share code: ${(g as any).join_code}` : "Have fun." });
+    const isPrivateFriendsGame = isFriends && !(g as any).is_public;
+    if (isPrivateFriendsGame) {
+      const link = `${window.location.origin}/sim/join/${(g as any).join_code}`;
+      try {
+        await navigator.clipboard.writeText(link);
+        toast({ title: "Game created! Invite link copied.", description: "Paste it to friends — opening it signs them in and adds them to this game." });
+      } catch {
+        toast({ title: "Game created!", description: `Share this link: ${link}` });
+      }
+    } else {
+      toast({ title: "Game created!", description: "Have fun." });
+    }
     nav("/sim");
   };
 
