@@ -15,7 +15,7 @@ import { WhyItMoved } from "@/components/sim/WhyItMoved";
 import { SimCopilot } from "@/components/sim/SimCopilot";
 import { SafetyMeter } from "@/components/sim/SafetyMeter";
 import { Leaderboard } from "@/components/sim/Leaderboard";
-import { ArrowLeft, LogOut, RefreshCw, Trophy, Copy, LogIn, Users, Lock, Globe, DoorOpen, HelpCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, LogOut, RefreshCw, Trophy, Copy, Check, Share2, LogIn, Users, Lock, Globe, DoorOpen, HelpCircle, Loader2 } from "lucide-react";
 import { SimWalkthrough, hasSeenSimWalkthrough } from "@/components/sim/SimWalkthrough";
 import { PostTradeCard } from "@/components/sim/PostTradeCard";
 import { PortfolioBar } from "@/components/sim/PortfolioBar";
@@ -255,6 +255,22 @@ const Sim = () => {
     setTimeout(() => setCodeCopied(false), 1500);
   };
 
+  const shareInvite = async () => {
+    if (!game) return;
+    const url = `${window.location.origin}/sim/join/${game.join_code}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `Join "${game.name}" on Integral Stocks`, url });
+        return;
+      } catch {
+        // cancelled or unsupported — fall through to clipboard
+      }
+    }
+    navigator.clipboard.writeText(url);
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 1500);
+  };
+
   const signOut = async () => { await supabase.auth.signOut(); nav("/auth"); };
 
   return (
@@ -281,18 +297,6 @@ const Sim = () => {
             </span>
           )}
           <div className="ml-auto flex items-center gap-1.5">
-            {game && !game.is_public && (
-              <button
-                onClick={copyCode}
-                title="Copy join code"
-                className={cn(
-                  "h-9 px-3 rounded-lg text-xs font-extrabold tracking-widest border-2 inline-flex items-center gap-1.5 transition-colors",
-                  codeCopied ? "border-emerald-500 text-emerald-700 bg-emerald-50" : "border-border hover:border-primary",
-                )}
-              >
-                <Copy className="w-3 h-3" /> {codeCopied ? "Copied" : game.join_code}
-              </button>
-            )}
             <button
               onClick={() => nav("/sim/lobby")}
               className="h-9 px-3 rounded-lg text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors inline-flex items-center gap-1.5"
@@ -321,6 +325,30 @@ const Sim = () => {
           </div>
         </div>
       </header>
+
+      {/* Join code — pinned to the corner so it's always visible, not buried in a menu. */}
+      {game && !game.is_public && (
+        <div className="fixed top-[70px] right-3 z-30 flex items-center gap-1 rounded-xl border-2 bg-card shadow-sm p-1">
+          <button
+            onClick={copyCode}
+            title="Copy join code"
+            className={cn(
+              "h-8 px-2.5 rounded-lg text-xs font-extrabold tracking-widest inline-flex items-center gap-1.5 transition-colors",
+              codeCopied ? "text-emerald-700" : "hover:text-primary",
+            )}
+          >
+            {codeCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+            {game.join_code}
+          </button>
+          <button
+            onClick={shareInvite}
+            title="Share invite link"
+            className="h-8 w-8 rounded-lg text-muted-foreground hover:text-primary hover:bg-muted transition-colors flex items-center justify-center"
+          >
+            <Share2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       <main className="max-w-6xl mx-auto px-4 py-5 space-y-5">
         {/* Portfolio header + allocation bar */}

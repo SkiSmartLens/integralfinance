@@ -41,9 +41,11 @@ const safeNext = (v: string | null) =>
 const Auth = () => {
   const nav = useNavigate();
   const [loading, setLoading] = useState<"google" | "apple" | null>(null);
+  const [joiningGame, setJoiningGame] = useState(false);
 
   useEffect(() => {
     const fromUrl = safeNext(new URLSearchParams(window.location.search).get("next"));
+    if (fromUrl?.startsWith("/sim/join/")) setJoiningGame(true);
     if (fromUrl) {
       try { localStorage.setItem(NEXT_KEY, fromUrl); } catch { /* ignore */ }
     }
@@ -124,9 +126,11 @@ const Auth = () => {
       <Header onSearch={() => {}} />
       <div className="container mx-auto px-4 py-12 max-w-md">
         <div className="bg-card border rounded-lg p-6">
-          <h1 className="text-2xl font-bold mb-1">Sign in to play</h1>
+          <h1 className="text-2xl font-bold mb-1">{joiningGame ? "Create your account to join" : "Sign in to play"}</h1>
           <p className="text-sm text-muted-foreground mb-6">
-            Use your Google or Apple account to trade a virtual portfolio with $100k.
+            {joiningGame
+              ? "One tap with Google or Apple — you'll be signed in and added to the game automatically."
+              : "Use your Google or Apple account to trade a virtual portfolio with $100k."}
           </p>
           <div className="space-y-3">
             <button
