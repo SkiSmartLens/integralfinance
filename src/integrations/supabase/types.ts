@@ -58,6 +58,8 @@ export type Database = {
           is_public: boolean
           join_code: string
           leverage: number
+          max_position_pct: number | null
+          min_price: number | null
           name: string
           starting_cash: number
         }
@@ -72,6 +74,8 @@ export type Database = {
           is_public?: boolean
           join_code?: string
           leverage?: number
+          max_position_pct?: number | null
+          min_price?: number | null
           name: string
           starting_cash?: number
         }
@@ -86,6 +90,8 @@ export type Database = {
           is_public?: boolean
           join_code?: string
           leverage?: number
+          max_position_pct?: number | null
+          min_price?: number | null
           name?: string
           starting_cash?: number
         }
@@ -230,6 +236,33 @@ export type Database = {
           fn?: string
           id?: string
           subject?: string
+        }
+        Relationships: []
+      }
+      stock_summary_cache: {
+        Row: {
+          body: Json
+          expires_at: string
+          mode: string
+          symbol: string
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          body: Json
+          expires_at: string
+          mode: string
+          symbol: string
+          updated_at?: string
+          version: string
+        }
+        Update: {
+          body?: Json
+          expires_at?: string
+          mode?: string
+          symbol?: string
+          updated_at?: string
+          version?: string
         }
         Relationships: []
       }

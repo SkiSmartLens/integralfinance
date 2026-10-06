@@ -22,6 +22,13 @@
       "when": 1791311859110,
       "tag": "0002_add_games_trading_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791311883869,
+      "tag": "0003_apply_pending_github_migrations",
+      "breakpoints": true
     }
   ]
 }
