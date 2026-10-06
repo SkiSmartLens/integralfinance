@@ -239,6 +239,33 @@ export type Database = {
         }
         Relationships: []
       }
+      stock_summary_cache: {
+        Row: {
+          body: Json
+          expires_at: string
+          mode: string
+          symbol: string
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          body: Json
+          expires_at: string
+          mode: string
+          symbol: string
+          updated_at?: string
+          version: string
+        }
+        Update: {
+          body?: Json
+          expires_at?: string
+          mode?: string
+          symbol?: string
+          updated_at?: string
+          version?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           commission: number
