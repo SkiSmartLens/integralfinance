@@ -373,11 +373,31 @@ function firstSuccess(tasks: Array<() => Promise<string | null>>): Promise<strin
   });
 }
 
+/** Resolve the first already-started promise that yields a non-null result. */
+function firstOf<T>(promises: Promise<T | null>[]): Promise<T | null> {
+  return new Promise((resolve) => {
+    let pending = promises.length;
+    if (pending === 0) return resolve(null);
+    let done = false;
+    for (const p of promises) {
+      p.then((r) => {
+        if (r && !done) { done = true; resolve(r); }
+      })
+        .catch(() => {})
+        .finally(() => {
+          pending--;
+          if (pending === 0 && !done) resolve(null);
+        });
+    }
+  });
+}
+
 /** Race the page itself, its publisher canonicals and every reader proxy at once. */
 async function attempt(url: string, reasons: FailReason[], stub: StubSlot, uuid?: string): Promise<string | null> {
-  // Yahoo's own content API is the most reliable source for its stubs — try it first.
-  const caas = await yahooCaas(url, stub, uuid);
-  if (caas) return caas;
+  // Yahoo's content API 404s about as often as it works these days (it looks to have been
+  // partly retired) — fire it alongside everything else instead of blocking on it first, so a
+  // dead/slow lookup no longer adds its own round trip ahead of every single request.
+  const caasPromise = yahooCaas(url, stub, uuid);
 
   // Kick off proxies for the original URL immediately — they don't depend on the direct fetch.
   const proxyRace = firstSuccess(proxies(url).map((c) => () => readable(c, UA, reasons)));
@@ -392,7 +412,7 @@ async function attempt(url: string, reasons: FailReason[], stub: StubSlot, uuid?
     // Yahoo slug URLs hide the story UUID in the page markup — pull it out and use the content API.
     if (isYahoo(url)) {
       const embedded = html.match(/"uuid"\s*:\s*"([0-9a-f-]{36})"/i)?.[1] ?? html.match(UUID_RE)?.[0];
-      if (embedded) {
+      if (embedded && embedded !== uuid) {
         const viaCaas = await yahooCaasByUuid(embedded, stub);
         if (viaCaas) return viaCaas;
       }
@@ -410,7 +430,7 @@ async function attempt(url: string, reasons: FailReason[], stub: StubSlot, uuid?
     }
   }
 
-  return await proxyRace;
+  return await firstOf([caasPromise, proxyRace]);
 }
 
 /**
@@ -441,12 +461,24 @@ function errorMessageFor(reason: FailReason): string {
   }
 }
 
-/** One pass only — everything already races in parallel, so a retry just doubles latency. */
+/**
+ * One retry after a short backoff. The first pass already races every candidate in parallel,
+ * but a clean run (confirmed directly against Yahoo, outside this function) can still lose to a
+ * failing one here — consistent with a transient, IP/volume-based soft-block rather than a
+ * deterministic "this article can't be read" case, so a second full pass is worth the latency.
+ */
 async function fetchArticleText(url: string, uuid?: string): Promise<{ text: string; partial: boolean }> {
   const reasons: FailReason[] = [];
   const stub: StubSlot = {};
   const t = await attempt(url, reasons, stub, uuid);
   if (t) return { text: t, partial: false };
+
+  await new Promise((r) => setTimeout(r, 600 + Math.random() * 400));
+  const retryReasons: FailReason[] = [];
+  const t2 = await attempt(url, retryReasons, stub, uuid);
+  if (t2) return { text: t2, partial: false };
+  reasons.push(...retryReasons);
+
   if (stub.value) return { text: `${stub.value.title}\n\n${stub.value.summary}`, partial: true };
   throw new Error(pickReason(reasons));
 }

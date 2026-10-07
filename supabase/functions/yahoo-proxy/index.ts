@@ -268,10 +268,26 @@ Deno.serve(async (req) => {
       const cacheKey = `opt:${symbol}:${date ?? "next"}`;
       const cached = getCache(cacheKey);
       if (cached) return new Response(cached, jsonHeaders());
-      const upstream =
-        `https://query2.finance.yahoo.com/v7/finance/options/${encodeURIComponent(symbol)}` +
-        (date ? `?date=${encodeURIComponent(date)}` : "");
-      const r = await yahooFetch(upstream);
+
+      // Like v7/finance/quote, this endpoint now 401s ("Invalid Crumb") without
+      // the authenticated crumb+cookie pair fetchMeta() already knows how to get.
+      const fetchOptionsOnce = async (auth: { crumb: string; cookie: string }) => {
+        const qs = new URLSearchParams({ crumb: auth.crumb });
+        if (date) qs.set("date", date);
+        const upstream = `https://query2.finance.yahoo.com/v7/finance/options/${encodeURIComponent(symbol)}?${qs.toString()}`;
+        return fetch(upstream, {
+          headers: { "User-Agent": UA, Cookie: auth.cookie, Accept: "application/json,text/plain,*/*" },
+        });
+      };
+
+      const auth = await getCrumb();
+      if (!auth) return json({ error: "Could not authenticate with Yahoo Finance. Please try again shortly." }, 503);
+      let r = await fetchOptionsOnce(auth);
+      if (r.status === 401 || r.status === 403) {
+        crumbCache = null;
+        const retryAuth = await getCrumb();
+        if (retryAuth) r = await fetchOptionsOnce(retryAuth);
+      }
       const body = await r.text();
       if (r.ok) setCache(cacheKey, body, 30000);
       return new Response(body, { ...jsonHeaders(), status: r.ok ? 200 : r.status });
