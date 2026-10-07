@@ -59,6 +59,12 @@ export interface Quote {
   exchange?: string;
   quoteType?: string;
   marketState?: string;
+  bid?: number;
+  ask?: number;
+  bidSize?: number;
+  askSize?: number;
+  /** Unix seconds — when this quote was last updated upstream. */
+  regularMarketTime?: number;
 }
 
 export async function fetchQuotes(symbols: string[]): Promise<Quote[]> {

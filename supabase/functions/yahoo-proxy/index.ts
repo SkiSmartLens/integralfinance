@@ -34,6 +34,11 @@ interface MetaExtra {
   earningsTimestampStart?: number;
   earningsTimestampEnd?: number;
   dividendYield?: number;
+  bid?: number;
+  ask?: number;
+  bidSize?: number;
+  askSize?: number;
+  regularMarketTime?: number;
 }
 
 
@@ -97,6 +102,11 @@ async function fetchMeta(symbol: string, priceHint?: number): Promise<MetaExtra>
     if (out.earningsTimestampStart == null && typeof q.earningsTimestampStart === "number") out.earningsTimestampStart = q.earningsTimestampStart;
     if (out.earningsTimestampEnd == null && typeof q.earningsTimestampEnd === "number") out.earningsTimestampEnd = q.earningsTimestampEnd;
     if (out.dividendYield == null && typeof q.dividendYield === "number") out.dividendYield = q.dividendYield;
+    if (out.bid == null && typeof q.bid === "number" && q.bid > 0) out.bid = q.bid;
+    if (out.ask == null && typeof q.ask === "number" && q.ask > 0) out.ask = q.ask;
+    if (out.bidSize == null && typeof q.bidSize === "number") out.bidSize = q.bidSize;
+    if (out.askSize == null && typeof q.askSize === "number") out.askSize = q.askSize;
+    if (out.regularMarketTime == null && typeof q.regularMarketTime === "number") out.regularMarketTime = q.regularMarketTime;
   };
 
   // Authenticated v7/finance/quote — gives marketCap, PE, earnings in one shot.

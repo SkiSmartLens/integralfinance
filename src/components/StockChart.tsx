@@ -13,6 +13,7 @@ import {
 import { useLiveChart } from "@/hooks/useLiveChart";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { formatNumber, formatLargeNumber, ChartPoint } from "@/lib/yahoo";
+import { formatEtTime } from "@/lib/marketHours";
 import { cn } from "@/lib/utils";
 
 const RANGES: { label: string; range: string; interval: string }[] = [
@@ -384,6 +385,11 @@ export const StockChart = ({ symbol }: Props) => {
                 </span>
               );
             })()}
+            {quote?.regularMarketTime != null && (
+              <span className="text-[11px] text-muted-foreground tabular-nums">
+                As of {formatEtTime(new Date(quote.regularMarketTime * 1000))}
+              </span>
+            )}
           </div>
           {/* Day range bar — shows where current price sits between day's low & high */}
           {quote?.regularMarketDayLow != null && quote?.regularMarketDayHigh != null && lastPrice != null && quote.regularMarketDayHigh > quote.regularMarketDayLow && (
@@ -398,6 +404,24 @@ export const StockChart = ({ symbol }: Props) => {
                   className="absolute top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-primary shadow ring-2 ring-background"
                   style={{
                     left: `calc(${Math.max(0, Math.min(100, ((lastPrice - quote.regularMarketDayLow) / (quote.regularMarketDayHigh - quote.regularMarketDayLow)) * 100))}% - 5px)`,
+                  }}
+                />
+              </div>
+            </div>
+          )}
+          {/* 52-week range bar — same idea, zoomed out to a full year */}
+          {quote?.fiftyTwoWeekLow != null && quote?.fiftyTwoWeekHigh != null && lastPrice != null && quote.fiftyTwoWeekHigh > quote.fiftyTwoWeekLow && (
+            <div className="mt-2 max-w-xs">
+              <div className="flex justify-between text-[10px] text-muted-foreground tabular-nums">
+                <span>L {formatNumber(quote.fiftyTwoWeekLow)}</span>
+                <span className="font-semibold">52-week range</span>
+                <span>H {formatNumber(quote.fiftyTwoWeekHigh)}</span>
+              </div>
+              <div className="relative h-1.5 mt-1 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="absolute top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-primary shadow ring-2 ring-background"
+                  style={{
+                    left: `calc(${Math.max(0, Math.min(100, ((lastPrice - quote.fiftyTwoWeekLow) / (quote.fiftyTwoWeekHigh - quote.fiftyTwoWeekLow)) * 100))}% - 5px)`,
                   }}
                 />
               </div>
@@ -575,8 +599,8 @@ export const StockChart = ({ symbol }: Props) => {
         <Stat label="Prev Close" value={formatNumber(quote?.regularMarketPreviousClose)} />
         <Stat label="Day High" value={formatNumber(quote?.regularMarketDayHigh)} />
         <Stat label="Day Low" value={formatNumber(quote?.regularMarketDayLow)} />
-        <Stat label="52W High" value={formatNumber(quote?.fiftyTwoWeekHigh)} />
-        <Stat label="52W Low" value={formatNumber(quote?.fiftyTwoWeekLow)} />
+        <Stat label="Bid" value={quote?.bid ? `${formatNumber(quote.bid)} × ${quote.bidSize ?? 0}` : "—"} />
+        <Stat label="Ask" value={quote?.ask ? `${formatNumber(quote.ask)} × ${quote.askSize ?? 0}` : "—"} />
         <Stat label="Volume" value={formatLargeNumber(quote?.regularMarketVolume)} />
         <Stat label="Mkt Cap" value={formatLargeNumber(quote?.marketCap)} />
       </div>

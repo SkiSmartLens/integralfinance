@@ -74,7 +74,7 @@ const BlogPost = () => {
         <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-[1.05] mb-4">{post.title}</h1>
         <div className="text-xs text-muted-foreground mb-6 flex items-center gap-2">
           <span>
-            By <Link to="/about" className="font-semibold hover:text-foreground">William Wolenski</Link>
+            By <Link to="/about" className="font-semibold hover:text-foreground">William Wolenski</Link>, Founder
           </span>
           <span>·</span>
           <Clock className="w-3.5 h-3.5" />

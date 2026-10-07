@@ -5,6 +5,7 @@ import { HomeHeader } from "@/components/HomeHeader";
 import { SEO } from "@/components/SEO";
 import { SiteFooter } from "@/components/SiteFooter";
 import { fetchNews, fetchScreener, formatNumber, NewsItem, ScreenerQuote } from "@/lib/yahoo";
+import { formatEtTime } from "@/lib/marketHours";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -117,6 +118,7 @@ const MarketBrief = () => {
   const [loading, setLoading] = useState(true);
   const [shared, setShared] = useState(false);
   const [visibleCount, setVisibleCount] = useState(6);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const handleShare = async () => {
     const url = typeof window !== "undefined" ? window.location.href : "https://integralstocks.com/market-brief";
@@ -156,6 +158,7 @@ const MarketBrief = () => {
       setGainers(g.slice(0, 5));
       setLosers(l.slice(0, 5));
       setLoading(false);
+      setLastUpdated(new Date());
     });
     return () => {
       alive = false;
@@ -206,6 +209,11 @@ const MarketBrief = () => {
           <p className="text-base sm:text-lg text-muted-foreground mt-4 max-w-2xl">
             {todayLabel()} — the top stories, the biggest winners and losers, and one lesson to help it all make sense.
           </p>
+          {lastUpdated && (
+            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5" /> Market data as of {formatEtTime(lastUpdated)}
+            </p>
+          )}
           <button
             onClick={handleShare}
             className="inline-flex items-center gap-2 mt-6 px-5 py-2.5 rounded-full bg-primary text-primary-foreground font-extrabold hover:opacity-90 transition-opacity"

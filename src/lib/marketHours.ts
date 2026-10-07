@@ -30,6 +30,17 @@ export function isUsMarketOpen(d = new Date()): boolean {
   return minutes >= 9 * 60 + 30 && minutes < 16 * 60;
 }
 
+/** Format a timestamp as "3:42 PM ET" — used to show quote staleness honestly. */
+export function formatEtTime(d: Date): string {
+  const time = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(d);
+  return `${time} ET`;
+}
+
 /** Human label for when the next regular session begins. */
 export function nextOpenLabel(d = new Date()): string {
   const { weekday, minutes } = etNow(d);
