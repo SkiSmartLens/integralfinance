@@ -38,12 +38,27 @@ const NEXT_KEY = "postAuthRedirect";
 const safeNext = (v: string | null) =>
   v && v.startsWith("/") && !v.startsWith("//") ? v : null;
 
+/** Supabase appends type=recovery to the password-reset link it emails out. */
+const isRecoveryUrl = () => {
+  const query = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  return (query.get("type") ?? hash.get("type")) === "recovery";
+};
+
 const Auth = () => {
   const nav = useNavigate();
-  const [loading, setLoading] = useState<"google" | "apple" | null>(null);
+  const [loading, setLoading] = useState<"google" | "apple" | "email" | null>(null);
   const [joiningGame, setJoiningGame] = useState(false);
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  // Arriving from a reset email: collect a new password instead of signing in.
+  const [recovering, setRecovering] = useState(isRecoveryUrl);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
+    const isRecovery = isRecoveryUrl();
     const fromUrl = safeNext(new URLSearchParams(window.location.search).get("next"));
     if (fromUrl?.startsWith("/sim/join/")) setJoiningGame(true);
     if (fromUrl) {
@@ -82,11 +97,16 @@ const Auth = () => {
       return true;
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((e, session) => {
+      if (e === "PASSWORD_RECOVERY") { setRecovering(true); return; }
+      // A recovery link signs the user in to authorize the password change, so
+      // redirecting on that session would skip the "set a new password" form.
+      if (isRecovery) return;
       if (session) go();
     });
     (async () => {
       if (await consumeTokensFromUrl()) return; // onAuthStateChange fires and redirects
+      if (isRecovery) return;
       const { data } = await supabase.auth.getSession();
       if (data.session) go();
     })();
@@ -113,14 +133,133 @@ const Auth = () => {
     }
   };
 
+  const fail = (description: string) =>
+    toast({ title: "Something went wrong", description, variant: "destructive" });
 
+  const submitEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNotice(null);
+    setLoading("email");
+    try {
+      if (mode === "signup") {
+        if (password.length < 8) {
+          fail("Use at least 8 characters for your password.");
+          return;
+        }
+        const { data, error } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth`,
+            // The profiles trigger reads display_name here, otherwise it falls
+            // back to the email's local part (so "will.w@…" becomes "will.w").
+            ...(name.trim() ? { data: { display_name: name.trim() } } : {}),
+          },
+        });
+        if (error) {
+          fail(error.message);
+          return;
+        }
+        // No session means the project requires email confirmation first.
+        if (!data.session) {
+          setNotice(`Check ${email.trim()} for a confirmation link to finish setting up your account.`);
+        }
+        return; // with a session, onAuthStateChange redirects
+      }
 
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (error) {
+        fail(
+          error.message === "Invalid login credentials"
+            ? "That email and password don't match an account. Check them, or create an account below."
+            : error.message,
+        );
+      }
+      // on success onAuthStateChange redirects
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const forgotPassword = async () => {
+    const target = email.trim();
+    if (!target) {
+      fail("Enter your email address first, then tap 'Forgot password'.");
+      return;
+    }
+    setNotice(null);
+    setLoading("email");
+    const { error } = await supabase.auth.resetPasswordForEmail(target, {
+      redirectTo: `${window.location.origin}/auth`,
+    });
+    setLoading(null);
+    if (error) {
+      fail(error.message);
+      return;
+    }
+    setNotice(`If an account exists for ${target}, a password reset link is on its way.`);
+  };
+
+  const setNewPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password.length < 8) {
+      fail("Use at least 8 characters for your password.");
+      return;
+    }
+    setLoading("email");
+    const { error } = await supabase.auth.updateUser({ password });
+    setLoading(null);
+    if (error) {
+      fail(error.message);
+      return;
+    }
+    toast({ title: "Password updated", description: "You're all set." });
+    setRecovering(false);
+    setPassword("");
+    nav("/sim/lobby", { replace: true });
+  };
+
+  const busy = loading !== null;
+
+  if (recovering) {
+    return (
+      <div className="min-h-screen bg-background">
+        <SEO title="Choose a new password — Integral Stocks" description="Set a new password for your Integral Stocks account." path="/auth" />
+        <Header onSearch={() => {}} />
+        <div className="container mx-auto px-4 py-12 max-w-md">
+          <form onSubmit={setNewPassword} className="bg-card border rounded-lg p-6">
+            <h1 className="text-2xl font-bold mb-1">Choose a new password</h1>
+            <p className="text-sm text-muted-foreground mb-6">At least 8 characters.</p>
+            <input
+              type="password"
+              value={password}
+              onChange={(ev) => setPassword(ev.target.value)}
+              autoComplete="new-password"
+              placeholder="New password"
+              required
+              className="w-full rounded-md border bg-background px-3 py-2.5 text-sm mb-3"
+            />
+            <button
+              type="submit"
+              disabled={busy}
+              className="w-full py-2.5 rounded-md bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-60"
+            >
+              {busy ? "Saving…" : "Save password"}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
       <SEO
         title="Sign in — Integral Stocks"
-        description="Sign in with Google or Apple to access the Integral Stocks trading simulator and your watchlist."
+        description="Sign in with Google, Apple, or an email and password to access the Integral Stocks trading simulator and your watchlist."
         path="/auth"
       />
       <Header onSearch={() => {}} />
@@ -135,7 +274,7 @@ const Auth = () => {
           <div className="space-y-3">
             <button
               onClick={() => signIn("google")}
-              disabled={loading !== null}
+              disabled={busy}
               className="w-full py-2.5 rounded-md border bg-background font-semibold text-sm hover:bg-muted transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
             >
               {loading === "google" ? (
@@ -149,7 +288,7 @@ const Auth = () => {
             </button>
             <button
               onClick={() => signIn("apple")}
-              disabled={loading !== null}
+              disabled={busy}
               className="w-full py-2.5 rounded-md bg-foreground text-background font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2"
             >
               {loading === "apple" ? (
@@ -162,8 +301,81 @@ const Auth = () => {
               )}
             </button>
           </div>
+
+          <div className="flex items-center gap-3 my-6">
+            <span className="h-px flex-1 bg-border" />
+            <span className="text-xs text-muted-foreground font-medium">or use email</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+
+          <form onSubmit={submitEmail} className="space-y-3">
+            {mode === "signup" && (
+              <input
+                type="text"
+                value={name}
+                onChange={(ev) => setName(ev.target.value)}
+                autoComplete="name"
+                placeholder="Your name"
+                className="w-full rounded-md border bg-background px-3 py-2.5 text-sm"
+              />
+            )}
+            <input
+              type="email"
+              value={email}
+              onChange={(ev) => setEmail(ev.target.value)}
+              autoComplete="email"
+              placeholder="you@example.com"
+              required
+              className="w-full rounded-md border bg-background px-3 py-2.5 text-sm"
+            />
+            <input
+              type="password"
+              value={password}
+              onChange={(ev) => setPassword(ev.target.value)}
+              autoComplete={mode === "signup" ? "new-password" : "current-password"}
+              placeholder={mode === "signup" ? "Password (8+ characters)" : "Password"}
+              required
+              className="w-full rounded-md border bg-background px-3 py-2.5 text-sm"
+            />
+            <button
+              type="submit"
+              disabled={busy}
+              className="w-full py-2.5 rounded-md bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-60"
+            >
+              {loading === "email"
+                ? "Working…"
+                : mode === "signup"
+                  ? "Create account"
+                  : "Sign in"}
+            </button>
+          </form>
+
+          {notice && (
+            <p className="text-sm bg-muted/60 border rounded-md p-3 mt-3 text-muted-foreground">{notice}</p>
+          )}
+
+          <div className="flex items-center justify-between gap-2 mt-4 text-xs">
+            <button
+              type="button"
+              onClick={() => { setMode(mode === "signup" ? "signin" : "signup"); setNotice(null); }}
+              className="font-semibold text-primary hover:underline"
+            >
+              {mode === "signup" ? "Already have an account? Sign in" : "New here? Create an account"}
+            </button>
+            {mode === "signin" && (
+              <button
+                type="button"
+                onClick={forgotPassword}
+                disabled={busy}
+                className="text-muted-foreground hover:text-foreground disabled:opacity-60"
+              >
+                Forgot password?
+              </button>
+            )}
+          </div>
+
           <p className="text-xs text-muted-foreground mt-6">
-            Single sign-on only — we never store a password for your account.
+            Google and Apple are the quickest — one tap, nothing to remember.
           </p>
         </div>
       </div>
