@@ -9,6 +9,7 @@ import { formatNumber, formatLargeNumber } from "@/lib/yahoo";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { AnimatedNumber } from "@/components/sim/AnimatedNumber";
 import { MiniChart } from "@/components/sim/MiniChart";
+import { NetWorthChart } from "@/components/sim/NetWorthChart";
 import { SimSearch } from "@/components/sim/SimSearch";
 import { TradeTicket } from "@/components/sim/TradeTicket";
 import { HoldingsPanel, Holding } from "@/components/sim/HoldingsPanel";
@@ -177,7 +178,7 @@ const Sim = () => {
     return [...set];
   }, [selected, positions]);
 
-  const { quotes } = useLiveQuotes(symbols, 5000);
+  const { quotes, loading: quotesLoading } = useLiveQuotes(symbols, 5000);
   const quoteMap = useMemo(() => new Map(quotes.map((q) => [q.symbol, q])), [quotes]);
 
   const selQuote = quoteMap.get(selected);
@@ -219,6 +220,33 @@ const Sim = () => {
   const equity = cash + holdingsValue;
   const dayPL = holdings.reduce((s, h) => s + (h.last - h.prevClose) * h.shares, 0);
   const totalReturnPct = startingCash > 0 ? ((equity - startingCash) / startingCash) * 100 : 0;
+
+  // Net-worth history: no backend cron here, so the "every 12 hours" cadence is
+  // enforced at write time instead — each visit checks the latest snapshot and
+  // only inserts a new one once 12h have actually elapsed. Gated on quotesLoading
+  // so the recorded equity reflects live prices, not cash-only before they arrive.
+  useEffect(() => {
+    if (!member || !dataReady || quotesLoading) return;
+    let alive = true;
+    (async () => {
+      const { data: last } = await supabase
+        .from("portfolio_snapshots")
+        .select("recorded_at")
+        .eq("member_id", member.id)
+        .order("recorded_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!alive) return;
+      const lastAt = last?.recorded_at ? new Date(last.recorded_at).getTime() : 0;
+      const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+      if (Date.now() - lastAt < TWELVE_HOURS_MS) return;
+      await supabase.from("portfolio_snapshots").insert({ member_id: member.id, equity });
+    })();
+    return () => {
+      alive = false;
+    };
+    /* eslint-disable-next-line */
+  }, [member?.id, dataReady, quotesLoading]);
 
   const execute = async (side: "buy" | "sell" | "short" | "cover", shares: number, atOpen = false) => {
     if (!member) return;
@@ -396,6 +424,7 @@ const Sim = () => {
                 <Loader2 className="w-3.5 h-3.5 animate-spin" /> Couldn't refresh your portfolio — retrying…
               </div>
             )}
+            {member && <NetWorthChart memberId={member.id} equity={equity} startingCash={startingCash} />}
             <PortfolioBar
               equity={equity}
               buyingPower={buyingPower}
