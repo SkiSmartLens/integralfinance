@@ -14,6 +14,7 @@ import { useLiveChart } from "@/hooks/useLiveChart";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { formatNumber, formatLargeNumber, ChartPoint } from "@/lib/yahoo";
 import { formatEtTime } from "@/lib/marketHours";
+import { fiveEvenTicks } from "@/lib/chartTicks";
 import { cn } from "@/lib/utils";
 
 const RANGES: { label: string; range: string; interval: string }[] = [
@@ -225,6 +226,10 @@ export const StockChart = ({ symbol }: Props) => {
   }, [data, chartType, is1D, showPrevSession]);
 
   const withSMA = chartData;
+
+  // Exactly 5 x-axis labels, evenly spaced across the visible time range,
+  // instead of however many auto-ticking happens to fit.
+  const xTicks = useMemo(() => fiveEvenTicks(withSMA.map((d) => d.t)), [withSMA]);
 
   const formatTime = (t: number) => {
     const d = new Date(t);
@@ -490,11 +495,11 @@ export const StockChart = ({ symbol }: Props) => {
               </defs>
               <XAxis
                 dataKey="t"
+                ticks={xTicks}
                 tickFormatter={formatTime}
                 tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
                 axisLine={false}
                 tickLine={false}
-                minTickGap={50}
                 type="category"
               />
               <YAxis

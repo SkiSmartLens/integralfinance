@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import { Area, AreaChart, ResponsiveContainer, Tooltip, YAxis } from "recharts";
+import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useLiveChart } from "@/hooks/useLiveChart";
 import { formatNumber } from "@/lib/yahoo";
+import { fiveEvenTicks } from "@/lib/chartTicks";
 import { cn } from "@/lib/utils";
 
 const RANGES = [
@@ -39,6 +40,16 @@ export const MiniChart = ({ symbol }: { symbol: string }) => {
     return [min - pad, max + pad] as [number, number];
   }, [points]);
 
+  const xTicks = useMemo(() => fiveEvenTicks(points.map((p) => p.t)), [points]);
+
+  const formatTime = (t: number) => {
+    const d = new Date(t);
+    if (r.range === "1d") return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    if (r.range === "5d") return d.toLocaleDateString([], { weekday: "short", hour: "numeric" });
+    if (r.range === "1mo" || r.range === "3mo") return d.toLocaleDateString([], { month: "short", day: "numeric" });
+    return d.toLocaleDateString([], { month: "short", year: "2-digit" });
+  };
+
   return (
     <div className="animate-fade-in">
       <div className="flex flex-wrap justify-end gap-1 mb-2">
@@ -69,7 +80,24 @@ export const MiniChart = ({ symbol }: { symbol: string }) => {
                   <stop offset="100%" stopColor={color} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <YAxis hide domain={domain} />
+              <XAxis
+                dataKey="t"
+                ticks={xTicks}
+                tickFormatter={formatTime}
+                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                axisLine={false}
+                tickLine={false}
+                type="category"
+              />
+              <YAxis
+                domain={domain}
+                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                axisLine={false}
+                tickLine={false}
+                orientation="right"
+                width={46}
+                tickFormatter={(v) => formatNumber(v)}
+              />
               <Tooltip
                 cursor={{ stroke: "hsl(var(--muted-foreground))", strokeWidth: 1, strokeDasharray: "3 3" }}
                 contentStyle={{
