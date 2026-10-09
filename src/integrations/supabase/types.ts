@@ -153,35 +153,6 @@ export type Database = {
           },
         ]
       }
-      portfolio_snapshots: {
-        Row: {
-          equity: number
-          id: string
-          member_id: string
-          recorded_at: string
-        }
-        Insert: {
-          equity: number
-          id?: string
-          member_id: string
-          recorded_at?: string
-        }
-        Update: {
-          equity?: number
-          id?: string
-          member_id?: string
-          recorded_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "portfolio_snapshots_member_id_fkey"
-            columns: ["member_id"]
-            isOneToOne: false
-            referencedRelation: "game_members"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       positions: {
         Row: {
           avg_cost: number
