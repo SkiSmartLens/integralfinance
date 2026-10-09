@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/backend";
+import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { Header } from "@/components/Header";
 import { PracticeNav } from "@/components/PracticeNav";
 import { SEO } from "@/components/SEO";
@@ -55,8 +56,10 @@ const setActiveGame = (id: string) => {
 const SITE = "https://integralstocks.com";
 export const inviteLink = (code: string) => `${SITE}/sim/join/${code}`;
 
+interface AdminPosition { symbol: string; shares: number; avgCost: number }
+interface AdminPlayer { member_id: string; user_id: string; cash: number; name: string; positions: AdminPosition[] }
 interface AdminGame extends Game {
-  players: { member_id: string; user_id: string; cash: number; name: string }[];
+  players: AdminPlayer[];
 }
 
 const GameLobby = () => {
@@ -120,11 +123,26 @@ const GameLobby = () => {
         .from("game_members")
         .select("id, game_id, user_id, cash");
       const { data: profs } = await supabase.from("profiles").select("user_id, display_name");
+      const { data: allPositions } = await supabase
+        .from("positions")
+        .select("member_id, symbol, shares, avg_cost");
       const nameBy = new Map(((profs ?? []) as any[]).map((p) => [p.user_id, p.display_name as string]));
-      const byGame = new Map<string, { member_id: string; user_id: string; cash: number; name: string }[]>();
+      const posByMember = new Map<string, AdminPosition[]>();
+      (allPositions ?? []).forEach((p) => {
+        const list = posByMember.get(p.member_id) ?? [];
+        list.push({ symbol: p.symbol, shares: Number(p.shares), avgCost: Number(p.avg_cost) });
+        posByMember.set(p.member_id, list);
+      });
+      const byGame = new Map<string, AdminPlayer[]>();
       ((allMembers ?? []) as any[]).forEach((m) => {
         const list = byGame.get(m.game_id) ?? [];
-        list.push({ member_id: m.id, user_id: m.user_id, cash: Number(m.cash), name: nameBy.get(m.user_id) ?? "Player" });
+        list.push({
+          member_id: m.id,
+          user_id: m.user_id,
+          cash: Number(m.cash),
+          name: nameBy.get(m.user_id) ?? "Player",
+          positions: posByMember.get(m.id) ?? [],
+        });
         byGame.set(m.game_id, list);
       });
       setAdminGames(
@@ -139,6 +157,21 @@ const GameLobby = () => {
   useEffect(() => {
     if (userId) refresh(userId);
   }, [userId]);
+
+  // Live prices for every symbol any player holds, so the admin panel can show
+  // each player's real current total (cash + live position value) next to
+  // their stored cash — the fastest way to tell a genuine gain/loss apart from
+  // a stale or corrupted cash balance.
+  const adminSymbols = useMemo(() => {
+    const s = new Set<string>();
+    adminGames.forEach((g) => g.players.forEach((p) => p.positions.forEach((pos) => s.add(pos.symbol))));
+    return [...s];
+  }, [adminGames]);
+  const { quotes: adminQuotes } = useLiveQuotes(adminSymbols, 15000);
+  const adminPriceMap = useMemo(
+    () => new Map(adminQuotes.map((q) => [q.symbol, q.regularMarketPrice ?? 0])),
+    [adminQuotes],
+  );
 
 
   const enterGame = (gameId: string) => {
@@ -321,22 +354,36 @@ const GameLobby = () => {
                     </div>
                     <CopyCode code={g.join_code} />
                   </div>
-                  <ul className="mt-3 space-y-1">
-                    {g.players.map((p) => (
-                      <li
-                        key={p.user_id}
-                        className="flex items-center justify-between gap-2 text-xs bg-muted/40 rounded-lg px-2.5 py-1.5"
-                      >
-                        <span className="truncate font-bold">{p.name}</span>
-                        <button
-                          onClick={() => editPlayerCash(p)}
-                          className="shrink-0 tabular-nums text-muted-foreground hover:text-primary underline decoration-dotted underline-offset-2"
-                          title={`Set ${p.name}'s cash`}
-                        >
-                          ${formatNumber(p.cash)} cash
-                        </button>
-                      </li>
-                    ))}
+                  <ul className="mt-3 space-y-1.5">
+                    {g.players.map((p) => {
+                      const holdingsValue = p.positions.reduce(
+                        (s, pos) => s + (adminPriceMap.get(pos.symbol) ?? pos.avgCost) * pos.shares,
+                        0,
+                      );
+                      const total = p.cash + holdingsValue;
+                      return (
+                        <li key={p.user_id} className="bg-muted/40 rounded-lg px-2.5 py-1.5 text-xs">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="truncate font-bold">{p.name}</span>
+                            <span className="tabular-nums font-extrabold shrink-0">${formatNumber(total)}</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-2 mt-0.5 text-muted-foreground">
+                            <span className="truncate">
+                              {p.positions.length === 0
+                                ? "No positions"
+                                : p.positions.map((pos) => `${pos.symbol} ${pos.shares}sh`).join(", ")}
+                            </span>
+                            <button
+                              onClick={() => editPlayerCash(p)}
+                              className="shrink-0 tabular-nums hover:text-primary underline decoration-dotted underline-offset-2"
+                              title={`Set ${p.name}'s cash`}
+                            >
+                              ${formatNumber(p.cash)} cash
+                            </button>
+                          </div>
+                        </li>
+                      );
+                    })}
                     {g.players.length === 0 && (
                       <li className="text-xs text-muted-foreground">No players yet.</li>
                     )}
