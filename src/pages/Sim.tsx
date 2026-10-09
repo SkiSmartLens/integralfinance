@@ -24,7 +24,7 @@ import { PortfolioBar } from "@/components/sim/PortfolioBar";
 import { isUsMarketOpen, nextOpenLabel } from "@/lib/marketHours";
 
 
-interface Member { id: string; game_id: string; user_id: string; cash: number }
+interface Member { id: string; game_id: string; user_id: string; cash: number; joined_at: string }
 interface Position { id: string; symbol: string; shares: number; avg_cost: number }
 interface Game {
   id: string;
@@ -424,7 +424,14 @@ const Sim = () => {
                 <Loader2 className="w-3.5 h-3.5 animate-spin" /> Couldn't refresh your portfolio — retrying…
               </div>
             )}
-            {member && <NetWorthChart memberId={member.id} equity={equity} startingCash={startingCash} />}
+            {member && (
+              <NetWorthChart
+                memberId={member.id}
+                joinedAt={member.joined_at}
+                equity={equity}
+                startingCash={startingCash}
+              />
+            )}
             <PortfolioBar
               equity={equity}
               buyingPower={buyingPower}

@@ -3,31 +3,41 @@ import { Area, AreaChart, ResponsiveContainer, Tooltip, YAxis } from "recharts";
 import { supabase } from "@/lib/backend";
 import { formatNumber } from "@/lib/yahoo";
 import { Clock, LineChart } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Point {
   t: number;
   equity: number;
-  /** The seeded game-start point and the live trailing point aren't real snapshot rows. */
-  live?: boolean;
 }
 
+const RANGES = [
+  { label: "1W", ms: 7 * 24 * 60 * 60 * 1000 },
+  { label: "1M", ms: 30 * 24 * 60 * 60 * 1000 },
+  { label: "3M", ms: 91 * 24 * 60 * 60 * 1000 },
+  { label: "1Y", ms: 365 * 24 * 60 * 60 * 1000 },
+  { label: "All", ms: Infinity },
+] as const;
+
 /**
- * Net worth over time. Real history comes from `portfolio_snapshots`, which a
- * new row is added to at most once every 12 hours (see Sim.tsx) — there's no
- * backend cron here, so the cadence is enforced at write time instead. The
- * line always ends on the current live equity so it never looks stale between
- * snapshots.
+ * Net worth over time, starting the day you joined. Real history comes from
+ * `portfolio_snapshots`, which a new row is added to at most once every 12
+ * hours (see Sim.tsx) — there's no backend cron here, so the cadence is
+ * enforced at write time instead. The line always ends on the current live
+ * equity so it never looks stale between snapshots.
  */
 export const NetWorthChart = ({
   memberId,
+  joinedAt,
   equity,
   startingCash,
 }: {
   memberId: string;
+  joinedAt: string;
   equity: number;
   startingCash: number;
 }) => {
   const [history, setHistory] = useState<Point[] | null>(null);
+  const [rangeIdx, setRangeIdx] = useState(RANGES.length - 1); // default: All
 
   useEffect(() => {
     let alive = true;
@@ -47,14 +57,28 @@ export const NetWorthChart = ({
     };
   }, [memberId]);
 
-  const points = useMemo(() => {
+  // Full series: the day you joined (equity = starting cash, since no trades
+  // had happened yet) through every real snapshot since, ending on the live
+  // figure right now so the line never looks stale between snapshots.
+  const full = useMemo(() => {
     if (history === null) return [];
-    const base =
-      history.length === 0 && startingCash > 0
-        ? [{ t: Date.now() - 60_000, equity: startingCash, live: true }]
-        : history;
-    return [...base, { t: Date.now(), equity, live: true }];
-  }, [history, equity, startingCash]);
+    const joinPoint: Point = { t: new Date(joinedAt).getTime(), equity: startingCash };
+    const real = history.filter((p) => p.t > joinPoint.t);
+    return [joinPoint, ...real, { t: Date.now(), equity }];
+  }, [history, joinedAt, equity, startingCash]);
+
+  // Windowed to the selected timeframe — keep the last point before the
+  // window too, so a short-range view still has a starting edge to draw from
+  // instead of beginning mid-air.
+  const points = useMemo(() => {
+    const ms = RANGES[rangeIdx].ms;
+    if (!Number.isFinite(ms) || full.length === 0) return full;
+    const cutoff = Date.now() - ms;
+    const inWindow = full.filter((p) => p.t >= cutoff);
+    const before = full.filter((p) => p.t < cutoff);
+    const lead = before.length ? [before[before.length - 1]] : [];
+    return [...lead, ...inWindow];
+  }, [full, rangeIdx]);
 
   const first = points[0]?.equity;
   const last = points.at(-1)?.equity;
@@ -72,15 +96,31 @@ export const NetWorthChart = ({
 
   return (
     <section className="rounded-3xl border bg-card px-5 py-5 sm:px-6 shadow-sm">
-      <div className="flex items-center justify-between gap-2 mb-2">
+      <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
         <h3 className="font-extrabold text-sm inline-flex items-center gap-1.5">
           <LineChart className="w-4 h-4 text-primary" /> Your net worth
         </h3>
-        <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
-          <Clock className="w-3 h-3" /> Updates every 12 hours
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
+            <Clock className="w-3 h-3" /> Updates every 12 hours
+          </span>
+          <div className="flex gap-1">
+            {RANGES.map((r, i) => (
+              <button
+                key={r.label}
+                onClick={() => setRangeIdx(i)}
+                className={cn(
+                  "px-2 py-1 rounded-md text-xs font-semibold transition-colors",
+                  rangeIdx === i ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted",
+                )}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
-      <div className="h-32 w-full">
+      <div className="h-56 sm:h-64 w-full">
         {history === null ? (
           <div className="h-full flex items-center justify-center text-sm text-muted-foreground">Loading…</div>
         ) : points.length < 2 ? (
