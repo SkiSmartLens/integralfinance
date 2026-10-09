@@ -17,6 +17,20 @@ if (rootElement) {
     })
     .catch((error: unknown) => {
       console.error("IntegralStocks failed to start", error);
+      // Usually a stale cached page referencing a chunk hash a newer deploy no
+      // longer serves — the host's SPA fallback returns index.html for that
+      // missing JS path, which surfaces here as a MIME-type/module-script
+      // error. One silent reload picks up the fresh index.html and the
+      // correct hashes, same as lazyWithReload() does for page-level chunks
+      // in App.tsx; rate-limited via sessionStorage so a genuinely broken
+      // deploy shows the fallback below instead of reloading forever.
+      const key = "app-reload-at";
+      const last = Number(sessionStorage.getItem(key) ?? 0);
+      if (Date.now() - last > 10_000) {
+        sessionStorage.setItem(key, String(Date.now()));
+        window.location.reload();
+        return;
+      }
       root.render(
         <main className="min-h-screen bg-background px-6 flex items-center justify-center text-center">
           <div className="max-w-md">
