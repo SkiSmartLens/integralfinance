@@ -231,6 +231,20 @@ const GameLobby = () => {
     if (userId) refresh(userId);
   };
 
+  // Admin-only: wipe a player's positions/orders/transaction history and
+  // reset cash to the game's starting amount — a full clean slate, for
+  // cleaning up a corrupted account rather than just patching the number.
+  const resetPlayer = async (player: { member_id: string; name: string }) => {
+    if (!confirm(`Reset ${player.name} to a clean starting balance? This clears all their positions and trade history.`)) return;
+    const { data, error } = await supabase.functions.invoke<{ error?: string }>("admin-set-cash", {
+      body: { member_id: player.member_id, action: "reset" },
+    });
+    if (error) return toast({ title: "Couldn't reset player", description: error.message, variant: "destructive" });
+    if (data?.error) return toast({ title: "Couldn't reset player", description: data.error, variant: "destructive" });
+    toast({ title: `${player.name} reset to a clean starting balance` });
+    if (userId) refresh(userId);
+  };
+
   const joinByCode = async () => {
     const c = code.trim().toUpperCase();
     if (!c) return;
@@ -373,13 +387,22 @@ const GameLobby = () => {
                                 ? "No positions"
                                 : p.positions.map((pos) => `${pos.symbol} ${pos.shares}sh`).join(", ")}
                             </span>
-                            <button
-                              onClick={() => editPlayerCash(p)}
-                              className="shrink-0 tabular-nums hover:text-primary underline decoration-dotted underline-offset-2"
-                              title={`Set ${p.name}'s cash`}
-                            >
-                              ${formatNumber(p.cash)} cash
-                            </button>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                onClick={() => editPlayerCash(p)}
+                                className="tabular-nums hover:text-primary underline decoration-dotted underline-offset-2"
+                                title={`Set ${p.name}'s cash`}
+                              >
+                                ${formatNumber(p.cash)} cash
+                              </button>
+                              <button
+                                onClick={() => resetPlayer(p)}
+                                className="hover:text-rose-600 underline decoration-dotted underline-offset-2"
+                                title={`Reset ${p.name} to a clean starting balance`}
+                              >
+                                Reset
+                              </button>
+                            </div>
                           </div>
                         </li>
                       );

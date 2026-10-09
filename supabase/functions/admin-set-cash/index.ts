@@ -5,11 +5,12 @@ const corsHeaders = {
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
-// Lets an admin directly set a player's cash — e.g. to clean up a corrupted
-// balance from a historical bug, or reset a test account. game_members.cash
-// has no client-writable RLS policy at all (writes only ever happen through
-// the trading engine's service-role calls), so this has to run as a
-// privileged edge function rather than a plain client update.
+// Lets an admin directly fix a player's balance — either set cash to a
+// specific number, or fully reset the account (clear positions/orders/
+// transactions and reset cash to the game's starting amount). Neither is
+// possible through a plain client call: game_members.cash and positions
+// have no client-writable RLS policy at all, so this has to run as a
+// privileged edge function instead.
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -40,11 +41,63 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!roleRow) return json({ error: "Admin access required." }, 403);
 
-    const { member_id, cash } = await req.json();
+    const body = await req.json();
+    const { member_id, action } = body;
     if (!member_id || typeof member_id !== "string") {
       return json({ error: "member_id is required." }, 400);
     }
-    const newCash = Number(cash);
+
+    if (action === "reset") {
+      const { data: member, error: memberErr } = await svc
+        .from("game_members")
+        .select("id, game_id")
+        .eq("id", member_id)
+        .maybeSingle();
+      if (memberErr) {
+        console.error("admin reset: member lookup failed", memberErr);
+        return json({ error: "Could not reset player. Please try again." }, 500);
+      }
+      if (!member) return json({ error: "Player not found." }, 404);
+
+      const { data: game, error: gameErr } = await svc
+        .from("games")
+        .select("starting_cash")
+        .eq("id", member.game_id)
+        .maybeSingle();
+      if (gameErr || !game) {
+        console.error("admin reset: game lookup failed", gameErr);
+        return json({ error: "Could not reset player. Please try again." }, 500);
+      }
+
+      // Clearing positions before game_members (not strictly required by FKs,
+      // but keeps the reset atomic-in-intent and matches what a fresh
+      // membership row would look like).
+      const [posRes, txRes, orderRes] = await Promise.all([
+        svc.from("positions").delete().eq("member_id", member_id),
+        svc.from("transactions").delete().eq("member_id", member_id),
+        svc.from("orders").delete().eq("member_id", member_id),
+      ]);
+      if (posRes.error || txRes.error || orderRes.error) {
+        console.error("admin reset: clear failed", posRes.error, txRes.error, orderRes.error);
+        return json({ error: "Could not clear positions/history. Please try again." }, 500);
+      }
+      // portfolio_snapshots may not exist on every deploy yet — best-effort only.
+      await svc.from("portfolio_snapshots").delete().eq("member_id", member_id);
+
+      const { data: updated, error: updateErr } = await svc
+        .from("game_members")
+        .update({ cash: game.starting_cash })
+        .eq("id", member_id)
+        .select("id, cash, user_id")
+        .maybeSingle();
+      if (updateErr || !updated) {
+        console.error("admin reset: cash update failed", updateErr);
+        return json({ error: "Could not reset cash. Please try again." }, 500);
+      }
+      return json({ ok: true, member: updated });
+    }
+
+    const newCash = Number(body.cash);
     if (!Number.isFinite(newCash)) {
       return json({ error: "cash must be a number." }, 400);
     }
