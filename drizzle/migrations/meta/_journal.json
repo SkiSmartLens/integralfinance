@@ -29,6 +29,13 @@
       "when": 1791311883869,
       "tag": "0003_apply_pending_github_migrations",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791558045301,
+      "tag": "0004_create_portfolio_snapshots",
+      "breakpoints": true
     }
   ]
 }
