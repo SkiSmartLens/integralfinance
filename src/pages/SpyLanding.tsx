@@ -9,14 +9,34 @@ import { formatNumber } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
 import { ArrowRight, LineChart } from "lucide-react";
 
+// Retry a failed section import once (transient rebuild/deploy hiccup), then
+// reload the page once per 10s instead of leaving a blank screen.
+const retryImport = <T,>(load: () => Promise<T>): Promise<T> =>
+  load().catch(
+    () =>
+      new Promise<T>((resolve, reject) =>
+        setTimeout(() => {
+          load().then(resolve).catch((e) => {
+            const key = "section-reload-at";
+            const last = Number(sessionStorage.getItem(key) ?? 0);
+            if (Date.now() - last > 10_000) {
+              sessionStorage.setItem(key, String(Date.now()));
+              window.location.reload();
+            }
+            reject(e);
+          });
+        }, 800),
+      ),
+  );
+
 const StockSummary = lazy(() =>
-  import("@/components/StockSummary").then((m) => ({ default: m.StockSummary })),
+  retryImport(() => import("@/components/StockSummary")).then((m) => ({ default: m.StockSummary })),
 );
 const StockExplainer = lazy(() =>
-  import("@/components/StockExplainer").then((m) => ({ default: m.StockExplainer })),
+  retryImport(() => import("@/components/StockExplainer")).then((m) => ({ default: m.StockExplainer })),
 );
 const NewsList = lazy(() =>
-  import("@/components/NewsList").then((m) => ({ default: m.NewsList })),
+  retryImport(() => import("@/components/NewsList")).then((m) => ({ default: m.NewsList })),
 );
 
 const SYMBOL = "^GSPC";
