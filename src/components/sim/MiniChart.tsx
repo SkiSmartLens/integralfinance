@@ -8,6 +8,10 @@ const RANGES = [
   { label: "1D", range: "1d", interval: "1m" },
   { label: "1W", range: "5d", interval: "5m" },
   { label: "1M", range: "1mo", interval: "1d" },
+  { label: "3M", range: "3mo", interval: "1d" },
+  { label: "1Y", range: "1y", interval: "1d" },
+  { label: "5Y", range: "5y", interval: "1wk" },
+  { label: "All", range: "max", interval: "1mo" },
 ] as const;
 
 export const MiniChart = ({ symbol }: { symbol: string }) => {
@@ -37,7 +41,7 @@ export const MiniChart = ({ symbol }: { symbol: string }) => {
 
   return (
     <div className="animate-fade-in">
-      <div className="flex justify-end gap-1 mb-2">
+      <div className="flex flex-wrap justify-end gap-1 mb-2">
         {RANGES.map((rg, i) => (
           <button
             key={rg.label}
