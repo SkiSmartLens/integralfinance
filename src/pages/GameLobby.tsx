@@ -56,7 +56,7 @@ const SITE = "https://integralstocks.com";
 export const inviteLink = (code: string) => `${SITE}/sim/join/${code}`;
 
 interface AdminGame extends Game {
-  players: { user_id: string; cash: number; name: string }[];
+  players: { member_id: string; user_id: string; cash: number; name: string }[];
 }
 
 const GameLobby = () => {
@@ -118,13 +118,13 @@ const GameLobby = () => {
         .order("created_at", { ascending: false });
       const { data: allMembers } = await supabase
         .from("game_members")
-        .select("game_id, user_id, cash");
+        .select("id, game_id, user_id, cash");
       const { data: profs } = await supabase.from("profiles").select("user_id, display_name");
       const nameBy = new Map(((profs ?? []) as any[]).map((p) => [p.user_id, p.display_name as string]));
-      const byGame = new Map<string, { user_id: string; cash: number; name: string }[]>();
+      const byGame = new Map<string, { member_id: string; user_id: string; cash: number; name: string }[]>();
       ((allMembers ?? []) as any[]).forEach((m) => {
         const list = byGame.get(m.game_id) ?? [];
-        list.push({ user_id: m.user_id, cash: Number(m.cash), name: nameBy.get(m.user_id) ?? "Player" });
+        list.push({ member_id: m.id, user_id: m.user_id, cash: Number(m.cash), name: nameBy.get(m.user_id) ?? "Player" });
         byGame.set(m.game_id, list);
       });
       setAdminGames(
@@ -175,6 +175,27 @@ const GameLobby = () => {
       return toast({ title: "Couldn't join", description: error.message, variant: "destructive" });
     }
     enterGame(game.id);
+  };
+
+  // Admin-only: directly set a player's cash (e.g. to fix a corrupted
+  // balance). game_members.cash has no client-writable RLS policy at all —
+  // every write normally happens through the trading engine's service-role
+  // calls — so this goes through a privileged edge function that checks the
+  // caller is actually an admin before touching anyone's balance.
+  const editPlayerCash = async (player: { member_id: string; name: string; cash: number }) => {
+    const next = prompt(`Set ${player.name}'s cash to:`, String(player.cash));
+    if (next == null) return;
+    const amount = Number(next);
+    if (!Number.isFinite(amount) || amount < 0) {
+      return toast({ title: "Enter a valid, non-negative number", variant: "destructive" });
+    }
+    const { data, error } = await supabase.functions.invoke<{ error?: string }>("admin-set-cash", {
+      body: { member_id: player.member_id, cash: amount },
+    });
+    if (error) return toast({ title: "Couldn't update cash", description: error.message, variant: "destructive" });
+    if (data?.error) return toast({ title: "Couldn't update cash", description: data.error, variant: "destructive" });
+    toast({ title: `${player.name}'s cash set to $${amount.toLocaleString()}` });
+    if (userId) refresh(userId);
   };
 
   const joinByCode = async () => {
@@ -304,12 +325,16 @@ const GameLobby = () => {
                     {g.players.map((p) => (
                       <li
                         key={p.user_id}
-                        className="flex items-center justify-between text-xs bg-muted/40 rounded-lg px-2.5 py-1.5"
+                        className="flex items-center justify-between gap-2 text-xs bg-muted/40 rounded-lg px-2.5 py-1.5"
                       >
                         <span className="truncate font-bold">{p.name}</span>
-                        <span className="tabular-nums text-muted-foreground">
+                        <button
+                          onClick={() => editPlayerCash(p)}
+                          className="shrink-0 tabular-nums text-muted-foreground hover:text-primary underline decoration-dotted underline-offset-2"
+                          title={`Set ${p.name}'s cash`}
+                        >
                           ${formatNumber(p.cash)} cash
-                        </span>
+                        </button>
                       </li>
                     ))}
                     {g.players.length === 0 && (
