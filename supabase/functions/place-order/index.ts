@@ -193,93 +193,74 @@ interface FillRules {
   startingCash?: number;
 }
 
-/** Applies cash/position effects for an order row and marks it filled. */
-async function fillOrder(svc: any, member_id: string, ord: any, fillPrice: number, rules: FillRules = {}) {
-  const marginFloor = rules.marginFloor ?? 0;
-  const { data: member } = await svc
-    .from("game_members").select("id, cash").eq("id", member_id).single();
-  if (!member) return { error: "portfolio not found" };
-
+/**
+ * Applies cash/position effects for an order row and marks it filled.
+ *
+ * This used to do the cash update as a separate, unchecked `.update()` call
+ * after writing the position — with no `.error` check on any of the writes.
+ * If that cash write silently failed (a rejected trigger, a dropped request,
+ * anything) the function had no way to know: it still inserted the position,
+ * inserted a transaction row, and marked the order "filled", so the trade
+ * looked successful while the shares showed up with no cash ever leaving the
+ * account — net worth inflated by the full trade amount. `apply_order_fill`
+ * (added in a prior migration but never actually wired up here) does the
+ * whole fill — lock the portfolio row, move cash, write the position, mark
+ * the order filled, log the transaction — as one atomic, row-locked RPC call
+ * with a single error outcome, so a partial failure is no longer possible.
+ */
+async function fillOrder(
+  svc: any,
+  member_id: string,
+  ord: any,
+  fillPrice: number,
+  rules: FillRules = {},
+): Promise<{ error?: string; filled?: boolean; price?: number }> {
   const side = ord.side as "buy" | "sell" | "short" | "cover";
   const shares = Number(ord.shares);
   const symbol = String(ord.symbol).toUpperCase();
-  const cost = fillPrice * shares;
-
-  const { data: pos } = await svc
-    .from("positions").select("*")
-    .eq("member_id", member_id).eq("symbol", symbol).maybeSingle();
-  const cur = pos ? Number(pos.shares) : 0;
-  const curAvg = pos ? Number(pos.avg_cost) : 0;
 
   const fail = async (msg: string) => {
     await svc.from("orders").update({ status: "rejected" }).eq("id", ord.id);
     return { error: msg };
   };
 
-  // Rules below only gate opening/adding exposure (buy, short) — you can
-  // always close a position, even one that no longer fits the game's rules
-  // (e.g. a stock that gapped below the min price overnight).
-  const checkEntryRules = async (newNotionalShares: number) => {
+  // Entry rules (min price / max position %) only gate opening/adding exposure
+  // (buy, short) — you can always close a position, even one that no longer
+  // fits the game's rules (e.g. a stock that gapped below the min price
+  // overnight). apply_order_fill doesn't know about these per-game custom
+  // rules, so they're checked here first against a fresh read of the position.
+  if (side === "buy" || side === "short") {
+    const { data: pos } = await svc
+      .from("positions").select("shares")
+      .eq("member_id", member_id).eq("symbol", symbol).maybeSingle();
+    const cur = pos ? Number(pos.shares) : 0;
+    const newNotionalShares = side === "buy" ? cur + shares : Math.abs(cur - shares);
     if (rules.minPrice && fillPrice < rules.minPrice) {
-      return `This game requires stocks priced at least $${rules.minPrice.toFixed(2)} — ${symbol} is $${fillPrice.toFixed(2)}.`;
+      return await fail(`This game requires stocks priced at least $${rules.minPrice.toFixed(2)} — ${symbol} is $${fillPrice.toFixed(2)}.`);
     }
     if (rules.maxPositionPct && rules.startingCash) {
       const cap = rules.startingCash * (rules.maxPositionPct / 100);
       const notional = newNotionalShares * fillPrice;
       if (notional > cap) {
-        return `That would put $${notional.toFixed(0)} in ${symbol} — this game caps a single stock at ${rules.maxPositionPct}% of starting capital ($${cap.toFixed(0)}).`;
+        return await fail(`That would put $${notional.toFixed(0)} in ${symbol} — this game caps a single stock at ${rules.maxPositionPct}% of starting capital ($${cap.toFixed(0)}).`);
       }
     }
-    return null;
-  };
-
-  if (side === "buy") {
-    const newShares = cur + shares;
-    const entryErr = await checkEntryRules(newShares);
-    if (entryErr) return await fail(entryErr);
-    if (Number(member.cash) - cost < marginFloor) return await fail("insufficient buying power");
-    if (cur < 0) return await fail("you have a short position — use COVER");
-    const newAvg = cur > 0 ? (cur * curAvg + cost) / newShares : fillPrice;
-    if (pos) await svc.from("positions").update({ shares: newShares, avg_cost: newAvg }).eq("id", pos.id);
-    else await svc.from("positions").insert({ member_id, symbol, shares, avg_cost: fillPrice });
-    await svc.from("game_members").update({ cash: Number(member.cash) - cost }).eq("id", member_id);
-  } else if (side === "sell") {
-    if (cur <= 0 || cur < shares) return await fail("insufficient shares");
-    const newShares = cur - shares;
-    if (newShares === 0) await svc.from("positions").delete().eq("id", pos!.id);
-    else await svc.from("positions").update({ shares: newShares }).eq("id", pos!.id);
-    await svc.from("game_members").update({ cash: Number(member.cash) + cost }).eq("id", member_id);
-  } else if (side === "short") {
-    const absNew = Math.abs(cur - shares);
-    const entryErr = await checkEntryRules(absNew);
-    if (entryErr) return await fail(entryErr);
-    if (cur > 0) return await fail("you have a long position — SELL first");
-    const newShares = cur - shares;
-    const absOld = Math.abs(cur);
-    const newAvg = absOld > 0 ? (absOld * curAvg + shares * fillPrice) / absNew : fillPrice;
-    if (pos) await svc.from("positions").update({ shares: newShares, avg_cost: newAvg }).eq("id", pos.id);
-    else await svc.from("positions").insert({ member_id, symbol, shares: -shares, avg_cost: fillPrice });
-    await svc.from("game_members").update({ cash: Number(member.cash) + cost }).eq("id", member_id);
-  } else if (side === "cover") {
-    if (cur >= 0) return await fail("no short position to cover");
-    if (Math.abs(cur) < shares) return await fail("cover size exceeds short");
-    if (Number(member.cash) - cost < marginFloor) return await fail("insufficient buying power to cover");
-    const newShares = cur + shares;
-    if (newShares === 0) await svc.from("positions").delete().eq("id", pos!.id);
-    else await svc.from("positions").update({ shares: newShares }).eq("id", pos!.id);
-    await svc.from("game_members").update({ cash: Number(member.cash) - cost }).eq("id", member_id);
   }
 
-  await svc.from("orders").update({
-    status: "filled",
-    filled_price: fillPrice,
-    filled_at: new Date().toISOString(),
-  }).eq("id", ord.id);
-
-  await svc.from("transactions").insert({
-    member_id, order_id: ord.id, symbol,
-    side, shares, price: fillPrice, commission: 0,
+  const { data, error } = await svc.rpc("apply_order_fill", {
+    _member_id: member_id,
+    _order_id: ord.id,
+    _symbol: symbol,
+    _side: side,
+    _shares: shares,
+    _price: fillPrice,
+    _margin_floor: rules.marginFloor ?? 0,
   });
+  if (error) {
+    console.error("apply_order_fill rpc failed", error);
+    return await fail("Something went wrong filling your order. Please try again.");
+  }
+  if (data?.error) return await fail(data.error);
 
   return { filled: true, price: fillPrice };
 }
