@@ -146,6 +146,26 @@ const GameLobby = () => {
     nav("/sim");
   };
 
+  // The admin "All games" list includes every game in the app, not just ones
+  // the admin has actually joined — enterGame() alone just points /sim at a
+  // game_id with no game_members row behind it, so Sim.tsx can't find it and
+  // silently falls back to whichever game the admin really is a member of
+  // (their first one). Join on demand first, same as joinPublic, so "Open
+  // game" actually works for any game.
+  const adminOpenGame = async (game: Game) => {
+    if (!userId) return;
+    const alreadyMember = myMemberships.some((m) => m.game_id === game.id);
+    if (!alreadyMember) {
+      const { error } = await supabase
+        .from("game_members")
+        .insert({ game_id: game.id, user_id: userId, cash: game.starting_cash });
+      if (error && !error.message.includes("duplicate")) {
+        return toast({ title: "Couldn't open game", description: error.message, variant: "destructive" });
+      }
+    }
+    enterGame(game.id);
+  };
+
   const joinPublic = async (game: Game) => {
     if (!userId) return nav("/auth");
     const { error } = await supabase
@@ -297,7 +317,7 @@ const GameLobby = () => {
                     )}
                   </ul>
                   <button
-                    onClick={() => enterGame(g.id)}
+                    onClick={() => adminOpenGame(g)}
                     className="mt-4 w-full h-10 rounded-xl border-2 font-extrabold text-sm hover:border-primary"
                   >
                     Open game
