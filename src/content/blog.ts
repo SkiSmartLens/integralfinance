@@ -61,6 +61,26 @@ export const REDIRECTS: Record<string, string> = {
   "teen-investing": "why-i-built-integralstocks",
 };
 
+/**
+ * Tickers whose auto-generated /blog/why-did-<ticker>-move-today page (live in
+ * August 2026, since removed) Google still has on file. That explanation now
+ * lives on the ticker page, so these URLs redirect there; whyMovedTicker()
+ * covers any other ticker client-side.
+ */
+export const LEGACY_WHY_MOVED_TICKERS = [
+  "^fvx", "^gdaxi", "^tnx", "aaoi", "abbv", "adbe", "aig", "alhc", "alm", "alms", "amba", "amd", "amzn", "app",
+  "arwr", "ats", "avax-usd", "avgo", "axp", "bfly", "bmi", "bnb-usd", "bp", "btsg", "bxbl", "cdna", "ci", "clov",
+  "crm", "cvna", "ddog", "elvn", "frmi", "fslr", "fti", "fxi", "gm", "goog", "hona", "hubs", "hut", "ibrx", "iesc",
+  "insm", "ions", "iova", "itgr", "key", "ko", "legn", "ma", "maas", "mara", "mrna", "ms", "mstr", "mtz", "navn",
+  "nq=f", "nvda", "orcl", "pag", "payc", "pega", "plbl", "prim", "pypl", "rblx", "rddt", "roku", "sb=f", "shop",
+  "sitm", "slbt", "spy", "tfc", "unh", "usdbrl=x", "usdmxn=x", "uup", "vcyt", "vod", "voo", "vti", "wfc", "wmt",
+  "wpp", "xlf", "xlp", "zs=f", "zw=f",
+];
+
+export function whyMovedTicker(slug: string): string | undefined {
+  return /^why-did-(.+)-move-today$/.exec(slug)?.[1];
+}
+
 export const POSTS: BlogPost[] = [
   {
     slug: "how-to-start-investing-with-100-dollars",

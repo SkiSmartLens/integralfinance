@@ -25,7 +25,14 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, resolve } from "path";
 import { ALL_TICKERS, CATEGORIES, isIndexableTicker, tickerDisplayName, tickerPageLabel } from "../src/lib/categories";
-import { POSTS, REDIRECTS, postsForTicker, renderBody, type BlogPost } from "../src/content/blog";
+import {
+  LEGACY_WHY_MOVED_TICKERS,
+  POSTS,
+  REDIRECTS,
+  postsForTicker,
+  renderBody,
+  type BlogPost,
+} from "../src/content/blog";
 import { ACADEMY_MODULES } from "../src/lib/academy";
 import { GLOSSARY, getGlossaryEntry, type GlossaryEntry } from "../src/content/glossary";
 
@@ -880,9 +887,17 @@ function main() {
     writePage(`/blog/${from}`, redirectPage(`/blog/${to}`));
     written++;
   }
+  // Retired auto-generated "why did X move today" posts. Google learned these
+  // from links on every ticker page, so cover every known ticker, not just the
+  // ones it has already reported.
+  const movedTickers = new Set([...LEGACY_WHY_MOVED_TICKERS, ...ALL_TICKERS.map((t) => t.toLowerCase())]);
+  for (const t of movedTickers) {
+    writePage(`/blog/why-did-${t}-move-today`, redirectPage(tickerHref(t)));
+    written++;
+  }
 
   console.log(
-    `prerender: wrote ${written} page(s) (${staticRoutes.length} static, ${tickerRoutes.length}/${ALL_TICKERS.length} tickers, ${GLOSSARY.length + 2} glossary, ${POSTS.length + 1} blog, ${Object.keys(REDIRECTS).length} blog redirects, 1 faq, 2 about/disclaimer)`,
+    `prerender: wrote ${written} page(s) (${staticRoutes.length} static, ${tickerRoutes.length}/${ALL_TICKERS.length} tickers, ${GLOSSARY.length + 2} glossary, ${POSTS.length + 1} blog, ${Object.keys(REDIRECTS).length} blog redirects, ${movedTickers.size} why-moved redirects, 1 faq, 2 about/disclaimer)`,
   );
 }
 

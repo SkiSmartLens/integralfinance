@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowRight, BookOpen, Clock, LineChart } from "lucide-react"
 import { Header } from "@/components/Header";
 import { SEO } from "@/components/SEO";
 import { SiteFooter } from "@/components/SiteFooter";
-import { getPost, POSTS, redirectFor, renderBody } from "@/content/blog";
+import { getPost, POSTS, redirectFor, renderBody, whyMovedTicker } from "@/content/blog";
 import { featuredImage } from "@/content/blogImages";
 import NotFound from "./NotFound";
 
@@ -15,6 +15,8 @@ const BlogPost = () => {
   const post = getPost(slug);
   const redirect = post ? undefined : redirectFor(slug);
   if (redirect) return <Navigate to={`/blog/${redirect}`} replace />;
+  const movedTicker = post ? undefined : whyMovedTicker(slug);
+  if (movedTicker) return <Navigate to={`/stocks/${movedTicker.toLowerCase()}`} replace />;
   if (!post) return <NotFound />;
   const blocks = renderBody(post.body);
 
