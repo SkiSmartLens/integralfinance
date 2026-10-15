@@ -52,6 +52,12 @@ const AcademyModule = () => {
   if (!module || !roadmap) {
     return (
       <div className="min-h-screen flex flex-col">
+        <SEO
+          title="Lesson Not Found — Investor Academy | Integral Stocks"
+          description="This Investor Academy lesson doesn't exist."
+          path={`/academy/${id ?? ""}`}
+          noindex
+        />
         <Header />
         <main className="flex-1 max-w-2xl mx-auto p-10 text-center">
           <p className="text-muted-foreground">Module not found.</p>
@@ -65,6 +71,13 @@ const AcademyModule = () => {
   if (!isUnlocked(modId)) {
     return (
       <div className="min-h-screen flex flex-col">
+        {/* Crawlers never complete lesson 1, so they only ever see this locked screen. */}
+        <SEO
+          title={`${module.title} — Investor Academy | Integral Stocks`}
+          description={module.blurb}
+          path={`/academy/${modId}`}
+          noindex
+        />
         <Header />
         <main className="flex-1 max-w-2xl mx-auto p-10 text-center">
           <h1 className="text-2xl font-extrabold mb-2">Locked</h1>

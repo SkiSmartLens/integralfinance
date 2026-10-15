@@ -2,7 +2,7 @@
 
 import { writeFileSync } from "fs";
 import { resolve } from "path";
-import { ALL_TICKERS } from "../src/lib/categories";
+import { ALL_TICKERS, isIndexableTicker } from "../src/lib/categories";
 import { POSTS } from "../src/content/blog";
 import { GLOSSARY } from "../src/content/glossary";
 
@@ -30,6 +30,7 @@ const staticEntries: SitemapEntry[] = [
   { path: "/start", changefreq: "monthly", priority: "0.8" },
   // "/watchlist" is omitted: it's per-visitor (empty for a crawler) and noindexed.
   { path: "/simulator", changefreq: "weekly", priority: "0.8" },
+  { path: "/teachers", changefreq: "monthly", priority: "0.7" },
   { path: "/academy", changefreq: "monthly", priority: "0.7" },
   { path: "/academy/1", changefreq: "monthly", priority: "0.5" },
   // "/sim" is omitted: it's a signed-in game view that sends visitors to /auth.
@@ -57,8 +58,8 @@ const staticEntries: SitemapEntry[] = [
   { path: "/learn/glossary", changefreq: "monthly", priority: "0.7" },
 ];
 
-// Individual stock pages for every ticker referenced in the app's data.
-const stockEntries: SitemapEntry[] = ALL_TICKERS.map((symbol) => ({
+// Individual stock pages for every indexable ticker in the app's data.
+const stockEntries: SitemapEntry[] = ALL_TICKERS.filter(isIndexableTicker).map((symbol) => ({
   // `^` (index tickers like ^GSPC) isn't a legal URL character — percent-encode it.
   path: `/stocks/${symbol.toLowerCase().replace(/\^/g, "%5E")}`,
   changefreq: "hourly",

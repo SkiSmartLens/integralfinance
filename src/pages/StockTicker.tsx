@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { SEO, canonicalPath } from "@/components/SEO";
 import { StockChart } from "@/components/StockChart";
@@ -7,7 +7,7 @@ import { StockExplainer } from "@/components/StockExplainer";
 import { SiteFooter } from "@/components/SiteFooter";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { formatNumber } from "@/lib/yahoo";
-import { ALL_TICKERS } from "@/lib/categories";
+import { ALL_TICKERS, isIndexableTicker, tickerPageLabel } from "@/lib/categories";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, LineChart, Newspaper, SlidersHorizontal } from "lucide-react";
 import { AcademyPrompt } from "@/components/AcademyPrompt";
@@ -47,7 +47,11 @@ const StockTicker = () => {
     !loading && !error && !ALL_TICKERS.includes(symbol) && (!q || (last == null && /404/.test(q.error ?? "")));
   const pageUrl = `https://integralstocks.com${canonicalPath(`/stocks/${symbol.toLowerCase()}`)}`;
 
-  const title = `${symbol} (${name}) Stock Price & Chart | IntegralStocks`;
+  // Only lowercase ticker URLs have a prerendered page; any other casing gets
+  // the homepage shell, so send it to the canonical spelling.
+  if (ticker !== ticker.toLowerCase()) return <Navigate to={`/stocks/${ticker.toLowerCase()}`} replace />;
+
+  const title = `${symbol} (${name}) ${tickerPageLabel(symbol)} | IntegralStocks`;
   const priceBit = last != null ? `Live price $${formatNumber(last)} (${ch >= 0 ? "+" : ""}${formatNumber(ch)}%).` : "";
   const description = `${name} (${symbol}) live chart plus a plain-English AI breakdown of why the stock is moving today. ${priceBit} Beginner-friendly.`.slice(0, 300);
   const keywords = [
@@ -69,7 +73,7 @@ const StockTicker = () => {
         description={description}
         path={`/stocks/${symbol.toLowerCase()}`}
         keywords={keywords}
-        noindex={unknownSymbol}
+        noindex={unknownSymbol || !isIndexableTicker(symbol)}
         jsonLd={[
           {
             "@context": "https://schema.org",

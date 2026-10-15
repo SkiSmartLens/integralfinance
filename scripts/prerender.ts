@@ -24,8 +24,9 @@
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, resolve } from "path";
-import { ALL_TICKERS } from "../src/lib/categories";
-import { POSTS, REDIRECTS, renderBody, type BlogPost } from "../src/content/blog";
+import { ALL_TICKERS, CATEGORIES, isIndexableTicker, tickerDisplayName, tickerPageLabel } from "../src/lib/categories";
+import { POSTS, REDIRECTS, postsForTicker, renderBody, type BlogPost } from "../src/content/blog";
+import { ACADEMY_MODULES } from "../src/lib/academy";
 import { GLOSSARY, getGlossaryEntry, type GlossaryEntry } from "../src/content/glossary";
 
 const SITE = "https://integralstocks.com";
@@ -63,6 +64,8 @@ function stripManagedHead(html: string): string {
 
 interface HeadInput {
   path: string;
+  /** Canonical path when this route is an alias of another page; defaults to `path`. */
+  canonical?: string;
   title: string;
   description: string;
   keywords?: string;
@@ -72,7 +75,7 @@ interface HeadInput {
 }
 
 function headTags(h: HeadInput): string[] {
-  const url = urlFor(h.path);
+  const url = urlFor(h.canonical ?? h.path);
   const image = h.image ?? DEFAULT_IMAGE;
   return [
     `<title>${esc(h.title)}</title>`,
@@ -116,9 +119,12 @@ function writePage(path: string, html: string) {
 
 interface Route {
   path: string;
+  canonical?: string;
   title: string;
   description: string;
   noindex?: boolean;
+  /** Extra crawler-fallback HTML placed after the summary paragraph. */
+  extraHtml?: string;
 }
 
 function headOnlyPage(r: Route): string {
@@ -130,16 +136,18 @@ function headOnlyPage(r: Route): string {
   html = html.replace(
     /(<div data-crawler-fallback[^>]*>)[\s\S]*?(?=<nav>)/,
     (_, open) =>
-      `${open}\n        <h1>${esc(r.title.replace(/\s*[|—]\s*IntegralStocks$/, ""))}</h1>\n        <p>${esc(r.description)}</p>\n        `,
+      `${open}\n        <h1>${esc(r.title.replace(/\s*[|—]\s*IntegralStocks$/, ""))}</h1>\n        <p>${esc(r.description)}</p>\n        ${r.extraHtml ?? ""}\n        `,
   );
   return html;
 }
 
-// Static utility pages. Deliberately excludes: routes covered by the "full"
-// tier below (glossary, blog, FAQ, about, disclaimer); "/dashboard"
-// (robots.txt-disallowed, so no compliant crawler ever requests it); "/news"
-// (a non-canonical alias of "/market-brief" — same reason it's left out of
-// sitemap.xml).
+// Static utility pages. Deliberately excludes routes covered by the "full"
+// tier below (glossary, blog, FAQ, about, disclaimer) and "/dashboard"
+// (robots.txt-disallowed, so no compliant crawler ever requests it).
+// Every other public route must be listed: a route with no prerendered file is
+// served the homepage's HTML, canonical and all, which Google reads as a
+// duplicate of "/". Aliases ("/news", "/sim/lobby") get their own file whose
+// canonical points at the real page.
 const staticRoutes: Route[] = [
   {
     path: "/",
@@ -166,13 +174,24 @@ const staticRoutes: Route[] = [
   { path: "/learn/portfolio", title: "Build a Beginner Investing Portfolio", description: "Diversification, position sizing and risk: how to put a simple, resilient portfolio together from scratch." },
   { path: "/learn/advanced", title: "Advanced Investing Tools Explained", description: "Options, derivatives and advanced order types explained in plain English — plus when beginners should skip them." },
   { path: "/academy", title: "Investor Academy — A Guided Course for Beginners", description: "A short, gamified, linear course that takes total beginners from zero to confident with the stock market basics." },
-  { path: "/academy/1", title: "Investor Academy: Lesson 1", description: "The first lesson in the Investor Academy — a guided, gamified course for total beginners." },
+  // Lessons after the first are locked until the previous one is completed,
+  // which a crawler never does — so only lesson 1 is indexable.
+  ...ACADEMY_MODULES.map((m) => ({
+    path: `/academy/${m.id}`,
+    title: `${m.title} — Investor Academy | Integral Stocks`,
+    description: m.blurb,
+    noindex: m.id > 1,
+  })),
   { path: "/simulator", title: "Free Stock Market Simulator for Beginners | IntegralStocks", description: "Practice trading with $100,000 of virtual cash and real live prices. Play the stock market simulator solo or with friends — free, zero risk." },
+  { path: "/sim/lobby", canonical: "/simulator", title: "Free Stock Market Simulator for Beginners | IntegralStocks", description: "Practice trading with $100,000 of virtual cash and real live prices. Play the stock market simulator solo or with friends — free, zero risk." },
+  { path: "/sim/create", title: "Create Game — Integral Stocks Simulator", description: "Configure your stock simulator game: starting cash, short selling, leverage, duration and visibility.", noindex: true },
+  { path: "/teachers", title: "Free Stock Market Game for Classrooms & Clubs | IntegralStocks", description: "Run a free stock market simulation for your class or investing club. Create a game, share a code, and watch a live leaderboard — no signup fees, no real money, no credit card." },
   { path: "/sim", title: "Practice Trading — $100,000 Paper Trading Account", description: "A free, single-player paper trading simulator with a $100,000 virtual account and market/limit/stop orders.", noindex: true },
   { path: "/screener", title: "Stock Screener — Find Stocks by Filter", description: "Filter stocks by price, movement and volume with a simple screener designed for people new to investing." },
   { path: "/calendar", title: "Earnings & Market Calendar", description: "Upcoming earnings dates and market events, with plain-English notes on why each one can move prices." },
   { path: "/watchlist", title: "Your Stock Watchlist", description: "Track the stocks you care about with live prices and AI explanations of each day's move.", noindex: true },
   { path: "/market-brief", title: "Daily Market Brief — Today in 2 Minutes", description: "A short daily read on what moved the market today and why, written for beginners rather than traders." },
+  { path: "/news", canonical: "/market-brief", title: "Daily Market Brief — Today in 2 Minutes", description: "A short daily read on what moved the market today and why, written for beginners rather than traders." },
   { path: "/translate", title: "Jargon Translator — Finance Terms in Plain English", description: "Paste any confusing finance sentence and get a plain-English translation instantly. No jargon left behind." },
   { path: "/tools", title: "Free Finance Calculators — Compound Interest, Position Size & More", description: "Free investing calculators: compound interest, position sizing, dividend yield, and profit/loss — all client-side, no sign-up required." },
   { path: "/start", title: "Start Here — Your First Steps in Investing", description: "Two quick questions and we'll point you at the right first lesson, first chart and first practice trade." },
@@ -183,12 +202,57 @@ const staticRoutes: Route[] = [
   { path: "/affiliate-disclosure", title: "Affiliate Disclosure — IntegralStocks", description: "How IntegralStocks discloses affiliate relationships and sponsored links." },
 ];
 
+const tickerHref = (symbol: string) => `/stocks/${symbol.toLowerCase().replace(/\^/g, "%5E")}`;
+
+/** Which category lists a ticker sits in, plus the other tickers in those lists. */
+function tickerContext(symbol: string): { groups: string[]; peers: string[] } {
+  const groups: string[] = [];
+  const peers = new Set<string>();
+  for (const c of CATEGORIES) {
+    if (c.symbols?.includes(symbol)) {
+      groups.push(c.label);
+      c.symbols.forEach((s) => peers.add(s));
+    }
+    for (const st of c.subTopics ?? []) {
+      if (st.symbols?.includes(symbol)) {
+        groups.push(`${c.label} › ${st.label}`);
+        st.symbols.forEach((s) => peers.add(s));
+      }
+    }
+  }
+  peers.delete(symbol);
+  return { groups, peers: [...peers].filter(isIndexableTicker).slice(0, 12) };
+}
+
+function tickerExtraHtml(symbol: string): string {
+  const { groups, peers } = tickerContext(symbol);
+  const posts = postsForTicker(symbol);
+  return [
+    groups.length ? `<p>Listed under: ${groups.map(esc).join(", ")}.</p>` : "",
+    peers.length
+      ? `<p>Compare with: ${peers.map((p) => `<a href="${tickerHref(p)}">${esc(p)}</a>`).join(" ")}</p>`
+      : "",
+    posts.length
+      ? `<p>Read more: ${posts.map((p) => `<a href="/blog/${p.slug}">${esc(p.title)}</a>`).join(" · ")}</p>`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n        ");
+}
+
 const tickerRoutes: Route[] = ALL_TICKERS
-  .map((symbol) => ({
-    path: `/stocks/${symbol.toLowerCase()}`,
-    title: `${symbol} Stock Price & Chart | IntegralStocks`,
-    description: `${symbol} live chart plus a plain-English AI breakdown of why the stock is moving today. Beginner-friendly, updated continuously.`,
-  }))
+  .map((symbol) => {
+    const name = tickerDisplayName(symbol);
+    const subject = name ? `${name} (${symbol})` : symbol;
+    const indexable = isIndexableTicker(symbol);
+    return {
+      path: `/stocks/${symbol.toLowerCase()}`,
+      title: `${subject} ${tickerPageLabel(symbol)} | IntegralStocks`,
+      description: `${subject} live chart plus a plain-English AI breakdown of why it's moving today. Beginner-friendly, updated continuously.`,
+      noindex: !indexable,
+      extraHtml: indexable ? tickerExtraHtml(symbol) : undefined,
+    };
+  })
   .slice(0, MAX_TICKER_PAGES);
 
 // ---------- Tier 2: full content (glossary, blog, FAQ) ----------

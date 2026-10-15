@@ -106,7 +106,7 @@ const CreateGame = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <SEO title="Create Game — Integral Stocks Simulator" description="Configure your stock simulator game: starting cash, short selling, leverage, duration and visibility." path="/sim/create" />
+      <SEO title="Create Game — Integral Stocks Simulator" description="Configure your stock simulator game: starting cash, short selling, leverage, duration and visibility." path="/sim/create" noindex />
       <Header />
       <main className="flex-1 max-w-2xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-12">
         <Link to="/sim/lobby" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6">

@@ -153,6 +153,51 @@ export const SECTORS: { symbol: string; name: string }[] = [
   { symbol: "XLRE", name: "Real Estate" },
 ];
 
+const INDEX_NAMES: Record<string, string> = {
+  "^GSPC": "S&P 500",
+  "^DJI": "Dow Jones Industrial Average",
+  "^IXIC": "Nasdaq Composite",
+  "^RUT": "Russell 2000",
+  "^VIX": "CBOE Volatility Index",
+};
+
+const CRYPTO_NAMES: Record<string, string> = {
+  "BTC-USD": "Bitcoin",
+  "ETH-USD": "Ethereum",
+  "SOL-USD": "Solana",
+  "BNB-USD": "BNB",
+  "XRP-USD": "XRP",
+  "DOGE-USD": "Dogecoin",
+  "ADA-USD": "Cardano",
+  "AVAX-USD": "Avalanche",
+  "DOT-USD": "Polkadot",
+  "LINK-USD": "Chainlink",
+};
+
+// Futures, currency pairs, bond yields, volatility-of-volatility and foreign
+// indexes still get working pages, but they're off-topic for a beginner stock
+// site and near-identical to each other, so they stay out of the sitemap and
+// carry noindex. Only the major US indexes are kept indexable.
+export function isIndexableTicker(symbol: string): boolean {
+  const s = symbol.toUpperCase();
+  if (s.endsWith("=F") || s.endsWith("=X") || s.endsWith(".SS") || s === "DX-Y.NYB") return false;
+  if (s.startsWith("^")) return s in INDEX_NAMES;
+  return true;
+}
+
+export function tickerDisplayName(symbol: string): string | undefined {
+  const s = symbol.toUpperCase();
+  return INDEX_NAMES[s] ?? CRYPTO_NAMES[s];
+}
+
+/** Title suffix for a ticker page: not every symbol is a stock. */
+export function tickerPageLabel(symbol: string): string {
+  const s = symbol.toUpperCase();
+  if (s.startsWith("^")) return "Index Chart";
+  if (s.endsWith("-USD") || s.includes("=") || s === "DX-Y.NYB") return "Price & Chart";
+  return "Stock Price & Chart";
+}
+
 // Every ticker referenced anywhere in the app's data, sorted. Drives the
 // sitemap, build-time prerendering, and which /stocks/:ticker pages are known.
 export const ALL_TICKERS: string[] = (() => {

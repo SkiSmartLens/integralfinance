@@ -31,6 +31,11 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://integralstocks.com/teachers</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://integralstocks.com/academy</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -42,11 +47,6 @@
   </url>
   <url>
     <loc>https://integralstocks.com/about</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/teachers</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -146,11 +146,6 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://integralstocks.com/stocks/000001.ss</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://integralstocks.com/stocks/aapl</loc>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
@@ -212,11 +207,6 @@
   </url>
   <url>
     <loc>https://integralstocks.com/stocks/arm</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/audusd=x</loc>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -286,11 +276,6 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://integralstocks.com/stocks/bz=f</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://integralstocks.com/stocks/c</loc>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
@@ -302,11 +287,6 @@
   </url>
   <url>
     <loc>https://integralstocks.com/stocks/ci</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/cl=f</loc>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -346,11 +326,6 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://integralstocks.com/stocks/ct=f</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://integralstocks.com/stocks/cvx</loc>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
@@ -367,11 +342,6 @@
   </url>
   <url>
     <loc>https://integralstocks.com/stocks/dot-usd</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/dx-y.nyb</loc>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -396,22 +366,12 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://integralstocks.com/stocks/es=f</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://integralstocks.com/stocks/eth-usd</loc>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://integralstocks.com/stocks/etsy</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/eurusd=x</loc>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -451,16 +411,6 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://integralstocks.com/stocks/gbpusd=x</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/gc=f</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://integralstocks.com/stocks/gild</loc>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
@@ -491,17 +441,7 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://integralstocks.com/stocks/hg=f</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://integralstocks.com/stocks/hmc</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/ho=f</loc>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -542,11 +482,6 @@
   </url>
   <url>
     <loc>https://integralstocks.com/stocks/jpm</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/kc=f</loc>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -671,11 +606,6 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://integralstocks.com/stocks/ng=f</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://integralstocks.com/stocks/nio</loc>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
@@ -687,11 +617,6 @@
   </url>
   <url>
     <loc>https://integralstocks.com/stocks/now</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/nq=f</loc>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -716,22 +641,12 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://integralstocks.com/stocks/pa=f</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://integralstocks.com/stocks/panw</loc>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://integralstocks.com/stocks/pfe</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/pl=f</loc>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -766,11 +681,6 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://integralstocks.com/stocks/rb=f</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://integralstocks.com/stocks/regn</loc>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
@@ -791,22 +701,12 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://integralstocks.com/stocks/rty=f</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://integralstocks.com/stocks/run</loc>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://integralstocks.com/stocks/s</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/sb=f</loc>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -827,11 +727,6 @@
   </url>
   <url>
     <loc>https://integralstocks.com/stocks/shop</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/si=f</loc>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -917,46 +812,6 @@
   </url>
   <url>
     <loc>https://integralstocks.com/stocks/usb</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/usdbrl=x</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/usdcad=x</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/usdchf=x</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/usdinr=x</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/usdjpy=x</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/usdmxn=x</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/usdtry=x</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/usdzar=x</loc>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -1066,27 +921,7 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://integralstocks.com/stocks/ym=f</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/zc=f</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://integralstocks.com/stocks/zs</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/zs=f</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/zw=f</loc>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -1096,37 +931,7 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://integralstocks.com/stocks/%5Efchi</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/%5Eftse</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/%5Efvx</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/%5Egdaxi</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://integralstocks.com/stocks/%5Egspc</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/%5Ehsi</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/%5Eirx</loc>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -1136,52 +941,12 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://integralstocks.com/stocks/%5Eks11</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/%5Emove</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/%5En225</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://integralstocks.com/stocks/%5Erut</loc>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://integralstocks.com/stocks/%5Estoxx50e</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/%5Etnx</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/%5Etwii</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/%5Etyx</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://integralstocks.com/stocks/%5Evix</loc>
-    <changefreq>hourly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://integralstocks.com/stocks/%5Evvix</loc>
     <changefreq>hourly</changefreq>
     <priority>0.7</priority>
   </url>
