@@ -52,6 +52,7 @@ const Screener = lazyWithReload(() => import("./pages/Screener.tsx"));
 const Calendar = lazyWithReload(() => import("./pages/Calendar.tsx"));
 const Watchlist = lazyWithReload(() => import("./pages/Watchlist.tsx"));
 const About = lazyWithReload(() => import("./pages/About.tsx"));
+const Teachers = lazyWithReload(() => import("./pages/Teachers.tsx"));
 const Contact = lazyWithReload(() => import("./pages/Contact.tsx"));
 const Disclaimer = lazyWithReload(() => import("./pages/Disclaimer.tsx"));
 const DataSources = lazyWithReload(() => import("./pages/DataSources.tsx"));
@@ -118,6 +119,7 @@ const App = () => (
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/watchlist" element={<Watchlist />} />
             <Route path="/about" element={<About />} />
+            <Route path="/teachers" element={<Teachers />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/disclaimer" element={<Disclaimer />} />
             <Route path="/data-sources" element={<DataSources />} />

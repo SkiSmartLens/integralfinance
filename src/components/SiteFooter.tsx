@@ -26,6 +26,7 @@ export const SiteFooter = () => (
           <li><Link to="/learn/glossary" className="hover:text-primary transition-colors">Glossary</Link></li>
           <li><Link to="/academy" className="hover:text-primary transition-colors">Investor Academy</Link></li>
           <li><Link to="/simulator" className="hover:text-primary transition-colors">Trading Simulator</Link></li>
+          <li><Link to="/teachers" className="hover:text-primary transition-colors">For Teachers & Clubs</Link></li>
           <li><Link to="/translate" className="hover:text-primary transition-colors">Jargon Translator</Link></li>
           <li><Link to="/tools" className="hover:text-primary transition-colors">Finance Tools</Link></li>
           <li><Link to="/blog" className="hover:text-primary transition-colors">Blog</Link></li>
