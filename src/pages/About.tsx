@@ -67,7 +67,10 @@ const About = () => (
 
       <h2>Why we built this</h2>
       <p>
-        <em>By William Wolenski, founder of IntegralStocks.</em>
+        <em>
+          By William Wolenski, founder of IntegralStocks. The full version, including the trade that shaped the
+          product, is in <Link to="/blog/why-i-built-integralstocks">Why I Built IntegralStocks</Link>.
+        </em>
       </p>
       <p>
         I got tired of finance sites assuming you already had an econ degree. Every "beginner" explainer still

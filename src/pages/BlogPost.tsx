@@ -8,6 +8,7 @@ import { featuredImage } from "@/content/blogImages";
 import NotFound from "./NotFound";
 
 const SITE = "https://integralstocks.com";
+const STORY_SLUG = "why-i-built-integralstocks";
 
 const BlogPost = () => {
   const { slug = "" } = useParams();
@@ -100,6 +101,20 @@ const BlogPost = () => {
             return <p key={i} dangerouslySetInnerHTML={{ __html: b.html }} />;
           })}
         </article>
+
+        {post.slug !== STORY_SLUG && (
+          <aside className="mt-12 rounded-xl border bg-card p-5 text-sm leading-relaxed">
+            <p className="font-extrabold mb-1">About the author</p>
+            <p className="text-muted-foreground">
+              William Wolenski built IntegralStocks after a school stock-market competition showed him he could see
+              his portfolio's numbers but couldn't explain why any of them moved. He isn't a professional investor,
+              and nothing here is financial advice.{" "}
+              <Link to={`/blog/${STORY_SLUG}`} className="font-semibold text-foreground hover:text-primary">
+                Read the story behind the site →
+              </Link>
+            </p>
+          </aside>
+        )}
 
         {post.tickers && post.tickers.length > 0 && (
           <section className="mt-12 border-t pt-8">
