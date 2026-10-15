@@ -6,7 +6,7 @@ const corsHeaders = {
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 // Bump when the prompt or response schema changes: invalidates both cache levels.
-const CACHE_VERSION = "v6";
+const CACHE_VERSION = "v7";
 
 // Level 1: per-instance memory. Level 2: public.stock_summary_cache, shared across
 // instances (edge instances are short-lived, so level 1 alone was mostly cold).
@@ -212,16 +212,35 @@ Deno.serve(async (req) => {
       .map((w) => w.trim())
       .filter((w) => w.length >= 4 && !/^(inc|corp|corporation|company|the|and|group|holdings|ltd|plc|index|fund|etf|trust)$/i.test(w));
     const needles = [sym.toLowerCase(), ...nameWords.map((w) => w.toLowerCase())];
+    // Social platforms and forums aren't journalism — never cite them, whether
+    // they surface via Yahoo's news search or Firecrawl's open web search.
+    const LOW_QUALITY_HOSTS = /(^|\.)(facebook|twitter|x|instagram|reddit|pinterest|linkedin|quora|tiktok|youtube)\.com$/i;
+    const isLowQualityUrl = (url: string): boolean => {
+      try { return LOW_QUALITY_HOSTS.test(new URL(url).hostname.replace(/^www\./, "")); }
+      catch { return false; }
+    };
     // Keep the raw filtered news items so we can build a sources array to send
     // to the client for citation UI, alongside the plain-text list for the prompt.
     const filteredNews = (newsJson?.news ?? []).filter((n: any) => {
       const t = `${n.title ?? ""} ${n.summary ?? ""}`.toLowerCase();
-      return needles.some((n) => t.includes(n));
+      if (!needles.some((n) => t.includes(n))) return false;
+      const url = (n.link as string) ?? (n.url as string) ?? "";
+      return !isLowQualityUrl(url);
     });
-    const headlines: string[] = filteredNews
+    // providerPublishTime is unix seconds. Headlines feed "whyMoved" — an old
+    // story (a Fed decision from months back, a stale earnings recap) with no
+    // date attached reads to the model as if it just happened, which is how a
+    // long-gone macro event ends up explained as today's catalyst. Dropping
+    // anything older than 14 days and stamping an explicit age on what's left
+    // closes that off without the model having to guess.
+    const nowSec = Date.now() / 1000;
+    const ageDays = (n: any) => (nowSec - Number(n.providerPublishTime ?? nowSec)) / 86400;
+    const recentNews = filteredNews.filter((n: any) => !n.providerPublishTime || ageDays(n) <= 14);
+    const formatAge = (d: number) => (d < 1 ? "today" : d < 2 ? "yesterday" : `${Math.round(d)} days ago`);
+    const headlines: string[] = recentNews
       .slice(0, 10)
-      .map((n: any) => `- ${n.title} (${n.publisher})`);
-    const sources = filteredNews.slice(0, 6).map((n: any) => ({
+      .map((n: any) => `- ${n.title} (${n.publisher}, ${n.providerPublishTime ? formatAge(ageDays(n)) : "date unknown"})`);
+    const sources = recentNews.slice(0, 6).map((n: any) => ({
       title: n.title as string,
       publisher: n.publisher as string,
       url: (n.link as string) ?? (n.url as string) ?? "",
@@ -241,7 +260,7 @@ Deno.serve(async (req) => {
         for (const r of results) {
           const title = (r.title ?? "").toString().trim();
           const url = (r.url ?? "").toString();
-          if (!title || !url || seen.has(url)) continue;
+          if (!title || !url || seen.has(url) || isLowQualityUrl(url)) continue;
           seen.add(url);
           let host = "";
           try { host = new URL(url).hostname.replace(/^www\./, ""); } catch { /* ignore */ }
@@ -312,6 +331,7 @@ ${headlines.join("\n") || "(no recent headlines)"}`;
 - NEVER say "broad market action", "no recent headlines", "no news", "market sentiment", "general market conditions", or any similar filler.
 - If a RESEARCH article above is provided, whyMoved MUST be built from it and MUST include at least one bracket citation like [1]. Name the actual catalyst and the reported number (earnings, guidance, analyst action, product/legal/macro event) as reported.
 - Never state a catalyst that is not supported by the research or headlines above. If the research is thin, say what IS known and then explain the rest from the structural data.
+- Every headline above is dated. NEVER treat a headline marked more than a few days old as the reason for TODAY's move, and NEVER cite a macroeconomic event (a Fed rate decision, a jobs or CPI report, an election, etc.) from memory — only if that exact event appears in the RESEARCH or a headline above dated within the last few days. If nothing recent is given, fall back to the structural data rule below instead of guessing a stale macro cause.
 - If they do NOT give a concrete catalyst, explain the move from the STRUCTURAL data above. Call out whichever apply and cite the numbers: extreme under- or over-performance vs the 52-week range, severe unprofitability (negative EPS, negative operating/profit margins), lack of institutional backing (low heldPercentInstitutions), heavy debt load (high debtToEquity / totalDebt), or high volatility (beta well above 1, wide day range). Tie those structural facts to why the price is reacting the way it is today.
 - 3-5 sentences. Concrete numbers, not adjectives.
 HARD RULES for positives and negatives (violating these is a failure):
