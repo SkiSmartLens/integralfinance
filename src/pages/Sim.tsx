@@ -28,13 +28,13 @@ import { ledgerCash, type LedgerTrade } from "@/lib/simLedger";
  * A member's full trade history. Pages until an empty page rather than
  * trusting a page size, so it can't silently stop at the API's row cap.
  */
-const loadTrades = async (memberId: string): Promise<LedgerTrade[] | null> => {
+const loadTrades = async (memberId: string): Promise<DayTrade[] | null> => {
   const PAGE = 1000;
-  const all: LedgerTrade[] = [];
+  const all: DayTrade[] = [];
   for (let from = 0; ; ) {
     const { data, error } = await supabase
       .from("transactions")
-      .select("symbol, side, shares, price")
+      .select("symbol, side, shares, price, created_at")
       .eq("member_id", memberId)
       .order("created_at")
       .order("id")
@@ -44,7 +44,7 @@ const loadTrades = async (memberId: string): Promise<LedgerTrade[] | null> => {
       return null;
     }
     if (!data?.length) return all;
-    all.push(...data.map((t) => ({ symbol: t.symbol, side: t.side, shares: Number(t.shares), price: Number(t.price) })));
+    all.push(...data.map((t) => ({ symbol: t.symbol, side: t.side, shares: Number(t.shares), price: Number(t.price), created_at: t.created_at })));
     from += data.length;
   }
 };
@@ -86,7 +86,7 @@ const Sim = () => {
   const [member, setMember] = useState<Member | null>(null);
   const [game, setGame] = useState<Game | null>(null);
   const [positions, setPositions] = useState<Position[]>([]);
-  const [trades, setTrades] = useState<LedgerTrade[]>([]);
+  const [trades, setTrades] = useState<DayTrade[]>([]);
   const [selected, setSelected] = useState("AAPL");
   const [placing, setPlacing] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
@@ -258,7 +258,15 @@ const Sim = () => {
 
   const holdingsValue = holdings.reduce((s, h) => s + h.last * h.shares, 0);
   const equity = cash + holdingsValue;
-  const dayPL = holdings.reduce((s, h) => s + (h.last - h.prevClose) * h.shares, 0);
+  // Trades since today's US session date (ET) count from their fill price.
+  const todayET = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+  const isToday = (iso?: string) =>
+    !!iso && new Date(iso).toLocaleDateString("en-CA", { timeZone: "America/New_York" }) === todayET;
+  const todays = trades.filter((t) => isToday(t.created_at));
+  holdings.forEach((h) => {
+    (h as Holding & { dayPl?: number }).dayPl = dayPnl(h.shares, h.last, h.prevClose, todays.filter((t) => t.symbol.toUpperCase() === h.symbol.toUpperCase()));
+  });
+  const dayPL = holdings.reduce((s, h) => s + (h.dayPl ?? 0), 0);
   const totalReturnPct = startingCash > 0 ? ((equity - startingCash) / startingCash) * 100 : 0;
 
   // Net-worth history: no backend cron here, so the "every 12 hours" cadence is
