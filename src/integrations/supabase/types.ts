@@ -393,6 +393,36 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_delete_game: { Args: { _game_id: string }; Returns: number }
+      admin_remove_member: { Args: { _member_id: string }; Returns: undefined }
+      admin_reset_member: { Args: { _member_id: string }; Returns: number }
+      admin_set_cash: {
+        Args: { _cash: number; _member_id: string }
+        Returns: number
+      }
+      admin_set_net_worth: {
+        Args: {
+          _holdings_value: number
+          _member_id: string
+          _net_worth: number
+        }
+        Returns: number
+      }
+      admin_set_position: {
+        Args: {
+          _charge?: boolean
+          _member_id: string
+          _price: number
+          _shares: number
+          _symbol: string
+        }
+        Returns: Json
+      }
+      admin_sync_all_cash: { Args: never; Returns: number }
+      admin_update_game: {
+        Args: { _changes: Json; _game_id: string }
+        Returns: undefined
+      }
       apply_order_fill: {
         Args: {
           _margin_floor?: number
@@ -432,6 +462,26 @@ export type Database = {
       }
       member_in_my_game: { Args: { _member_id: string }; Returns: boolean }
       owns_member: { Args: { _member_id: string }; Returns: boolean }
+      sim_cash_synced: { Args: never; Returns: boolean }
+      sim_clear_member: { Args: { _member_id: string }; Returns: undefined }
+      sim_fill: {
+        Args: {
+          _member_id: string
+          _price: number
+          _shares: number
+          _side: Database["public"]["Enums"]["order_side"]
+          _symbol: string
+        }
+        Returns: undefined
+      }
+      sim_ledger_cash: { Args: { _member_id: string }; Returns: number }
+      sim_record_cash_adjustment: {
+        Args: { _amount: number; _member_id: string }
+        Returns: undefined
+      }
+      sim_require_admin: { Args: never; Returns: undefined }
+      sim_sync_all_cash: { Args: never; Returns: number }
+      sim_sync_cash: { Args: { _member_id: string }; Returns: number }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
