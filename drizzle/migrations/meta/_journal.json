@@ -36,6 +36,13 @@
       "when": 1791558045301,
       "tag": "0004_create_portfolio_snapshots",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792159444871,
+      "tag": "0005_allow_db_admin_cash_fix",
+      "breakpoints": true
     }
   ]
 }
