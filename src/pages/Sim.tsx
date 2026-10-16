@@ -22,7 +22,7 @@ import { SimWalkthrough, hasSeenSimWalkthrough } from "@/components/sim/SimWalkt
 import { PostTradeCard } from "@/components/sim/PostTradeCard";
 import { PortfolioBar } from "@/components/sim/PortfolioBar";
 import { isUsMarketOpen, nextOpenLabel } from "@/lib/marketHours";
-import { ledgerCash, type LedgerTrade } from "@/lib/simLedger";
+import { ledgerCash, dayPnl, type DayTrade } from "@/lib/simLedger";
 
 /**
  * A member's full trade history. Pages until an empty page rather than
@@ -264,7 +264,7 @@ const Sim = () => {
     !!iso && new Date(iso).toLocaleDateString("en-CA", { timeZone: "America/New_York" }) === todayET;
   const todays = trades.filter((t) => isToday(t.created_at));
   holdings.forEach((h) => {
-    (h as Holding & { dayPl?: number }).dayPl = dayPnl(h.shares, h.last, h.prevClose, todays.filter((t) => t.symbol.toUpperCase() === h.symbol.toUpperCase()));
+    h.dayPl = dayPnl(h.shares, h.last, h.prevClose, todays.filter((t) => t.symbol.toUpperCase() === h.symbol.toUpperCase()));
   });
   const dayPL = holdings.reduce((s, h) => s + (h.dayPl ?? 0), 0);
   const totalReturnPct = startingCash > 0 ? ((equity - startingCash) / startingCash) * 100 : 0;
