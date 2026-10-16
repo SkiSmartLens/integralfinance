@@ -3,6 +3,7 @@ import { supabase } from "@/lib/backend";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { formatNumber } from "@/lib/yahoo";
 import { estimatedNetWorth } from "@/lib/simLedger";
+import { useCashSynced } from "@/lib/simAdmin";
 import { Trophy, Loader2, Briefcase } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -75,6 +76,7 @@ export const Leaderboard = ({
     return [...s];
   }, [rows]);
   const { quotes } = useLiveQuotes(symbols, 10000);
+  const synced = useCashSynced();
   const priceMap = useMemo(
     () => new Map(quotes.map((q) => [q.symbol, q.regularMarketPrice ?? 0])),
     [quotes],
@@ -91,11 +93,11 @@ export const Leaderboard = ({
         const equity =
           r.user_id === meUserId && myCash != null
             ? myCash + holdings
-            : estimatedNetWorth(startingCash, r.cash, priced);
+            : estimatedNetWorth(startingCash, r.cash, priced, synced);
         return { ...r, equity, returnPct: startingCash > 0 ? ((equity - startingCash) / startingCash) * 100 : 0 };
       })
       .sort((a, b) => b.equity - a.equity);
-  }, [rows, priceMap, startingCash, meUserId, myCash]);
+  }, [rows, priceMap, startingCash, meUserId, myCash, synced]);
 
   const myRank = ranked.findIndex((r) => r.user_id === meUserId);
   const [viewing, setViewing] = useState<(typeof ranked)[number] | null>(null);

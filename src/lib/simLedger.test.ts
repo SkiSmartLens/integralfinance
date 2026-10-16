@@ -23,6 +23,14 @@ describe("ledgerCash", () => {
     expect(cash).toBeCloseTo(-50000);
     expect(cash + 1000 * 150).toBeCloseTo(100000);
   });
+  it("admin cash adjustments ($CASH rows) add and remove cash", () => {
+    const trades = [
+      { symbol: "$CASH", side: "sell" as const, shares: 1, price: 5000 },
+      { symbol: "$CASH", side: "buy" as const, shares: 1, price: 2000 },
+      { symbol: "$CASH", side: "sell" as const, shares: 1, price: 700 },
+    ];
+    expect(ledgerCash(100000, trades, [])).toBeCloseTo(103700);
+  });
   it("a sale whose purchase was never recorded isn't counted as profit", () => {
     expect(ledgerCash(100000, [{ symbol: "AAPL", side: "sell", shares: 400, price: 250 }], [])).toBeCloseTo(100000);
   });

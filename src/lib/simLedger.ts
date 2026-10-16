@@ -46,13 +46,13 @@ export function ledgerCash(startingCash: number, trades: LedgerTrade[], position
     const price = Number(t.price);
     let held = netShares.get(symbol) ?? 0;
     const basis = avgCost.get(symbol) ?? price;
-    if (t.side === "sell") {
+    if (symbol !== CASH_ADJUSTMENT_SYMBOL && t.side === "sell") {
       const missing = shares - Math.max(0, held);
       if (missing > 1e-9) {
         cash -= missing * basis;
         held += missing;
       }
-    } else if (t.side === "cover") {
+    } else if (symbol !== CASH_ADJUSTMENT_SYMBOL && t.side === "cover") {
       const missing = shares - Math.max(0, -held);
       if (missing > 1e-9) {
         cash += missing * basis;
@@ -78,15 +78,19 @@ export function ledgerCash(startingCash: number, trades: LedgerTrade[], position
  * every purchase twice (once as cash, once as shares). So a stored balance
  * still sitting exactly at the starting amount while they hold stock isn't
  * trusted: net worth is then starting cash + their open positions' gains.
+ *
+ * cashSynced: the database keeps stored cash equal to the trade history
+ * (see simAdmin.cashSynced), so it's always trusted.
  */
 export function estimatedNetWorth(
   startingCash: number,
   storedCash: number,
   positions: { shares: number; avgCost: number; last: number }[],
+  cashSynced = false,
 ): number {
   const value = positions.reduce((s, p) => s + p.last * p.shares, 0);
   const cost = positions.reduce((s, p) => s + p.avgCost * p.shares, 0);
-  const untouched = positions.length > 0 && Math.abs(storedCash - startingCash) < 0.01;
+  const untouched = !cashSynced && positions.length > 0 && Math.abs(storedCash - startingCash) < 0.01;
   return untouched ? startingCash + (value - cost) : storedCash + value;
 }
 

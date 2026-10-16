@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { formatNumber } from "@/lib/yahoo";
 import { AdminHoldingsDialog } from "@/components/sim/AdminHoldingsDialog";
 import { estimatedNetWorth, ledgerCash, type LedgerPosition, type LedgerTrade } from "@/lib/simLedger";
+import { simAdmin, useCashSynced } from "@/lib/simAdmin";
 
 interface Game {
   id: string;
@@ -115,6 +116,7 @@ const GameLobby = () => {
   const [adminGames, setAdminGames] = useState<AdminGame[]>([]);
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [myLedger, setMyLedger] = useState<Map<string, OwnLedger>>(new Map());
+  const synced = useCashSynced();
   const [code, setCode] = useState("");
   const [joining, setJoining] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -215,11 +217,9 @@ const GameLobby = () => {
     (async () => {
       const [cleanup, reconcile] = await Promise.all([
         supabase.functions.invoke<{ removed?: number }>("join-game", { body: { action: "cleanup_empty_games" } }),
-        isAdmin
-          ? supabase.functions.invoke<{ fixed?: number }>("admin-set-cash", { body: { action: "reconcile_all" } })
-          : Promise.resolve({ data: null }),
+        isAdmin ? simAdmin.syncAll() : Promise.resolve({ data: 0 }),
       ]);
-      if ((cleanup.data?.removed ?? 0) > 0 || (reconcile.data?.fixed ?? 0) > 0) refresh(userId);
+      if ((cleanup.data?.removed ?? 0) > 0 || (reconcile.data ?? 0) > 0) refresh(userId);
     })().catch(() => {});
   }, [userId, loading, isAdmin]);
 
@@ -256,7 +256,7 @@ const GameLobby = () => {
   const playerTotals = (p: AdminPlayer, startingCash: number) => {
     const priced = p.positions.map((pos) => ({ ...pos, last: priceOr(pos.symbol, pos.avgCost) }));
     const holdingsValue = priced.reduce((s, pos) => s + pos.last * pos.shares, 0);
-    const total = ownNetWorth(p.member_id, startingCash) ?? estimatedNetWorth(startingCash, p.cash, priced);
+    const total = ownNetWorth(p.member_id, startingCash) ?? estimatedNetWorth(startingCash, p.cash, priced, synced);
     return { total, cashShown: total - holdingsValue };
   };
 
@@ -297,11 +297,10 @@ const GameLobby = () => {
     enterGame(game.id);
   };
 
-  // Admin-only: directly set a player's cash (e.g. to fix a corrupted
-  // balance). game_members.cash has no client-writable RLS policy at all —
-  // every write normally happens through the trading engine's service-role
-  // calls — so this goes through a privileged edge function that checks the
-  // caller is actually an admin before touching anyone's balance.
+  // Admin-only: set a player's cash. game_members.cash has no client-writable
+  // policy, so this goes through the admin_set_cash database function, which
+  // checks the caller is an admin and records the change in their trade
+  // history (so it sticks).
   const editPlayerCash = async (player: { member_id: string; name: string; cash: number }) => {
     const next = prompt(`Set ${player.name}'s cash to:`, String(player.cash));
     if (next == null) return;
@@ -309,11 +308,8 @@ const GameLobby = () => {
     if (!Number.isFinite(amount) || amount < 0) {
       return toast({ title: "Enter a valid, non-negative number", variant: "destructive" });
     }
-    const { data, error } = await supabase.functions.invoke<{ error?: string }>("admin-set-cash", {
-      body: { member_id: player.member_id, cash: amount },
-    });
-    if (error) return toast({ title: "Couldn't update cash", description: error.message, variant: "destructive" });
-    if (data?.error) return toast({ title: "Couldn't update cash", description: data.error, variant: "destructive" });
+    const { error } = await simAdmin.setCash(player.member_id, amount);
+    if (error) return toast({ title: "Couldn't update cash", description: error, variant: "destructive" });
     toast({ title: `${player.name}'s cash set to $${amount.toLocaleString()}` });
     if (userId) refresh(userId);
   };
@@ -323,11 +319,8 @@ const GameLobby = () => {
   // cleaning up a corrupted account rather than just patching the number.
   const resetPlayer = async (player: { member_id: string; name: string }) => {
     if (!confirm(`Reset ${player.name} to a clean starting balance? This clears all their positions and trade history.`)) return;
-    const { data, error } = await supabase.functions.invoke<{ error?: string }>("admin-set-cash", {
-      body: { member_id: player.member_id, action: "reset" },
-    });
-    if (error) return toast({ title: "Couldn't reset player", description: error.message, variant: "destructive" });
-    if (data?.error) return toast({ title: "Couldn't reset player", description: data.error, variant: "destructive" });
+    const { error } = await simAdmin.reset(player.member_id);
+    if (error) return toast({ title: "Couldn't reset player", description: error, variant: "destructive" });
     toast({ title: `${player.name} reset to a clean starting balance` });
     if (userId) refresh(userId);
   };

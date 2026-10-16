@@ -313,13 +313,13 @@ function ledgerCash(startingCash: number, trades: LedgerTrade[], positions: Ledg
     // shorted) count as bought at their average cost, or at the sale price if
     // the position is gone — never as pure profit.
     const basis = avgCost.get(symbol) ?? price;
-    if (t.side === "sell") {
+    if (symbol !== CASH_ADJUSTMENT_SYMBOL && t.side === "sell") {
       const missing = shares - Math.max(0, held);
       if (missing > 1e-9) {
         cash -= missing * basis;
         held += missing;
       }
-    } else if (t.side === "cover") {
+    } else if (symbol !== CASH_ADJUSTMENT_SYMBOL && t.side === "cover") {
       const missing = shares - Math.max(0, -held);
       if (missing > 1e-9) {
         cash += missing * basis;

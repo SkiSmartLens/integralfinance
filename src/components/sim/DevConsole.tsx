@@ -6,15 +6,16 @@ import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { formatNumber } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
 import { estimatedNetWorth } from "@/lib/simLedger";
+import { simAdmin, useCashSynced } from "@/lib/simAdmin";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { AdminHoldingsDialog } from "./AdminHoldingsDialog";
 
-/** Must match BUILD in the place-order, admin-set-cash and join-game edge functions. */
+/** Must match BUILD in the place-order and join-game edge functions. */
 const EXPECTED_BUILD = "2026-10-16-dev";
 
-const DEPLOY_REQUEST = `Please deploy the Supabase edge functions place-order, admin-set-cash and join-game exactly as they are in the repo, without changing their code. Afterwards, a POST to each with no signed-in user should return JSON that includes "build": "${EXPECTED_BUILD}".`;
+const DEPLOY_REQUEST = `Please deploy the Supabase edge functions place-order and join-game exactly as they are in the repo, without changing their code. Afterwards, a POST to each with no signed-in user should return JSON that includes "build": "${EXPECTED_BUILD}".`;
 
 interface GameRow {
   id: string;
@@ -58,11 +59,11 @@ async function callFn<T>(fn: string, body: Record<string, unknown>): Promise<Cal
 const money = (n: number) => `${n < 0 ? "−" : ""}$${formatNumber(Math.abs(n))}`;
 
 /**
- * Admin-only control panel inside the simulator: every player's exact net
- * worth, and controls to set net worth, cash or stocks, reset or remove a
- * player, change any game's settings, delete games, and run housekeeping.
- * All writes go through the admin-set-cash edge function, which re-checks
- * the caller is an admin.
+ * Admin-only control panel inside the simulator: every player's net worth,
+ * and controls to set net worth, cash or stocks, reset or remove a player,
+ * change any game's settings, delete games, and run housekeeping. Writes go
+ * through the admin_* database functions (src/lib/simAdmin.ts), each of
+ * which re-checks the caller is an admin.
  */
 export const DevConsole = ({
   open,
@@ -81,12 +82,11 @@ export const DevConsole = ({
 }) => {
   const [games, setGames] = useState<GameRow[]>([]);
   const [gameId, setGameId] = useState<string | undefined>(currentGameId);
-  const [players, setPlayers] = useState<PlayerRow[] | null>(null);
-  const [exact, setExact] = useState(false);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [editing, setEditing] = useState<{ memberId: string; field: "net_worth" | "cash"; value: string } | null>(null);
   const [stocksFor, setStocksFor] = useState<string | null>(null);
+  const synced = useCashSynced();
 
   useEffect(() => {
     if (open && currentGameId && !gameId) setGameId(currentGameId);
@@ -97,40 +97,32 @@ export const DevConsole = ({
     setGames((data ?? []) as GameRow[]);
   }, []);
 
-  // Exact figures from the server when the admin function is deployed;
-  // otherwise an estimate from what an admin can read directly.
-  const [fallback, setFallback] = useState<{ member_id: string; name: string; cash: number; positions: { symbol: string; shares: number; avg_cost: number }[] }[]>([]);
+  // Admins can read every player's stored cash and holdings. Once the
+  // database keeps stored cash in sync with the trade history, these figures
+  // are exact; before that, other players' net worth is an estimate.
+  const [members, setMembers] = useState<{ member_id: string; name: string; cash: number; positions: { symbol: string; shares: number; avg_cost: number }[] }[]>([]);
   const loadPlayers = useCallback(async () => {
     if (!gameId) return;
     setLoading(true);
-    const r = await callFn<{ players: PlayerRow[] }>("admin-set-cash", { action: "player_summaries", game_id: gameId });
-    if (r.data?.players) {
-      setPlayers(r.data.players);
-      setExact(true);
-      setFallback([]);
-    } else {
-      const { data: members } = await supabase.from("game_members").select("id, user_id, cash").eq("game_id", gameId);
-      const ids = (members ?? []).map((m) => m.id);
-      const [{ data: pos }, { data: profs }] = await Promise.all([
-        ids.length
-          ? supabase.from("positions").select("member_id, symbol, shares, avg_cost").in("member_id", ids)
-          : Promise.resolve({ data: [] as { member_id: string; symbol: string; shares: number; avg_cost: number }[] }),
-        supabase.from("profiles").select("user_id, display_name").in("user_id", (members ?? []).map((m) => m.user_id)),
-      ]);
-      const names = new Map((profs ?? []).map((p) => [p.user_id, p.display_name as string]));
-      setFallback(
-        (members ?? []).map((m) => ({
-          member_id: m.id,
-          name: names.get(m.user_id) ?? "Player",
-          cash: Number(m.cash),
-          positions: (pos ?? [])
-            .filter((p) => p.member_id === m.id)
-            .map((p) => ({ symbol: p.symbol, shares: Number(p.shares), avg_cost: Number(p.avg_cost) })),
-        })),
-      );
-      setPlayers(null);
-      setExact(false);
-    }
+    const { data: ms } = await supabase.from("game_members").select("id, user_id, cash").eq("game_id", gameId);
+    const ids = (ms ?? []).map((m) => m.id);
+    const [{ data: pos }, { data: profs }] = await Promise.all([
+      ids.length
+        ? supabase.from("positions").select("member_id, symbol, shares, avg_cost").in("member_id", ids)
+        : Promise.resolve({ data: [] as { member_id: string; symbol: string; shares: number; avg_cost: number }[] }),
+      supabase.from("profiles").select("user_id, display_name").in("user_id", (ms ?? []).map((m) => m.user_id)),
+    ]);
+    const names = new Map((profs ?? []).map((p) => [p.user_id, p.display_name as string]));
+    setMembers(
+      (ms ?? []).map((m) => ({
+        member_id: m.id,
+        name: names.get(m.user_id) ?? "Player",
+        cash: Number(m.cash),
+        positions: (pos ?? [])
+          .filter((p) => p.member_id === m.id)
+          .map((p) => ({ symbol: p.symbol, shares: Number(p.shares), avg_cost: Number(p.avg_cost) })),
+      })),
+    );
     setLoading(false);
   }, [gameId]);
 
@@ -145,35 +137,34 @@ export const DevConsole = ({
   const game = games.find((g) => g.id === gameId);
   const startingCash = Number(game?.starting_cash ?? 0);
 
-  const fallbackSymbols = useMemo(
-    () => [...new Set(fallback.flatMap((p) => p.positions.map((x) => x.symbol)))],
-    [fallback],
-  );
-  const { quotes } = useLiveQuotes(fallbackSymbols, 15000);
+  const symbols = useMemo(() => [...new Set(members.flatMap((p) => p.positions.map((x) => x.symbol)))], [members]);
+  const { quotes } = useLiveQuotes(symbols, 15000);
   const quoteMap = useMemo(() => new Map(quotes.map((q) => [q.symbol, q.regularMarketPrice ?? 0])), [quotes]);
 
-  const rows: PlayerRow[] = useMemo(() => {
-    if (players) return players;
-    return fallback.map((p) => {
-      const priced = p.positions.map((x) => ({ ...x, last: quoteMap.get(x.symbol) || x.avg_cost }));
-      const netWorth = estimatedNetWorth(
-        startingCash,
-        p.cash,
-        priced.map((x) => ({ shares: x.shares, avgCost: x.avg_cost, last: x.last })),
-      );
-      const holdings = priced.reduce((s, x) => s + x.last * x.shares, 0);
-      return { member_id: p.member_id, name: p.name, cash: netWorth - holdings, net_worth: netWorth, positions: priced };
-    });
-  }, [players, fallback, quoteMap, startingCash]);
+  const rows: PlayerRow[] = useMemo(
+    () =>
+      members.map((p) => {
+        const priced = p.positions.map((x) => ({ ...x, last: quoteMap.get(x.symbol) || x.avg_cost }));
+        const netWorth = estimatedNetWorth(
+          startingCash,
+          p.cash,
+          priced.map((x) => ({ shares: x.shares, avgCost: x.avg_cost, last: x.last })),
+          synced,
+        );
+        const holdings = priced.reduce((s, x) => s + x.last * x.shares, 0);
+        return { member_id: p.member_id, name: p.name, cash: netWorth - holdings, net_worth: netWorth, positions: priced };
+      }),
+    [members, quoteMap, startingCash, synced],
+  );
 
   const afterChange = async () => {
     await loadPlayers();
     if (gameId === currentGameId) onChanged();
   };
 
-  const run = async (key: string, body: Record<string, unknown>, success: string) => {
+  const run = async (key: string, action: () => Promise<{ error?: string }>, success: string) => {
     setBusy(key);
-    const r = await callFn<Record<string, unknown>>("admin-set-cash", body);
+    const r = await action();
     setBusy(null);
     if (r.error) {
       toast({ title: "Didn't work", description: r.error, variant: "destructive" });
@@ -189,10 +180,12 @@ export const DevConsole = ({
     const amount = Number(editing.value.replace(/[$,\s]/g, ""));
     if (!Number.isFinite(amount)) return toast({ title: "Enter a number", variant: "destructive" });
     const player = rows.find((p) => p.member_id === editing.memberId);
+    const name = player?.name ?? "Player";
+    const holdings = (player?.positions ?? []).reduce((s, x) => s + x.last * x.shares, 0);
     const ok =
       editing.field === "net_worth"
-        ? await run(`nw:${editing.memberId}`, { action: "set_net_worth", member_id: editing.memberId, net_worth: amount }, `${player?.name ?? "Player"}'s net worth set to ${money(amount)}`)
-        : await run(`cash:${editing.memberId}`, { member_id: editing.memberId, cash: amount }, `${player?.name ?? "Player"}'s cash set to ${money(amount)}`);
+        ? await run(`nw:${editing.memberId}`, () => simAdmin.setNetWorth(editing.memberId, amount, holdings), `${name}'s net worth set to ${money(amount)}`)
+        : await run(`cash:${editing.memberId}`, () => simAdmin.setCash(editing.memberId, amount), `${name}'s cash set to ${money(amount)}`);
     if (ok) setEditing(null);
   };
 
@@ -237,7 +230,7 @@ export const DevConsole = ({
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>
                 {rows.length} player{rows.length === 1 ? "" : "s"} ·{" "}
-                {exact ? "exact figures from trade history" : "estimated (admin server function not deployed)"}
+                {synced ? "exact figures" : "estimated until the simulator SQL is installed"}
               </span>
               <button
                 type="button"
@@ -332,7 +325,7 @@ export const DevConsole = ({
                         busy={busy === `reset:${p.member_id}`}
                         onClick={() => {
                           if (!confirm(`Reset ${p.name} to ${money(startingCash)} with no stocks and no trade history?`)) return;
-                          run(`reset:${p.member_id}`, { action: "reset", member_id: p.member_id }, `${p.name} reset`);
+                          run(`reset:${p.member_id}`, () => simAdmin.reset(p.member_id), `${p.name} reset`);
                         }}
                       >
                         Reset
@@ -342,7 +335,7 @@ export const DevConsole = ({
                         busy={busy === `remove:${p.member_id}`}
                         onClick={() => {
                           if (!confirm(`Remove ${p.name} from ${game?.name ?? "this game"}? Their stocks and history in it are deleted.`)) return;
-                          run(`remove:${p.member_id}`, { action: "remove_member", member_id: p.member_id }, `${p.name} removed`);
+                          run(`remove:${p.member_id}`, () => simAdmin.remove(p.member_id), `${p.name} removed`);
                         }}
                       >
                         <UserMinus className="w-3.5 h-3.5" /> Remove
@@ -362,13 +355,13 @@ export const DevConsole = ({
                 game={game}
                 busy={busy}
                 onSave={async (changes) => {
-                  const ok = await run("game", { action: "update_game", game_id: game.id, changes }, "Game settings saved");
+                  const ok = await run("game", () => simAdmin.updateGame(game.id, changes), "Game settings saved");
                   if (ok) await loadGames();
                 }}
                 onDelete={async () => {
                   if (!confirm(`Delete "${game.name}" for everyone? All its players, stocks and history are removed. This can't be undone.`)) return;
                   setBusy("delete");
-                  const r = await callFn("admin-set-cash", { action: "delete_game", game_id: game.id });
+                  const r = await simAdmin.deleteGame(game.id);
                   setBusy(null);
                   if (r.error) return toast({ title: "Didn't work", description: r.error, variant: "destructive" });
                   toast({ title: `Deleted "${game.name}"` });
@@ -542,13 +535,20 @@ const Field = ({ label, hint, children }: { label: string; hint?: string; childr
 
 type FnStatus = { state: "checking" } | { state: "live"; build: string } | { state: "old" } | { state: "missing" } | { state: "error"; message: string };
 
+/**
+ * What's live on the backend. The database functions (installed by pasting
+ * the simulator SQL into Lovable's SQL editor) are what the dev console and
+ * correct balances depend on. The edge functions only add extras (game rules
+ * like min price, empty-game cleanup) and need a Lovable deploy.
+ */
 const ServerPanel = ({ open, onHousekeeping }: { open: boolean; onHousekeeping: () => void }) => {
+  const synced = useCashSynced();
   const [status, setStatus] = useState<Record<string, FnStatus>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const check = useCallback(async () => {
-    const fns = ["place-order", "admin-set-cash", "join-game"];
+    const fns = ["place-order", "join-game"];
     setStatus(Object.fromEntries(fns.map((f) => [f, { state: "checking" } as FnStatus])));
     const results = await Promise.all(fns.map((f) => callFn<{ build?: string }>(f, { action: "ping" })));
     setStatus(
@@ -569,31 +569,44 @@ const ServerPanel = ({ open, onHousekeeping }: { open: boolean; onHousekeeping: 
     if (open) check();
   }, [open, check]);
 
-  const allCurrent = ["place-order", "admin-set-cash", "join-game"].every((f) => {
+  const allCurrent = ["place-order", "join-game"].every((f) => {
     const s = status[f];
     return s?.state === "live" && s.build === EXPECTED_BUILD;
   });
 
-  const housekeeping = async (key: string, fn: string, body: Record<string, unknown>, describe: (d: Record<string, number>) => string) => {
+  const housekeeping = async (key: string, action: () => Promise<{ error?: string; message?: string }>) => {
     setBusy(key);
-    const r = await callFn<Record<string, number>>(fn, body);
+    const r = await action();
     setBusy(null);
     if (r.error) return toast({ title: "Didn't work", description: r.error, variant: "destructive" });
-    toast({ title: describe(r.data ?? {}) });
+    toast({ title: r.message ?? "Done" });
     onHousekeeping();
   };
 
   const label: Record<string, string> = {
     "place-order": "Order engine",
-    "admin-set-cash": "Admin controls",
     "join-game": "Joining & cleanup",
   };
 
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border p-3.5 space-y-2">
+        <div className="flex items-center justify-between gap-2 text-sm">
+          <span className="font-extrabold">Database controls</span>
+          <span className={cn("text-xs font-bold", synced ? "text-emerald-600" : "text-rose-600")}>
+            {synced ? "installed" : "not installed"}
+          </span>
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          {synced
+            ? "Every player's cash is kept equal to their trade history, and the controls in this panel work."
+            : "Paste the simulator SQL into Lovable's SQL editor and run it. Until then the controls here can't save and other players' figures are estimates."}
+        </p>
+      </div>
+
+      <div className="rounded-2xl border p-3.5 space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-extrabold">Server functions</span>
+          <span className="text-sm font-extrabold">Server functions <span className="font-normal text-muted-foreground">(optional)</span></span>
           <button type="button" onClick={check} className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
             <RefreshCw className="w-3.5 h-3.5" /> Check again
           </button>
@@ -606,7 +619,7 @@ const ServerPanel = ({ open, onHousekeeping }: { open: boolean; onHousekeeping: 
               <span>
                 {name} <span className="text-xs text-muted-foreground">({fn})</span>
               </span>
-              <span className={cn("text-xs font-bold", ok ? "text-emerald-600" : "text-rose-600")}>
+              <span className={cn("text-xs font-bold", ok ? "text-emerald-600" : "text-amber-600")}>
                 {!s || s.state === "checking"
                   ? "checking…"
                   : s.state === "live"
@@ -625,8 +638,8 @@ const ServerPanel = ({ open, onHousekeeping }: { open: boolean; onHousekeeping: 
         {!allCurrent && Object.keys(status).length > 0 && Object.values(status).every((s) => s.state !== "checking") && (
           <div className="pt-2 border-t mt-2 space-y-2">
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Server code only goes live when Lovable deploys it. Until then the dev console can't save changes and
-              other players' figures are estimates. Paste this into Lovable's chat:
+              Balances are correct either way. Deploying these adds per-game rules (min price, max % in one stock). To deploy,
+              paste this into Lovable's chat:
             </p>
             <div className="rounded-xl bg-muted/50 p-2.5 text-xs leading-relaxed">{DEPLOY_REQUEST}</div>
             <button
@@ -650,9 +663,10 @@ const ServerPanel = ({ open, onHousekeeping }: { open: boolean; onHousekeeping: 
           <ActionButton
             busy={busy === "sync"}
             onClick={() =>
-              housekeeping("sync", "admin-set-cash", { action: "reconcile_all" }, (d) =>
-                `Checked ${d.checked ?? 0} players, fixed ${d.fixed ?? 0} balance${d.fixed === 1 ? "" : "s"}`,
-              )
+              housekeeping("sync", async () => {
+                const r = await simAdmin.syncAll();
+                return r.error ? { error: r.error } : { message: `Fixed ${r.data ?? 0} balance${r.data === 1 ? "" : "s"}` };
+              })
             }
           >
             Sync all balances
@@ -660,17 +674,19 @@ const ServerPanel = ({ open, onHousekeeping }: { open: boolean; onHousekeeping: 
           <ActionButton
             busy={busy === "cleanup"}
             onClick={() =>
-              housekeeping("cleanup", "join-game", { action: "cleanup_empty_games" }, (d) =>
-                `Removed ${d.removed ?? 0} empty game${d.removed === 1 ? "" : "s"}`,
-              )
+              housekeeping("cleanup", async () => {
+                const r = await callFn<{ removed?: number }>("join-game", { action: "cleanup_empty_games" });
+                const n = r.data?.removed ?? 0;
+                return r.error ? { error: r.error } : { message: `Removed ${n} empty game${n === 1 ? "" : "s"}` };
+              })
             }
           >
             Remove empty games
           </ActionButton>
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed">
-          Sync rewrites every player's stored cash to match their trade history (the leaderboard reads it). Empty games are
-          ones nobody is in, over an hour old.
+          Sync rewrites every player's stored cash to match their trade history (the database also does this after every
+          trade). Empty games are ones nobody is in, over an hour old.
         </p>
       </div>
     </div>

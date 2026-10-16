@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Loader2, Plus, Trash2 } from "lucide-react";
-import { supabase } from "@/lib/backend";
+import { simAdmin } from "@/lib/simAdmin";
 import { toast } from "@/hooks/use-toast";
-import { formatNumber } from "@/lib/yahoo";
+import { fetchQuotes, formatNumber } from "@/lib/yahoo";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -15,8 +15,8 @@ export interface AdminHoldingsPlayer {
 
 /**
  * Admin-only editor for another player's holdings. Every change goes through
- * the admin-set-cash edge function, which runs it through the trading engine
- * so it lands in their trade history (and so in their net worth).
+ * the admin_set_position database function, which records it in their trade
+ * history (and so in their net worth) at the live price.
  */
 export const AdminHoldingsDialog = ({
   player,
@@ -51,22 +51,22 @@ export const AdminHoldingsDialog = ({
       return toast({ title: "Shares must be zero or more", variant: "destructive" });
     }
     setBusy(sym);
-    const { data, error } = await supabase.functions.invoke<{ error?: string; price?: number }>("admin-set-cash", {
-      body: { action: "set_position", member_id: player.member_id, symbol: sym, shares, charge },
-    });
-    setBusy(null);
-    let reason = data?.error ?? (error ? error.message : null);
-    if (error) {
-      // functions.invoke returns a generic "non-2xx" message — read the real reason.
-      try {
-        const body = await (error as { context?: { json?: () => Promise<{ error?: string }> } }).context?.json?.();
-        if (body?.error) reason = body.error;
-      } catch { /* keep generic message */ }
+    // The database has no prices, so the change happens at the live quote.
+    let price = 0;
+    try {
+      price = (await fetchQuotes([sym]))[0]?.regularMarketPrice ?? 0;
+    } catch { /* handled below */ }
+    if (!(price > 0)) price = priceMap.get(sym) ?? 0;
+    if (!(price > 0)) {
+      setBusy(null);
+      return toast({ title: `No live price for ${sym}`, description: "Check the ticker and try again.", variant: "destructive" });
     }
-    if (reason) return toast({ title: `Couldn't update ${sym}`, description: reason, variant: "destructive" });
+    const { error } = await simAdmin.setPosition(player.member_id, sym, shares, price, charge);
+    setBusy(null);
+    if (error) return toast({ title: `Couldn't update ${sym}`, description: error, variant: "destructive" });
     toast({
       title: `${player.name} now has ${formatNumber(shares)} ${sym}`,
-      description: data?.price ? `At $${formatNumber(data.price)} a share${charge ? ", paid from their cash" : ", free"}.` : undefined,
+      description: `At $${formatNumber(price)} a share${charge ? ", paid from their cash" : ", free"}.`,
     });
     if (symbol === newSymbol) {
       setNewSymbol("");
