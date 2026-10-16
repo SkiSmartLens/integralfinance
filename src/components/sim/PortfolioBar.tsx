@@ -6,8 +6,12 @@ import type { Holding } from "./HoldingsPanel";
 
 interface Props {
   equity: number;
-  /** Total deployable capital for this account (e.g. starting cash × leverage). */
-  buyingPower: number;
+  /** Actual cash: starting cash + realized gains − what's invested. Negative while borrowing. */
+  cash: number;
+  /** Cash plus whatever leverage still lets you borrow. */
+  spendable: number;
+  /** The game's leverage (1 = no borrowing). */
+  leverage: number;
   dayPL: number;
   totalReturnPct: number;
   holdings: Holding[];
@@ -21,11 +25,25 @@ const signedMoney = (n: number) => `${n >= 0 ? "+" : "−"}${money(n)}`;
 
 /**
  * Top-of-page portfolio header: net worth, today's gains, total return and
- * buying power, plus a single allocation bar. Each slice is one position,
- * tinted green/red by its unrealized gain; cash is a neutral grey slice.
- * Hovering a slice reveals its value and gain.
+ * cash, plus a single allocation bar. Each slice is one position, tinted
+ * green/red by its unrealized gain; cash is a neutral grey slice. Hovering a
+ * slice reveals its value and gain.
+ *
+ * Borrowing room from leverage is shown only as a separate, labelled hint —
+ * never as a balance — so selling everything in a 2× game reads as "$100k
+ * cash", not "$200k".
  */
-export const PortfolioBar = ({ equity, buyingPower, dayPL, totalReturnPct, holdings, marketOpen = false, onSelect }: Props) => {
+export const PortfolioBar = ({
+  equity,
+  cash,
+  spendable,
+  leverage,
+  dayPL,
+  totalReturnPct,
+  holdings,
+  marketOpen = false,
+  onSelect,
+}: Props) => {
   const [hover, setHover] = useState<string | null>(null);
 
   const slices = holdings
@@ -38,11 +56,11 @@ export const PortfolioBar = ({ equity, buyingPower, dayPL, totalReturnPct, holdi
     .sort((a, b) => b.value - a.value);
 
   const invested = slices.reduce((s, x) => s + x.value, 0);
-  const available = Math.max(0, buyingPower - invested);
-  const total = Math.max(buyingPower, invested);
+  const cashSlice = Math.max(0, cash);
+  const total = invested + cashSlice;
   const all = [
     ...slices,
-    { key: "__cash", label: "Buying power", value: available, pl: 0, plPct: 0, kind: "cash" as const },
+    { key: "__cash", label: "Cash", value: cashSlice, pl: 0, plPct: 0, kind: "cash" as const },
   ].filter((s) => s.value > 0);
 
   const active = all.find((s) => s.key === hover);
@@ -66,7 +84,14 @@ export const PortfolioBar = ({ equity, buyingPower, dayPL, totalReturnPct, holdi
           value={`${totalReturnPct >= 0 ? "+" : "−"}${formatNumber(Math.abs(totalReturnPct))}%`}
           tone={totalReturnPct >= 0 ? "up" : "down"}
         />
-        <Metric label="Buying power" value={money(available)} />
+        <div>
+          <Metric label={cash < 0 ? "Cash (borrowed)" : "Cash"} value={`${cash < 0 ? "−" : ""}${money(cash)}`} />
+          {leverage > 1 && (
+            <div className="text-[11px] text-muted-foreground tabular-nums mt-0.5">
+              Can spend {money(Math.max(0, spendable))} with {leverage}× leverage
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Allocation bar */}
@@ -107,7 +132,7 @@ export const PortfolioBar = ({ equity, buyingPower, dayPL, totalReturnPct, holdi
               <span className="font-extrabold">{active.label}</span>
               <span className="text-muted-foreground tabular-nums">{money(active.value)}</span>
               <span className="text-muted-foreground">
-                {total > 0 ? `${formatNumber((active.value / total) * 100)}% of buying power` : ""}
+                {total > 0 ? `${formatNumber((active.value / total) * 100)}% of your portfolio` : ""}
               </span>
               {active.kind === "position" && (
                 <span className={cn("font-bold tabular-nums", active.pl >= 0 ? "text-up" : "text-down")}>
@@ -118,7 +143,7 @@ export const PortfolioBar = ({ equity, buyingPower, dayPL, totalReturnPct, holdi
             </div>
           ) : (
             <span className="text-muted-foreground">
-              Hover the bar to see each position and your available buying power.
+              Hover the bar to see each position and your cash.
             </span>
           )}
         </div>

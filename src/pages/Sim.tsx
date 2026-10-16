@@ -238,7 +238,11 @@ const Sim = () => {
   // Cash comes from the trade history, not the stored balance, so net worth is
   // always starting cash + gains. Leverage only changes how much you can borrow.
   const cash = dataReady ? ledgerCash(startingCash, trades, positions) : Number(member?.cash ?? 0);
-  const buyingPower = startingCash * Number(game?.leverage ?? 1);
+  const leverage = Math.max(1, Number(game?.leverage ?? 1) || 1);
+  const buyingPower = startingCash * leverage;
+  // Same limit the trading engine enforces: cash may go negative down to the
+  // borrowed amount, startingCash × (leverage − 1).
+  const spendable = cash + startingCash * (leverage - 1);
   const heldShares = Number(positions.find((p) => p.symbol === selected)?.shares ?? 0);
 
   const holdings: Holding[] = positions
@@ -482,7 +486,9 @@ const Sim = () => {
             )}
             <PortfolioBar
               equity={equity}
-              buyingPower={buyingPower}
+              cash={cash}
+              spendable={spendable}
+              leverage={leverage}
               dayPL={dayPL}
               marketOpen={marketOpen}
               totalReturnPct={totalReturnPct}
@@ -558,6 +564,8 @@ const Sim = () => {
                 symbol={selected}
                 price={selPrice}
                 cash={cash}
+                spendable={spendable}
+                leverage={leverage}
                 shortPower={Math.max(0, buyingPower - Math.abs(holdingsValue))}
                 heldShares={heldShares}
                 allowShort={game?.allow_short ?? false}
