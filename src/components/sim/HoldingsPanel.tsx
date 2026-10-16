@@ -10,6 +10,8 @@ export interface Holding {
   avgCost: number;
   last: number;
   prevClose: number;
+  /** Today's P/L; shares bought today count from their fill price. */
+  dayPl?: number;
 }
 
 const signed = (n: number, dollars = true) =>
@@ -54,7 +56,7 @@ export const HoldingsPanel = ({
                 const cost = h.avgCost * h.shares;
                 const uPl = value - cost;
                 const uPlPct = cost > 0 ? (uPl / cost) * 100 : 0;
-                const dayPl = (h.last - h.prevClose) * h.shares;
+                const dayPl = h.dayPl ?? (h.last - h.prevClose) * h.shares;
                 return (
                   <tr
                     key={h.id}

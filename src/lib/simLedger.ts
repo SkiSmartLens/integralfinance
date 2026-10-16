@@ -41,3 +41,29 @@ export function ledgerCash(startingCash: number, trades: LedgerTrade[], position
   }
   return Math.round(cash * 100) / 100;
 }
+
+export interface DayTrade extends LedgerTrade {
+  created_at?: string;
+}
+
+/**
+ * Today's gain/loss on one symbol. Shares held since before today move from
+ * yesterday's close; shares traded today move from the price they traded at.
+ * So -0.2% on a $100k position is -$200, never a mix of close and fill prices.
+ */
+export function dayPnl(
+  currentShares: number,
+  last: number,
+  prevClose: number,
+  todaysTrades: LedgerTrade[],
+): number {
+  let net = 0;
+  let fromFills = 0;
+  for (const t of todaysTrades) {
+    const signed = t.side === "buy" || t.side === "cover" ? Number(t.shares) : -Number(t.shares);
+    net += signed;
+    fromFills += signed * (last - Number(t.price));
+  }
+  const heldOvernight = currentShares - net;
+  return heldOvernight * (last - prevClose) + fromFills;
+}
