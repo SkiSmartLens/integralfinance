@@ -8,10 +8,6 @@ interface Props {
   equity: number;
   /** Actual cash: starting cash + realized gains − what's invested. Negative while borrowing. */
   cash: number;
-  /** Cash plus whatever leverage still lets you borrow. */
-  spendable: number;
-  /** The game's leverage (1 = no borrowing). */
-  leverage: number;
   dayPL: number;
   totalReturnPct: number;
   holdings: Holding[];
@@ -29,15 +25,12 @@ const signedMoney = (n: number) => `${n >= 0 ? "+" : "−"}${money(n)}`;
  * green/red by its unrealized gain; cash is a neutral grey slice. Hovering a
  * slice reveals its value and gain.
  *
- * Borrowing room from leverage is shown only as a separate, labelled hint —
- * never as a balance — so selling everything in a 2× game reads as "$100k
- * cash", not "$200k".
+ * Borrowing room from leverage is never shown as money, so selling
+ * everything in a 2× game reads as "$100k cash", not "$200k".
  */
 export const PortfolioBar = ({
   equity,
   cash,
-  spendable,
-  leverage,
   dayPL,
   totalReturnPct,
   holdings,
@@ -84,14 +77,7 @@ export const PortfolioBar = ({
           value={`${totalReturnPct >= 0 ? "+" : "−"}${formatNumber(Math.abs(totalReturnPct))}%`}
           tone={totalReturnPct >= 0 ? "up" : "down"}
         />
-        <div>
-          <Metric label={cash < 0 ? "Cash (borrowed)" : "Cash"} value={`${cash < 0 ? "−" : ""}${money(cash)}`} />
-          {leverage > 1 && (
-            <div className="text-[11px] text-muted-foreground tabular-nums mt-0.5">
-              Can spend {money(Math.max(0, spendable))} with {leverage}× leverage
-            </div>
-          )}
-        </div>
+        <Metric label={cash < 0 ? "Cash (borrowed)" : "Cash"} value={`${cash < 0 ? "−" : ""}${money(cash)}`} />
       </div>
 
       {/* Allocation bar */}

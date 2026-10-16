@@ -5,7 +5,7 @@ const corsHeaders = {
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 // Shown on sign-in errors so a deploy can be confirmed from outside.
-const BUILD = "2026-10-16-ledger";
+const BUILD = "2026-10-16-ledger2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -298,14 +298,33 @@ interface LedgerPosition { symbol: string; shares: number; avg_cost: number }
 function ledgerCash(startingCash: number, trades: LedgerTrade[], positions: LedgerPosition[]): number {
   let cash = Number(startingCash);
   const netShares = new Map<string, number>();
+  const avgCost = new Map(positions.map((p) => [String(p.symbol).toUpperCase(), Number(p.avg_cost)]));
   for (const t of trades) {
     const symbol = String(t.symbol).toUpperCase();
     const shares = Number(t.shares);
-    const amount = Number(t.price) * shares;
+    const price = Number(t.price);
+    let held = netShares.get(symbol) ?? 0;
+    // Shares sold (or covered) that the history never shows being bought (or
+    // shorted) count as bought at their average cost, or at the sale price if
+    // the position is gone — never as pure profit.
+    const basis = avgCost.get(symbol) ?? price;
+    if (t.side === "sell") {
+      const missing = shares - Math.max(0, held);
+      if (missing > 1e-9) {
+        cash -= missing * basis;
+        held += missing;
+      }
+    } else if (t.side === "cover") {
+      const missing = shares - Math.max(0, -held);
+      if (missing > 1e-9) {
+        cash += missing * basis;
+        held -= missing;
+      }
+    }
     // Buys and covers spend cash and add shares; sells and shorts do the reverse.
     const spends = t.side === "buy" || t.side === "cover";
-    cash += spends ? -amount : amount;
-    netShares.set(symbol, (netShares.get(symbol) ?? 0) + (spends ? shares : -shares));
+    cash += (spends ? -1 : 1) * price * shares;
+    netShares.set(symbol, held + (spends ? shares : -shares));
   }
   for (const p of positions) {
     const unexplained = Number(p.shares) - (netShares.get(String(p.symbol).toUpperCase()) ?? 0);

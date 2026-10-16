@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/backend";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { formatNumber } from "@/lib/yahoo";
+import { estimatedNetWorth } from "@/lib/simLedger";
 import { Trophy, Loader2, Briefcase } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -10,7 +11,7 @@ interface Row {
   member_id: string;
   user_id: string;
   cash: number;
-  positions: { symbol: string; shares: number }[];
+  positions: { symbol: string; shares: number; avgCost: number }[];
   display_name: string;
 }
 
@@ -38,17 +39,17 @@ export const Leaderboard = ({
       const memberIds = (members ?? []).map((m: any) => m.id);
       const [{ data: positions }, { data: profs }] = await Promise.all([
         memberIds.length
-          ? supabase.from("positions").select("member_id, symbol, shares").in("member_id", memberIds)
+          ? supabase.from("positions").select("member_id, symbol, shares, avg_cost").in("member_id", memberIds)
           : Promise.resolve({ data: [] as any[] }),
         supabase
           .from("profiles")
           .select("user_id, display_name")
           .in("user_id", (members ?? []).map((m: any) => m.user_id)),
       ]);
-      const byMember = new Map<string, { symbol: string; shares: number }[]>();
+      const byMember = new Map<string, { symbol: string; shares: number; avgCost: number }[]>();
       (positions ?? []).forEach((p: any) => {
         const list = byMember.get(p.member_id) ?? [];
-        list.push({ symbol: p.symbol, shares: Number(p.shares) });
+        list.push({ symbol: p.symbol, shares: Number(p.shares), avgCost: Number(p.avg_cost) });
         byMember.set(p.member_id, list);
       });
       const nameByUser = new Map((profs ?? []).map((p: any) => [p.user_id, p.display_name as string]));
@@ -83,12 +84,14 @@ export const Leaderboard = ({
     if (!rows) return [];
     return rows
       .map((r) => {
-        const holdings = r.positions.reduce(
-          (sum, p) => sum + (priceMap.get(p.symbol) ?? 0) * p.shares,
-          0,
-        );
-        const cash = r.user_id === meUserId && myCash != null ? myCash : r.cash;
-        const equity = cash + holdings;
+        const priced = r.positions.map((p) => ({ ...p, last: priceMap.get(p.symbol) ?? p.avgCost }));
+        const holdings = priced.reduce((sum, p) => sum + p.last * p.shares, 0);
+        // Your own row uses your trade history; other players' trade history
+        // isn't readable here, so theirs is estimated from stored cash + holdings.
+        const equity =
+          r.user_id === meUserId && myCash != null
+            ? myCash + holdings
+            : estimatedNetWorth(startingCash, r.cash, priced);
         return { ...r, equity, returnPct: startingCash > 0 ? ((equity - startingCash) / startingCash) * 100 : 0 };
       })
       .sort((a, b) => b.equity - a.equity);
@@ -189,7 +192,7 @@ export const Leaderboard = ({
                     </thead>
                     <tbody>
                       {liveViewing.positions.map((p) => {
-                        const price = priceMap.get(p.symbol) ?? 0;
+                        const price = priceMap.get(p.symbol) ?? p.avgCost;
                         return (
                           <tr key={p.symbol} className="border-b last:border-0">
                             <td className="px-2 py-2 font-bold">{p.symbol}</td>

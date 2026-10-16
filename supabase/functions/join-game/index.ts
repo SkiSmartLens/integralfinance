@@ -6,7 +6,7 @@ const corsHeaders = {
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 // Shown on sign-in errors so a deploy can be confirmed from outside.
-const BUILD = "2026-10-16-ledger";
+const BUILD = "2026-10-16-ledger2";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });

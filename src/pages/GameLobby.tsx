@@ -25,6 +25,7 @@ import {
 import { cn } from "@/lib/utils";
 import { formatNumber } from "@/lib/yahoo";
 import { AdminHoldingsDialog } from "@/components/sim/AdminHoldingsDialog";
+import { estimatedNetWorth, ledgerCash, type LedgerPosition, type LedgerTrade } from "@/lib/simLedger";
 
 interface Game {
   id: string;
@@ -57,6 +58,48 @@ const setActiveGame = (id: string) => {
 const SITE = "https://integralstocks.com";
 export const inviteLink = (code: string) => `${SITE}/sim/join/${code}`;
 
+interface OwnLedger { trades: LedgerTrade[]; positions: LedgerPosition[] }
+
+/**
+ * Trade history and positions for your own memberships, so your games show
+ * net worth from the trade history (starting cash + gains) rather than the
+ * stored cash balance. Pages until an empty page so the API's row cap can't
+ * truncate it. Members with a failed read are left out (their card falls
+ * back to the stored figure).
+ */
+const loadOwnLedger = async (memberIds: string[]): Promise<Map<string, OwnLedger>> => {
+  const out = new Map<string, OwnLedger>();
+  if (!memberIds.length) return out;
+  const { data: pos, error: posErr } = await supabase
+    .from("positions")
+    .select("member_id, symbol, shares, avg_cost")
+    .in("member_id", memberIds);
+  if (posErr) return out;
+  const trades: (LedgerTrade & { member_id: string })[] = [];
+  for (let from = 0; ; ) {
+    const { data, error } = await supabase
+      .from("transactions")
+      .select("member_id, symbol, side, shares, price")
+      .in("member_id", memberIds)
+      .order("created_at")
+      .order("id")
+      .range(from, from + 999);
+    if (error) return out;
+    if (!data?.length) break;
+    trades.push(...data.map((t) => ({ ...t, shares: Number(t.shares), price: Number(t.price) })));
+    from += data.length;
+  }
+  for (const id of memberIds) {
+    out.set(id, {
+      trades: trades.filter((t) => t.member_id === id),
+      positions: (pos ?? [])
+        .filter((p) => p.member_id === id)
+        .map((p) => ({ symbol: p.symbol, shares: Number(p.shares), avg_cost: Number(p.avg_cost) })),
+    });
+  }
+  return out;
+};
+
 interface AdminPosition { symbol: string; shares: number; avgCost: number }
 interface AdminPlayer { member_id: string; user_id: string; cash: number; name: string; positions: AdminPosition[] }
 interface AdminGame extends Game {
@@ -71,6 +114,7 @@ const GameLobby = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminGames, setAdminGames] = useState<AdminGame[]>([]);
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
+  const [myLedger, setMyLedger] = useState<Map<string, OwnLedger>>(new Map());
   const [code, setCode] = useState("");
   const [joining, setJoining] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -98,6 +142,7 @@ const GameLobby = () => {
     const memberships =
       (mems as any[])?.map((m) => ({ ...m, game: m.games as Game })).filter((m) => m.game) ?? [];
     setMyMemberships(memberships);
+    setMyLedger(await loadOwnLedger(memberships.map((m) => m.id)));
 
     const memberGameIds = new Set(memberships.map((m) => m.game_id));
     const { data: pubs } = await supabase
@@ -182,16 +227,38 @@ const GameLobby = () => {
   // each player's real current total (cash + live position value) next to
   // their stored cash — the fastest way to tell a genuine gain/loss apart from
   // a stale or corrupted cash balance.
+  // Also covers your own games' holdings, for their net worth.
   const adminSymbols = useMemo(() => {
     const s = new Set<string>();
     adminGames.forEach((g) => g.players.forEach((p) => p.positions.forEach((pos) => s.add(pos.symbol))));
+    myLedger.forEach((l) => l.positions.forEach((pos) => s.add(pos.symbol)));
     return [...s];
-  }, [adminGames]);
+  }, [adminGames, myLedger]);
   const { quotes: adminQuotes } = useLiveQuotes(adminSymbols, 15000);
   const adminPriceMap = useMemo(
     () => new Map(adminQuotes.map((q) => [q.symbol, q.regularMarketPrice ?? 0])),
     [adminQuotes],
   );
+  // Live price, or average cost until a quote arrives (never 0).
+  const priceOr = (symbol: string, avgCost: number) => adminPriceMap.get(symbol) || avgCost;
+
+  // Net worth for one of your own memberships: starting cash + gains, from
+  // the trade history. Null if that history couldn't be loaded.
+  const ownNetWorth = (memberId: string, startingCash: number): number | null => {
+    const l = myLedger.get(memberId);
+    if (!l) return null;
+    const value = l.positions.reduce((s, p) => s + priceOr(p.symbol, p.avg_cost) * p.shares, 0);
+    return ledgerCash(startingCash, l.trades, l.positions) + value;
+  };
+
+  // Admin panel figures for one player. Your own rows use your trade history;
+  // other players' history isn't readable, so theirs is estimated.
+  const playerTotals = (p: AdminPlayer, startingCash: number) => {
+    const priced = p.positions.map((pos) => ({ ...pos, last: priceOr(pos.symbol, pos.avgCost) }));
+    const holdingsValue = priced.reduce((s, pos) => s + pos.last * pos.shares, 0);
+    const total = ownNetWorth(p.member_id, startingCash) ?? estimatedNetWorth(startingCash, p.cash, priced);
+    return { total, cashShown: total - holdingsValue };
+  };
 
 
   const enterGame = (gameId: string) => {
@@ -349,7 +416,9 @@ const GameLobby = () => {
                           <><Lock className="w-3 h-3" /> Private</>
                         )}
                         <span>·</span>
-                        <span className="tabular-nums">${formatNumber(Number(m.cash))} cash</span>
+                        <span className="tabular-nums">
+                          ${formatNumber(ownNetWorth(m.id, Number(m.game.starting_cash)) ?? Number(m.cash))} net worth
+                        </span>
                       </div>
                     </div>
                     {!m.game.is_public && <CopyCode code={m.game.join_code} />}
@@ -397,11 +466,7 @@ const GameLobby = () => {
                   </div>
                   <ul className="mt-3 space-y-1.5">
                     {g.players.map((p) => {
-                      const holdingsValue = p.positions.reduce(
-                        (s, pos) => s + (adminPriceMap.get(pos.symbol) ?? pos.avgCost) * pos.shares,
-                        0,
-                      );
-                      const total = p.cash + holdingsValue;
+                      const { total, cashShown } = playerTotals(p, Number(g.starting_cash));
                       return (
                         <li key={p.user_id} className="bg-muted/40 rounded-lg px-2.5 py-1.5 text-xs">
                           <div className="flex items-center justify-between gap-2">
@@ -423,11 +488,11 @@ const GameLobby = () => {
                                 Stocks
                               </button>
                               <button
-                                onClick={() => editPlayerCash(p)}
+                                onClick={() => editPlayerCash({ ...p, cash: Math.round(cashShown * 100) / 100 })}
                                 className="tabular-nums hover:text-primary underline decoration-dotted underline-offset-2"
                                 title={`Set ${p.name}'s cash`}
                               >
-                                ${formatNumber(p.cash)} cash
+                                {cashShown < 0 ? "−" : ""}${formatNumber(Math.abs(cashShown))} cash
                               </button>
                               <button
                                 onClick={() => resetPlayer(p)}
@@ -455,7 +520,13 @@ const GameLobby = () => {
               ))}
             </ul>
             <AdminHoldingsDialog
-              player={adminGames.flatMap((g) => g.players).find((p) => p.member_id === editingMemberId) ?? null}
+              player={(() => {
+                for (const g of adminGames) {
+                  const p = g.players.find((x) => x.member_id === editingMemberId);
+                  if (p) return { ...p, cash: playerTotals(p, Number(g.starting_cash)).cashShown };
+                }
+                return null;
+              })()}
               priceMap={adminPriceMap}
               onClose={() => setEditingMemberId(null)}
               onChanged={() => userId && refresh(userId)}

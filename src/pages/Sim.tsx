@@ -487,8 +487,6 @@ const Sim = () => {
             <PortfolioBar
               equity={equity}
               cash={cash}
-              spendable={spendable}
-              leverage={leverage}
               dayPL={dayPL}
               marketOpen={marketOpen}
               totalReturnPct={totalReturnPct}

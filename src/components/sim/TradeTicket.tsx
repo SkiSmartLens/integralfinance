@@ -43,9 +43,12 @@ export const TradeTicket = ({
   const [qty, setQty] = useState(1);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // Buys can spend cash plus any borrowing room leverage gives; shorts draw on
-  // margin capacity. Neither is "your money" — the header shows real cash.
+  // The most this order may cost: buys can go past your cash into whatever
+  // leverage lets you borrow; shorts draw on margin capacity.
   const tradingPower = Math.max(0, side === "short" ? shortPower ?? 0 : spendable ?? cash);
+  // What the slider and % buttons size against. For buys that's your actual
+  // cash, never the leveraged limit — typing a bigger number still borrows.
+  const budget = side === "buy" ? Math.min(Math.max(0, cash), tradingPower) : tradingPower;
   const leveraged = leverage > 1;
 
   useEffect(() => {
@@ -60,16 +63,16 @@ export const TradeTicket = ({
     if (side === "sell") return Math.max(0, heldShares);
     if (side === "cover") return Math.max(0, Math.abs(Math.min(heldShares, 0)));
     if (!price || price <= 0) return 0;
-    return Math.max(0, Math.floor(tradingPower / price));
-  }, [side, price, tradingPower, heldShares]);
+    return Math.max(0, Math.floor(budget / price));
+  }, [side, price, budget, heldShares]);
 
   // Share of the relevant budget already committed to this symbol (0–1).
   const investedFraction = useMemo(() => {
     if (!price || price <= 0) return 0;
     const committed = Math.abs(heldShares) * price;
-    const pool = tradingPower + committed;
+    const pool = budget + committed;
     return pool > 0 ? committed / pool : 0;
-  }, [price, heldShares, tradingPower]);
+  }, [price, heldShares, budget]);
 
 
   const estCost = price ? price * qty : 0;
@@ -141,16 +144,9 @@ export const TradeTicket = ({
           <h3 className="font-extrabold text-lg">Trade {symbol}</h3>
           <p className="text-xs text-muted-foreground">Simple market order — nothing scary.</p>
         </div>
-        <div className="text-right shrink-0">
-          <span className="text-xs text-muted-foreground inline-flex items-center gap-1 tabular-nums" title="Your cash">
-            <Wallet className="w-3.5 h-3.5" /> {cash < 0 ? "−" : ""}${formatNumber(Math.abs(cash))} cash
-          </span>
-          {leveraged && (side === "buy" || side === "cover") && (
-            <div className="text-[10px] text-muted-foreground tabular-nums mt-0.5">
-              can spend ${formatNumber(tradingPower)} with {leverage}× leverage
-            </div>
-          )}
-        </div>
+        <span className="text-xs text-muted-foreground inline-flex items-center gap-1 tabular-nums shrink-0" title="Your cash">
+          <Wallet className="w-3.5 h-3.5" /> {cash < 0 ? "−" : ""}${formatNumber(Math.abs(cash))} cash
+        </span>
       </div>
 
       {/* Side toggle — Buy/Sell (and Short/Cover if enabled) all live at the top level. */}
@@ -239,8 +235,8 @@ export const TradeTicket = ({
         })}
       </div>
       <p className="text-[11px] text-muted-foreground mb-4">
-        {leveraged && side === "buy"
-          ? `Percent of what you can spend, including money ${leverage}× leverage lets you borrow. 100% uses it all.`
+        {side === "buy"
+          ? `Percent of your cash. 100% invests it all.${leveraged ? ` To borrow with ${leverage}× leverage, type more shares.` : ""}`
           : "Percent of your available buying power. 100% invests it all."}
       </p>
 

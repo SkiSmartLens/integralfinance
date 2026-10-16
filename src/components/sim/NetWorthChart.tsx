@@ -18,6 +18,11 @@ const RANGES = [
   { label: "All", ms: Infinity },
 ] as const;
 
+// Snapshots recorded before net worth switched to the trade history
+// (2026-10-16) were computed from a stored cash balance that counted every
+// purchase twice, so they show money that never existed. Leave them out.
+const TRUSTED_SNAPSHOTS_FROM = Date.parse("2026-10-16T14:30:00Z");
+
 /**
  * Net worth over time, starting the day you joined. Real history comes from
  * `portfolio_snapshots`, which a new row is added to at most once every 12
@@ -63,7 +68,7 @@ export const NetWorthChart = ({
   const full = useMemo(() => {
     if (history === null) return [];
     const joinPoint: Point = { t: new Date(joinedAt).getTime(), equity: startingCash };
-    const real = history.filter((p) => p.t > joinPoint.t);
+    const real = history.filter((p) => p.t > joinPoint.t && p.t >= TRUSTED_SNAPSHOTS_FROM);
     return [joinPoint, ...real, { t: Date.now(), equity }];
   }, [history, joinedAt, equity, startingCash]);
 
