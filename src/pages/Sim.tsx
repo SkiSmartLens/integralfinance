@@ -17,10 +17,11 @@ import { WhyItMoved } from "@/components/sim/WhyItMoved";
 import { SimCopilot } from "@/components/sim/SimCopilot";
 import { SafetyMeter } from "@/components/sim/SafetyMeter";
 import { Leaderboard } from "@/components/sim/Leaderboard";
-import { ArrowLeft, LogOut, RefreshCw, Trophy, Copy, Check, Share2, LogIn, Users, Lock, Globe, DoorOpen, HelpCircle, Loader2, UserCog } from "lucide-react";
+import { ArrowLeft, LogOut, RefreshCw, Trophy, Copy, Check, Share2, LogIn, Users, Lock, Globe, DoorOpen, HelpCircle, Loader2, UserCog, Terminal } from "lucide-react";
 import { SimWalkthrough, hasSeenSimWalkthrough } from "@/components/sim/SimWalkthrough";
 import { PostTradeCard } from "@/components/sim/PostTradeCard";
 import { PortfolioBar } from "@/components/sim/PortfolioBar";
+import { DevConsole } from "@/components/sim/DevConsole";
 import { isUsMarketOpen, nextOpenLabel } from "@/lib/marketHours";
 import { ledgerCash, dayPnl, type DayTrade } from "@/lib/simLedger";
 
@@ -91,6 +92,8 @@ const Sim = () => {
   const [placing, setPlacing] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [walkOpen, setWalkOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [devOpen, setDevOpen] = useState(false);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [lastTrade, setLastTrade] = useState<
     | { symbol: string; side: "buy" | "sell" | "short" | "cover"; shares: number; price?: number }
@@ -128,6 +131,23 @@ const Sim = () => {
       .maybeSingle()
       .then(({ data }) => setDisplayName((data as any)?.display_name ?? null));
   }, [userId]);
+
+  // ---- Admins get the dev console (the server re-checks on every action) ----
+  useEffect(() => {
+    if (!userId) return;
+    supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "admin")
+      .then(({ data }) => setIsAdmin((data ?? []).length > 0));
+  }, [userId]);
+
+  const reloadGame = async () => {
+    if (!member) return;
+    const { data: g } = await supabase.from("games").select("*").eq("id", member.game_id).maybeSingle();
+    if (g) setGame(g as Game);
+  };
 
   const editDisplayName = async () => {
     if (!userId) return;
@@ -416,6 +436,15 @@ const Sim = () => {
             >
               <RefreshCw className="w-4 h-4" />
             </button>
+            {isAdmin && (
+              <button
+                onClick={() => setDevOpen(true)}
+                className="h-9 px-3 rounded-lg text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors inline-flex items-center gap-1.5"
+                title="Dev console"
+              >
+                <Terminal className="w-4 h-4" /> <span className="hidden sm:inline">Dev</span>
+              </button>
+            )}
             <button
               onClick={editDisplayName}
               className="h-9 w-9 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors flex items-center justify-center"
@@ -614,6 +643,21 @@ const Sim = () => {
         </div>
       </main>
       <SimWalkthrough open={walkOpen} onClose={() => setWalkOpen(false)} />
+      {isAdmin && (
+        <DevConsole
+          open={devOpen}
+          onOpenChange={setDevOpen}
+          currentGameId={game?.id}
+          onChanged={() => {
+            reloadGame();
+            reloadPortfolio(member);
+          }}
+          onGameDeleted={() => {
+            try { localStorage.removeItem("activeSimGame"); } catch { /* storage unavailable */ }
+            nav("/sim/lobby");
+          }}
+        />
+      )}
     </div>
   );
 };

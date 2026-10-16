@@ -6,7 +6,7 @@ const corsHeaders = {
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 // Shown on sign-in errors so a deploy can be confirmed from outside.
-const BUILD = "2026-10-16-ledger2";
+const BUILD = "2026-10-16-dev";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -31,6 +31,9 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
       auth: { persistSession: false },
     });
+
+    // Lets the dev console confirm which build is deployed.
+    if (body.action === "ping") return json({ ok: true, build: BUILD });
 
     if (body.action === "cleanup_empty_games") {
       const removed = await removeEmptyGames(admin, typeof body.game_id === "string" ? body.game_id : null);

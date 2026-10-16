@@ -6,7 +6,7 @@ const corsHeaders = {
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 // Shown on sign-in errors so a deploy can be confirmed from outside.
-const BUILD = "2026-10-16-ledger2";
+const BUILD = "2026-10-16-dev";
 
 // Lets an admin directly fix a player's account: set cash to a specific
 // number, set how many shares of a stock they hold, fully reset the account
@@ -52,14 +52,86 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { member_id, action } = body;
 
+    if (action === "ping") return json({ ok: true, build: BUILD });
+
     if (action === "reconcile_all") {
       const r = await reconcileAll(svc);
       if (!r) return json({ error: "Could not check balances. Please try again." }, 500);
       return json({ ok: true, ...r });
     }
 
+    // ---- Game-level actions (dev console) ----
+    const gameId = typeof body.game_id === "string" ? body.game_id : null;
+
+    if (action === "player_summaries") {
+      if (!gameId) return json({ error: "game_id is required." }, 400);
+      const players = await playerSummaries(svc, SUPABASE_URL, ANON, gameId);
+      if (!players) return json({ error: "Could not load players. Please try again." }, 500);
+      return json({ ok: true, players });
+    }
+
+    if (action === "update_game") {
+      if (!gameId) return json({ error: "game_id is required." }, 400);
+      const parsed = parseGameChanges(body.changes ?? {});
+      if ("error" in parsed) return json({ error: parsed.error }, 400);
+      if (!Object.keys(parsed.changes).length) return json({ error: "Nothing to change." }, 400);
+      const { data, error } = await svc.from("games").update(parsed.changes).eq("id", gameId).select("*").maybeSingle();
+      if (error) {
+        console.error("update_game failed", error);
+        return json({ error: "Could not save the game settings. Please try again." }, 500);
+      }
+      if (!data) return json({ error: "Game not found." }, 404);
+      // A new starting cash shifts everyone's trade-history cash; sync stored balances.
+      if ("starting_cash" in parsed.changes) await reconcileAll(svc);
+      return json({ ok: true, game: data });
+    }
+
+    if (action === "delete_game") {
+      if (!gameId) return json({ error: "game_id is required." }, 400);
+      const { data: members, error: mErr } = await svc.from("game_members").select("id").eq("game_id", gameId);
+      if (mErr) return json({ error: "Could not read the game's players. Please try again." }, 500);
+      const ids = (members ?? []).map((m: { id: string }) => m.id);
+      const err = await clearMembers(svc, ids, true);
+      if (err) return json({ error: err }, 500);
+      const { error } = await svc.from("games").delete().eq("id", gameId);
+      if (error) {
+        console.error("delete_game failed", error);
+        return json({ error: "Could not delete the game. Please try again." }, 500);
+      }
+      return json({ ok: true, removed_players: ids.length });
+    }
+
     if (!member_id || typeof member_id !== "string") {
       return json({ error: "member_id is required." }, 400);
+    }
+
+    if (action === "remove_member") {
+      const err = await clearMembers(svc, [member_id], true);
+      if (err) return json({ error: err }, 500);
+      return json({ ok: true });
+    }
+
+    if (action === "set_net_worth") {
+      const target = Number(body.net_worth);
+      if (!Number.isFinite(target)) return json({ error: "Net worth must be a number." }, 400);
+      const ctx = await memberContext(svc, member_id);
+      if ("error" in ctx) return json({ error: ctx.error }, ctx.status);
+      const history = await memberHistory(svc, member_id);
+      if (!history) return json({ error: "Could not read their trade history. Please try again." }, 500);
+      const prices = await livePrices(SUPABASE_URL, ANON, history.positions.map((p) => p.symbol));
+      const holdings = history.positions.reduce(
+        (s, p) => s + (prices.get(String(p.symbol).toUpperCase()) || Number(p.avg_cost)) * Number(p.shares),
+        0,
+      );
+      const current = ledgerCash(ctx.startingCash, history.trades, history.positions) + holdings;
+      // Net worth = cash + holdings, so the difference is made up in cash.
+      const adjustment = target - current;
+      if (Math.abs(adjustment) >= 0.01) {
+        const adjErr = await recordCashAdjustment(svc, member_id, adjustment);
+        if (adjErr) return json({ error: "Could not update net worth. Please try again." }, 500);
+      }
+      await reconcileMember(svc, member_id, ctx.startingCash);
+      return json({ ok: true, net_worth: target, adjustment: Math.round(adjustment * 100) / 100 });
     }
 
     if (action === "set_position") {
@@ -396,15 +468,150 @@ async function reconcileAll(svc: any): Promise<{ checked: number; fixed: number 
 
 /** Latest price for a symbol, via the same Yahoo proxy the trading engine uses. */
 async function livePrice(supabaseUrl: string, anon: string, symbol: string): Promise<number> {
-  try {
-    const res = await fetch(
-      `${supabaseUrl}/functions/v1/yahoo-proxy?kind=quote&symbols=${encodeURIComponent(symbol)}`,
-      { headers: { apikey: anon } },
-    );
-    const q = (await res.json())?.quoteResponse?.result?.[0];
-    return Number(q?.regularMarketPrice ?? q?.postMarketPrice ?? 0) || 0;
-  } catch (e) {
-    console.error("livePrice failed", e);
-    return 0;
+  return (await livePrices(supabaseUrl, anon, [symbol])).get(symbol.toUpperCase()) ?? 0;
+}
+
+/** Latest prices for several symbols (uppercase keys). Missing quotes are left out. */
+async function livePrices(supabaseUrl: string, anon: string, symbols: string[]): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  const unique = [...new Set(symbols.map((s) => String(s).toUpperCase()))];
+  for (let i = 0; i < unique.length; i += 40) {
+    try {
+      const res = await fetch(
+        `${supabaseUrl}/functions/v1/yahoo-proxy?kind=quote&symbols=${encodeURIComponent(unique.slice(i, i + 40).join(","))}`,
+        { headers: { apikey: anon } },
+      );
+      const results = (await res.json())?.quoteResponse?.result ?? [];
+      for (const q of results) {
+        const price = Number(q?.regularMarketPrice ?? q?.postMarketPrice ?? 0) || 0;
+        if (q?.symbol && price > 0) out.set(String(q.symbol).toUpperCase(), price);
+      }
+    } catch (e) {
+      console.error("livePrices failed", e);
+    }
   }
+  return out;
+}
+
+/**
+ * Every player in a game with exact figures from their trade history: cash,
+ * holdings at live prices, and net worth. Null if any read fails.
+ */
+async function playerSummaries(svc: any, supabaseUrl: string, anon: string, gameId: string) {
+  const { data: game } = await svc.from("games").select("starting_cash").eq("id", gameId).maybeSingle();
+  const startingCash = Number(game?.starting_cash ?? 0);
+  if (!(startingCash > 0)) return null;
+  const { data: members, error: mErr } = await svc
+    .from("game_members").select("id, user_id, cash, joined_at").eq("game_id", gameId);
+  if (mErr) return null;
+  const ids = (members ?? []).map((m: { id: string }) => m.id);
+  if (!ids.length) return [];
+  const [positions, trades, profilesRes] = await Promise.all([
+    fetchAll<LedgerPosition & { member_id: string }>((from, to) =>
+      svc.from("positions").select("member_id, symbol, shares, avg_cost").in("member_id", ids).order("id").range(from, to)),
+    fetchAll<LedgerTrade & { member_id: string }>((from, to) =>
+      svc.from("transactions").select("member_id, symbol, side, shares, price")
+        .in("member_id", ids).order("created_at").order("id").range(from, to)),
+    svc.from("profiles").select("user_id, display_name").in("user_id", (members ?? []).map((m: { user_id: string }) => m.user_id)),
+  ]);
+  if (!positions || !trades) return null;
+  const prices = await livePrices(supabaseUrl, anon, positions.map((p) => p.symbol));
+  const names = new Map((profilesRes.data ?? []).map((p: { user_id: string; display_name: string }) => [p.user_id, p.display_name]));
+
+  return (members ?? []).map((m: { id: string; user_id: string; cash: number; joined_at: string }) => {
+    const pos = positions.filter((p) => p.member_id === m.id);
+    const cash = ledgerCash(startingCash, trades.filter((t) => t.member_id === m.id), pos);
+    const priced = pos.map((p) => ({
+      symbol: p.symbol,
+      shares: Number(p.shares),
+      avg_cost: Number(p.avg_cost),
+      last: prices.get(String(p.symbol).toUpperCase()) || Number(p.avg_cost),
+    }));
+    const holdings = priced.reduce((s, p) => s + p.last * p.shares, 0);
+    return {
+      member_id: m.id,
+      user_id: m.user_id,
+      name: names.get(m.user_id) ?? "Player",
+      joined_at: m.joined_at,
+      cash,
+      stored_cash: Number(m.cash),
+      net_worth: Math.round((cash + holdings) * 100) / 100,
+      positions: priced,
+    };
+  });
+}
+
+/** Validates the game settings the dev console may change. */
+function parseGameChanges(raw: Record<string, unknown>): { changes: Record<string, unknown> } | { error: string } {
+  const changes: Record<string, unknown> = {};
+  const num = (v: unknown) => (v === null || v === "" ? null : Number(v));
+  if ("name" in raw) {
+    const name = String(raw.name ?? "").trim();
+    if (!name || name.length > 60) return { error: "Game name must be 1–60 characters." };
+    changes.name = name;
+  }
+  if ("starting_cash" in raw) {
+    const v = num(raw.starting_cash);
+    if (v === null || !Number.isFinite(v) || v <= 0 || v > 1e9) return { error: "Starting cash must be between $1 and $1,000,000,000." };
+    changes.starting_cash = v;
+  }
+  if ("leverage" in raw) {
+    const v = num(raw.leverage);
+    if (v === null || !Number.isFinite(v) || v < 1 || v > 10) return { error: "Leverage must be between 1× and 10×." };
+    changes.leverage = v;
+  }
+  for (const key of ["allow_short", "is_public"] as const) {
+    if (key in raw) {
+      if (typeof raw[key] !== "boolean") return { error: `${key} must be true or false.` };
+      changes[key] = raw[key];
+    }
+  }
+  if ("min_price" in raw) {
+    const v = num(raw.min_price);
+    if (v !== null && (!Number.isFinite(v) || v < 0)) return { error: "Minimum price must be $0 or more." };
+    changes.min_price = v;
+  }
+  if ("max_position_pct" in raw) {
+    const v = num(raw.max_position_pct);
+    if (v !== null && (!Number.isFinite(v) || v <= 0 || v > 100)) return { error: "Max position must be between 1% and 100%." };
+    changes.max_position_pct = v;
+  }
+  if ("ends_at" in raw) {
+    if (raw.ends_at === null || raw.ends_at === "") changes.ends_at = null;
+    else {
+      const t = Date.parse(String(raw.ends_at));
+      if (!Number.isFinite(t)) return { error: "End date isn't a valid date." };
+      changes.ends_at = new Date(t).toISOString();
+    }
+  }
+  return { changes };
+}
+
+/**
+ * Deletes players' positions, orders, trade history and net-worth snapshots,
+ * and (with removeMembership) the membership rows themselves. Returns an
+ * error message, or null on success.
+ */
+async function clearMembers(svc: any, memberIds: string[], removeMembership: boolean): Promise<string | null> {
+  if (!memberIds.length) return null;
+  const results = await Promise.all([
+    svc.from("positions").delete().in("member_id", memberIds),
+    svc.from("transactions").delete().in("member_id", memberIds),
+    svc.from("orders").delete().in("member_id", memberIds),
+  ]);
+  const failed = results.find((r: { error: unknown }) => r.error);
+  if (failed) {
+    console.error("clearMembers failed", failed.error);
+    return "Could not clear their positions and history. Please try again.";
+  }
+  // portfolio_snapshots may not exist on every deploy yet — best-effort only.
+  await svc.from("portfolio_snapshots").delete().in("member_id", memberIds);
+  if (removeMembership) {
+    const { error } = await svc.from("game_members").delete().in("id", memberIds);
+    if (error) {
+      console.error("clearMembers: membership delete failed", error);
+      return "Could not remove the player. Please try again.";
+    }
+  }
+  return null;
 }

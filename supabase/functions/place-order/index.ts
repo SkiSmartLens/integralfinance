@@ -5,7 +5,7 @@ const corsHeaders = {
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 // Shown on sign-in errors so a deploy can be confirmed from outside.
-const BUILD = "2026-10-16-ledger2";
+const BUILD = "2026-10-16-dev";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -30,6 +30,8 @@ Deno.serve(async (req) => {
     if (!user) return json({ error: "unauthorized", build: BUILD }, 401);
 
     const body = await req.json();
+    // Lets the dev console confirm which build is deployed.
+    if (body.action === "ping") return json({ ok: true, build: BUILD });
     const { member_id } = body;
     if (!member_id) return json({ error: "invalid input" }, 400);
 
