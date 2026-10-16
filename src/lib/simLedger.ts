@@ -1,4 +1,12 @@
-// Keep in sync with the copy in supabase/functions/place-order/index.ts.
+// Keep ledgerCash in sync with the copies in supabase/functions/place-order
+// and supabase/functions/admin-set-cash.
+
+/**
+ * Trade-history rows with this symbol are admin cash adjustments, not stock
+ * (a "sell" of 1 share at $X adds X to cash; a "buy" removes it). ledgerCash
+ * handles them like any other trade; no position ever has this symbol.
+ */
+export const CASH_ADJUSTMENT_SYMBOL = "$CASH";
 
 export interface LedgerTrade {
   symbol: string;

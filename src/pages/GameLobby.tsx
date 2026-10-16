@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/backend";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatNumber } from "@/lib/yahoo";
+import { AdminHoldingsDialog } from "@/components/sim/AdminHoldingsDialog";
 
 interface Game {
   id: string;
@@ -69,6 +70,7 @@ const GameLobby = () => {
   const [publicGames, setPublicGames] = useState<Game[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminGames, setAdminGames] = useState<AdminGame[]>([]);
+  const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [joining, setJoining] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -157,6 +159,24 @@ const GameLobby = () => {
   useEffect(() => {
     if (userId) refresh(userId);
   }, [userId]);
+
+  // Once per visit, in the background: delete games nobody is in, and (for
+  // admins) bring every player's stored cash in line with their trade history
+  // so the leaderboards are right. Reload the lists if either changed anything.
+  const housekeepingDone = useRef(false);
+  useEffect(() => {
+    if (!userId || loading || housekeepingDone.current) return;
+    housekeepingDone.current = true;
+    (async () => {
+      const [cleanup, reconcile] = await Promise.all([
+        supabase.functions.invoke<{ removed?: number }>("join-game", { body: { action: "cleanup_empty_games" } }),
+        isAdmin
+          ? supabase.functions.invoke<{ fixed?: number }>("admin-set-cash", { body: { action: "reconcile_all" } })
+          : Promise.resolve({ data: null }),
+      ]);
+      if ((cleanup.data?.removed ?? 0) > 0 || (reconcile.data?.fixed ?? 0) > 0) refresh(userId);
+    })().catch(() => {});
+  }, [userId, loading, isAdmin]);
 
   // Live prices for every symbol any player holds, so the admin panel can show
   // each player's real current total (cash + live position value) next to
@@ -261,7 +281,14 @@ const GameLobby = () => {
 
   const leaveGame = async (memberId: string) => {
     if (!confirm("Leave this game? Your positions and cash for this game will be discarded.")) return;
+    const gameId = myMemberships.find((m) => m.id === memberId)?.game_id;
     await supabase.from("game_members").delete().eq("id", memberId);
+    // If that was the last player, the game goes too.
+    if (gameId) {
+      await supabase.functions
+        .invoke("join-game", { body: { action: "cleanup_empty_games", game_id: gameId } })
+        .catch(() => {});
+    }
     if (userId) refresh(userId);
   };
 
@@ -389,6 +416,13 @@ const GameLobby = () => {
                             </span>
                             <div className="flex items-center gap-2 shrink-0">
                               <button
+                                onClick={() => setEditingMemberId(p.member_id)}
+                                className="hover:text-primary underline decoration-dotted underline-offset-2"
+                                title={`Edit ${p.name}'s stocks`}
+                              >
+                                Stocks
+                              </button>
+                              <button
                                 onClick={() => editPlayerCash(p)}
                                 className="tabular-nums hover:text-primary underline decoration-dotted underline-offset-2"
                                 title={`Set ${p.name}'s cash`}
@@ -420,6 +454,12 @@ const GameLobby = () => {
                 </li>
               ))}
             </ul>
+            <AdminHoldingsDialog
+              player={adminGames.flatMap((g) => g.players).find((p) => p.member_id === editingMemberId) ?? null}
+              priceMap={adminPriceMap}
+              onClose={() => setEditingMemberId(null)}
+              onChanged={() => userId && refresh(userId)}
+            />
           </section>
         )}
 
