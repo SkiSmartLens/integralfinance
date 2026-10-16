@@ -4,6 +4,9 @@ const corsHeaders = {
 };
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
+// Shown on sign-in errors so a deploy can be confirmed from outside.
+const BUILD = "2026-10-16-ledger";
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -12,7 +15,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
     const auth = req.headers.get("Authorization");
-    if (!auth) return json({ error: "unauthorized" }, 401);
+    if (!auth) return json({ error: "unauthorized", build: BUILD }, 401);
 
     const userClient = createClient(SUPABASE_URL, ANON, {
       global: { headers: { Authorization: auth } },
@@ -24,7 +27,7 @@ Deno.serve(async (req) => {
     });
     const { data: userRes } = await userClient.auth.getUser();
     const user = userRes.user;
-    if (!user) return json({ error: "unauthorized" }, 401);
+    if (!user) return json({ error: "unauthorized", build: BUILD }, 401);
 
     const body = await req.json();
     const { member_id } = body;

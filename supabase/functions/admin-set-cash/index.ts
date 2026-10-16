@@ -5,6 +5,9 @@ const corsHeaders = {
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
+// Shown on sign-in errors so a deploy can be confirmed from outside.
+const BUILD = "2026-10-16-ledger";
+
 // Lets an admin directly fix a player's account: set cash to a specific
 // number, set how many shares of a stock they hold, fully reset the account
 // (clear positions/orders/transactions and reset cash to the game's starting
@@ -21,7 +24,7 @@ Deno.serve(async (req) => {
 
   try {
     const auth = req.headers.get("Authorization");
-    if (!auth) return json({ error: "Please sign in." }, 401);
+    if (!auth) return json({ error: "Please sign in.", build: BUILD }, 401);
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -32,7 +35,7 @@ Deno.serve(async (req) => {
     });
     const { data: userRes } = await userClient.auth.getUser();
     const user = userRes.user;
-    if (!user) return json({ error: "Please sign in." }, 401);
+    if (!user) return json({ error: "Please sign in.", build: BUILD }, 401);
 
     const svc = createClient(SUPABASE_URL, SERVICE_ROLE, {
       auth: { persistSession: false },
