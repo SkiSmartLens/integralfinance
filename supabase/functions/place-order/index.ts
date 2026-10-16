@@ -49,6 +49,13 @@ Deno.serve(async (req) => {
     const maxPositionPct = (game as any)?.max_position_pct != null ? Number((game as any).max_position_pct) : null;
     const rules = { marginFloor, minPrice, maxPositionPct, startingCash };
 
+    // ---- Bring the stored cash balance back in line with the trade history ----
+    if (body.action === "reconcile") {
+      const r = await reconcileCash(svc, member_id, startingCash);
+      if (!r) return json({ error: "Could not check your balance. Please try again." }, 500);
+      return json({ ok: true, cash: r.stored, ledger_cash: r.derived });
+    }
+
     // ---- Release orders that were queued for the open ----
     if (body.action === "run_queued") {
       const { data: queued } = await svc
@@ -247,6 +254,13 @@ async function fillOrder(
     }
   }
 
+  // apply_order_fill checks buying power against the stored cash balance. If
+  // that balance still disagrees with the trade history after reconciling,
+  // shift the floor by the difference so the check effectively runs against
+  // the history's cash: stored - cost >= floor + drift  <=>  ledger - cost >= floor.
+  const before = await reconcileCash(svc, member_id, rules.startingCash ?? 0);
+  const drift = before ? before.stored - before.derived : 0;
+
   const { data, error } = await svc.rpc("apply_order_fill", {
     _member_id: member_id,
     _order_id: ord.id,
@@ -254,7 +268,7 @@ async function fillOrder(
     _side: side,
     _shares: shares,
     _price: fillPrice,
-    _margin_floor: rules.marginFloor ?? 0,
+    _margin_floor: (rules.marginFloor ?? 0) + drift,
   });
   if (error) {
     console.error("apply_order_fill rpc failed", error);
@@ -262,7 +276,94 @@ async function fillOrder(
   }
   if (data?.error) return await fail(data.error);
 
+  // If the fill's cash move didn't land, this puts it right.
+  await reconcileCash(svc, member_id, rules.startingCash ?? 0);
+
   return { filled: true, price: fillPrice };
+}
+
+// Keep in sync with src/lib/simLedger.ts.
+interface LedgerTrade { symbol: string; side: string; shares: number; price: number }
+interface LedgerPosition { symbol: string; shares: number; avg_cost: number }
+
+/**
+ * The cash a player should have according to their trade history: starting
+ * cash, minus every buy/cover, plus every sell/short. Shares the history
+ * doesn't account for (e.g. a position an admin set by hand) are treated as
+ * bought at their average cost, so they aren't free money.
+ */
+function ledgerCash(startingCash: number, trades: LedgerTrade[], positions: LedgerPosition[]): number {
+  let cash = Number(startingCash);
+  const netShares = new Map<string, number>();
+  for (const t of trades) {
+    const symbol = String(t.symbol).toUpperCase();
+    const shares = Number(t.shares);
+    const amount = Number(t.price) * shares;
+    // Buys and covers spend cash and add shares; sells and shorts do the reverse.
+    const spends = t.side === "buy" || t.side === "cover";
+    cash += spends ? -amount : amount;
+    netShares.set(symbol, (netShares.get(symbol) ?? 0) + (spends ? shares : -shares));
+  }
+  for (const p of positions) {
+    const unexplained = Number(p.shares) - (netShares.get(String(p.symbol).toUpperCase()) ?? 0);
+    if (Math.abs(unexplained) > 1e-9) cash -= unexplained * Number(p.avg_cost);
+  }
+  return Math.round(cash * 100) / 100;
+}
+
+/**
+ * Compares the stored game_members.cash with the trade history and, if they
+ * differ, rewrites the stored balance to match. Stored cash has drifted
+ * before (a buy's shares landing without its cost leaving cash, so net worth
+ * rose by the amount spent), and the leaderboard and buying-power checks read
+ * it directly. Returns null — and changes nothing — if any read fails, so a
+ * partial history can never overwrite a balance.
+ */
+async function reconcileCash(
+  svc: any,
+  member_id: string,
+  startingCash: number,
+): Promise<{ stored: number; derived: number } | null> {
+  if (!(startingCash > 0)) return null;
+  const [memberRes, posRes] = await Promise.all([
+    svc.from("game_members").select("cash").eq("id", member_id).single(),
+    svc.from("positions").select("symbol, shares, avg_cost").eq("member_id", member_id),
+  ]);
+  if (memberRes.error || !memberRes.data || posRes.error) {
+    console.error("reconcileCash: read failed", memberRes.error, posRes.error);
+    return null;
+  }
+
+  // Page until an empty page so the API's row cap can't truncate the history.
+  const trades: LedgerTrade[] = [];
+  const PAGE = 1000;
+  for (let from = 0; ; ) {
+    const { data, error } = await svc
+      .from("transactions")
+      .select("symbol, side, shares, price")
+      .eq("member_id", member_id)
+      .order("created_at")
+      .order("id")
+      .range(from, from + PAGE - 1);
+    if (error) {
+      console.error("reconcileCash: transactions read failed", error);
+      return null;
+    }
+    if (!data?.length) break;
+    trades.push(...data);
+    from += data.length;
+  }
+
+  const derived = ledgerCash(startingCash, trades, posRes.data ?? []);
+  let stored = Number(memberRes.data.cash);
+  if (Math.abs(stored - derived) >= 0.01) {
+    console.warn("reconcileCash: stored cash drifted from trade history", { member_id, stored, derived });
+    const { data: upd, error } = await svc
+      .from("game_members").update({ cash: derived }).eq("id", member_id).select("cash").single();
+    if (error) console.error("reconcileCash: correction failed", error);
+    else if (upd) stored = Number(upd.cash);
+  }
+  return { stored, derived };
 }
 
 function json(o: unknown, status = 200) {

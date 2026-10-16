@@ -18,10 +18,13 @@ export const Leaderboard = ({
   gameId,
   meUserId,
   startingCash,
+  myCash,
 }: {
   gameId: string;
   meUserId: string;
   startingCash: number;
+  /** Your cash as computed from your own trade history; overrides your stored balance. */
+  myCash?: number;
 }) => {
   const [rows, setRows] = useState<Row[] | null>(null);
 
@@ -84,11 +87,12 @@ export const Leaderboard = ({
           (sum, p) => sum + (priceMap.get(p.symbol) ?? 0) * p.shares,
           0,
         );
-        const equity = r.cash + holdings;
+        const cash = r.user_id === meUserId && myCash != null ? myCash : r.cash;
+        const equity = cash + holdings;
         return { ...r, equity, returnPct: startingCash > 0 ? ((equity - startingCash) / startingCash) * 100 : 0 };
       })
       .sort((a, b) => b.equity - a.equity);
-  }, [rows, priceMap, startingCash]);
+  }, [rows, priceMap, startingCash, meUserId, myCash]);
 
   const myRank = ranked.findIndex((r) => r.user_id === meUserId);
   const [viewing, setViewing] = useState<(typeof ranked)[number] | null>(null);

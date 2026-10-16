@@ -22,7 +22,32 @@ import { SimWalkthrough, hasSeenSimWalkthrough } from "@/components/sim/SimWalkt
 import { PostTradeCard } from "@/components/sim/PostTradeCard";
 import { PortfolioBar } from "@/components/sim/PortfolioBar";
 import { isUsMarketOpen, nextOpenLabel } from "@/lib/marketHours";
+import { ledgerCash, type LedgerTrade } from "@/lib/simLedger";
 
+/**
+ * A member's full trade history. Pages until an empty page rather than
+ * trusting a page size, so it can't silently stop at the API's row cap.
+ */
+const loadTrades = async (memberId: string): Promise<LedgerTrade[] | null> => {
+  const PAGE = 1000;
+  const all: LedgerTrade[] = [];
+  for (let from = 0; ; ) {
+    const { data, error } = await supabase
+      .from("transactions")
+      .select("symbol, side, shares, price")
+      .eq("member_id", memberId)
+      .order("created_at")
+      .order("id")
+      .range(from, from + PAGE - 1);
+    if (error) {
+      console.error("loadTrades failed", error);
+      return null;
+    }
+    if (!data?.length) return all;
+    all.push(...data.map((t) => ({ symbol: t.symbol, side: t.side, shares: Number(t.shares), price: Number(t.price) })));
+    from += data.length;
+  }
+};
 
 interface Member { id: string; game_id: string; user_id: string; cash: number; joined_at: string }
 interface Position { id: string; symbol: string; shares: number; avg_cost: number }
@@ -61,6 +86,7 @@ const Sim = () => {
   const [member, setMember] = useState<Member | null>(null);
   const [game, setGame] = useState<Game | null>(null);
   const [positions, setPositions] = useState<Position[]>([]);
+  const [trades, setTrades] = useState<LedgerTrade[]>([]);
   const [selected, setSelected] = useState("AAPL");
   const [placing, setPlacing] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
@@ -143,14 +169,15 @@ const Sim = () => {
 
   const reloadPortfolio = async (m = member) => {
     if (!m) return;
-    const [posRes, memberRes] = await Promise.all([
+    const [posRes, memberRes, tradeRows] = await Promise.all([
       supabase.from("positions").select("*").eq("member_id", m.id),
       supabase.from("game_members").select("*").eq("id", m.id).maybeSingle(),
+      loadTrades(m.id),
     ]);
     // On a query error, keep showing the last-known-good data instead of silently
     // resetting positions to empty — that would make net worth look like just the
     // cash balance (a fake "loss") until the next successful refresh.
-    if (posRes.error || memberRes.error) {
+    if (posRes.error || memberRes.error || !tradeRows) {
       console.error("reloadPortfolio failed", posRes.error, memberRes.error);
       setPortfolioError(true);
       return;
@@ -158,10 +185,21 @@ const Sim = () => {
     setPortfolioError(false);
     setPortfolioLoaded(true);
     setPositions((posRes.data ?? []) as Position[]);
+    setTrades(tradeRows);
     if (memberRes.data) setMember(memberRes.data as Member);
   };
 
   useEffect(() => { if (member) reloadPortfolio(member); /* eslint-disable-next-line */ }, [member?.id]);
+
+  // Ask the trading engine to correct the stored cash balance to match the
+  // trade history, so the leaderboard (which can only see stored cash for
+  // other players) agrees with the net worth shown here. Best-effort.
+  useEffect(() => {
+    if (!member?.id) return;
+    supabase.functions
+      .invoke("place-order", { body: { member_id: member.id, action: "reconcile" } })
+      .catch(() => {});
+  }, [member?.id]);
 
   // Auto-retry a failed refresh instead of leaving the user stuck on stale/wrong numbers.
   useEffect(() => {
@@ -196,8 +234,10 @@ const Sim = () => {
   // cash — until game/member/positions have all loaded, dataReady stays false
   // and the UI shows a loading state instead of a flash of "-100%" or similar.
   const dataReady = !!member && !!game && portfolioLoaded;
-  const cash = Number(member?.cash ?? 0);
   const startingCash = Number(game?.starting_cash ?? 0);
+  // Cash comes from the trade history, not the stored balance, so net worth is
+  // always starting cash + gains. Leverage only changes how much you can borrow.
+  const cash = dataReady ? ledgerCash(startingCash, trades, positions) : Number(member?.cash ?? 0);
   const buyingPower = startingCash * Number(game?.leverage ?? 1);
   const heldShares = Number(positions.find((p) => p.symbol === selected)?.shares ?? 0);
 
@@ -499,7 +539,7 @@ const Sim = () => {
 
             <HoldingsPanel holdings={holdings} onSelect={setSelected} />
             {member && game && userId && (
-              <Leaderboard gameId={game.id} meUserId={userId} startingCash={startingCash} />
+              <Leaderboard gameId={game.id} meUserId={userId} startingCash={startingCash} myCash={dataReady ? cash : undefined} />
             )}
           </section>
 
