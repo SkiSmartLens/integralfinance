@@ -14,6 +14,7 @@ import { SimSearch } from "@/components/sim/SimSearch";
 import { TradeTicket } from "@/components/sim/TradeTicket";
 import { HoldingsPanel, Holding } from "@/components/sim/HoldingsPanel";
 import { WhyItMoved } from "@/components/sim/WhyItMoved";
+import { SimWatchlist } from "@/components/sim/SimWatchlist";
 import { SimCopilot } from "@/components/sim/SimCopilot";
 import { SafetyMeter } from "@/components/sim/SafetyMeter";
 import { Leaderboard } from "@/components/sim/Leaderboard";
@@ -89,6 +90,12 @@ const Sim = () => {
   const [positions, setPositions] = useState<Position[]>([]);
   const [trades, setTrades] = useState<DayTrade[]>([]);
   const [selected, setSelected] = useState("AAPL");
+  const stockCardRef = useRef<HTMLDivElement>(null);
+  // The watchlist sits below the stock card, so bring the card into view.
+  const openFromList = (symbol: string) => {
+    setSelected(symbol);
+    stockCardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
   const [placing, setPlacing] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [walkOpen, setWalkOpen] = useState(false);
@@ -533,7 +540,7 @@ const Sim = () => {
         <div className="grid lg:grid-cols-[1fr_360px] gap-5 items-start">
           {/* Stock info */}
           <section className="space-y-4 order-2 lg:order-1">
-            <div className="rounded-3xl border-2 bg-card p-4 sm:p-5 shadow-sm">
+            <div ref={stockCardRef} className="rounded-3xl border-2 bg-card p-4 sm:p-5 shadow-sm scroll-mt-20">
               <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div className="min-w-0">
                   <div className="flex items-baseline gap-2 flex-wrap">
@@ -577,6 +584,8 @@ const Sim = () => {
             </div>
 
             <WhyItMoved symbol={selected} changePct={selChange} />
+
+            <SimWatchlist selected={selected} onSelect={openFromList} />
 
             <HoldingsPanel holdings={holdings} onSelect={setSelected} />
             {member && game && userId && (

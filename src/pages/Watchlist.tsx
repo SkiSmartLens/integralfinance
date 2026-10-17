@@ -6,6 +6,7 @@ import { StockChart } from "@/components/StockChart";
 import { StockExplainer } from "@/components/StockExplainer";
 import { SEO } from "@/components/SEO";
 import { WidgetBar } from "@/components/WidgetBar";
+import { MarketBriefCard } from "@/components/MarketBriefCard";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { fetchSearchQuotes, formatNumber, SearchQuote } from "@/lib/yahoo";
@@ -125,6 +126,7 @@ const WatchlistPage = () => {
         {/* Layout: list of saved + selected stock detail */}
         <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
           <aside className="bg-card border rounded-lg overflow-hidden self-start">
+            <MarketBriefCard className="border-b" />
             <div className="px-4 py-3 border-b text-xs font-semibold uppercase tracking-wide flex justify-between">
               <span>Saved</span>
               <span className="text-muted-foreground">{symbols.length}</span>

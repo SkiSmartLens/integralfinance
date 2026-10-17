@@ -1,21 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, GraduationCap, Clock, Newspaper, Share2, Check } from "lucide-react";
 import { HomeHeader } from "@/components/HomeHeader";
 import { SEO } from "@/components/SEO";
 import { SiteFooter } from "@/components/SiteFooter";
-import { fetchNews, fetchScreener, formatNumber, NewsItem, ScreenerQuote } from "@/lib/yahoo";
+import { formatNumber, ScreenerQuote } from "@/lib/yahoo";
+import { timeAgo, useMarketBrief } from "@/lib/marketBrief";
 import { formatEtTime } from "@/lib/marketHours";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-
-function timeAgo(ts: number) {
-  const s = Math.floor(Date.now() / 1000 - ts);
-  if (s < 60) return `${s}s ago`;
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
-  return `${Math.floor(s / 86400)}d ago`;
-}
 
 const todayLabel = () =>
   new Date().toLocaleDateString("en-US", {
@@ -75,50 +68,15 @@ function MoverRow({ q, direction }: { q: ScreenerQuote; direction: "up" | "down"
   );
 }
 
-// Merge multiple news feeds and drop near-duplicate stories (same link, or
-// headlines that share most of their significant words).
-const STOP = new Set(["the", "a", "an", "of", "to", "in", "on", "for", "and", "as", "is", "are", "at", "by", "with", "from", "after", "amid", "its", "it", "this", "that"]);
-
-function keyWords(title: string): string[] {
-  return (title || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9 ]/g, " ")
-    .split(/\s+/)
-    .filter((w) => w.length > 2 && !STOP.has(w));
-}
-
-function similar(a: string[], b: string[]): boolean {
-  if (!a.length || !b.length) return false;
-  const setB = new Set(b);
-  const overlap = a.filter((w) => setB.has(w)).length;
-  return overlap / Math.min(a.length, b.length) >= 0.6;
-}
-
-function dedupeNews(items: NewsItem[]): NewsItem[] {
-  const out: NewsItem[] = [];
-  const seenLinks = new Set<string>();
-  const wordSets: string[][] = [];
-  for (const item of items) {
-    const link = (item.link || "").split("?")[0];
-    if (link && seenLinks.has(link)) continue;
-    const words = keyWords(item.title);
-    if (wordSets.some((w) => similar(words, w))) continue;
-    if (link) seenLinks.add(link);
-    wordSets.push(words);
-    out.push(item);
-  }
-  return out;
-}
-
 const MarketBrief = () => {
-
-  const [news, setNews] = useState<NewsItem[]>([]);
-  const [gainers, setGainers] = useState<ScreenerQuote[]>([]);
-  const [losers, setLosers] = useState<ScreenerQuote[]>([]);
-  const [loading, setLoading] = useState(true);
+  const brief = useMarketBrief();
+  const loading = !brief;
+  const news = brief?.news ?? [];
+  const gainers = brief?.gainers ?? [];
+  const losers = brief?.losers ?? [];
+  const lastUpdated = brief?.loadedAt ?? null;
   const [shared, setShared] = useState(false);
   const [visibleCount, setVisibleCount] = useState(6);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const handleShare = async () => {
     const url = typeof window !== "undefined" ? window.location.href : "https://integralstocks.com/market-brief";
@@ -145,36 +103,8 @@ const MarketBrief = () => {
     }
   };
 
-  useEffect(() => {
-    let alive = true;
-    Promise.all([
-      fetchNews("stock market today").catch(() => []),
-      fetchNews("stocks earnings results").catch(() => []),
-      fetchScreener("day_gainers", 6).catch(() => []),
-      fetchScreener("day_losers", 6).catch(() => []),
-    ]).then(([n1, n2, g, l]) => {
-      if (!alive) return;
-      setNews(dedupeNews([...n1, ...n2]));
-      setGainers(g.slice(0, 5));
-      setLosers(l.slice(0, 5));
-      setLoading(false);
-      setLastUpdated(new Date());
-    });
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-
-  // Determine market mood from the average move of gainers vs losers.
-  const lesson = useMemo(() => {
-    if (!gainers.length && !losers.length) return LESSONS.mixed;
-    const gAvg = gainers.reduce((s, q) => s + (q.regularMarketChangePercent ?? 0), 0) / (gainers.length || 1);
-    const lAvg = Math.abs(losers.reduce((s, q) => s + (q.regularMarketChangePercent ?? 0), 0) / (losers.length || 1));
-    if (gAvg > lAvg * 1.15) return LESSONS.up;
-    if (lAvg > gAvg * 1.15) return LESSONS.down;
-    return LESSONS.mixed;
-  }, [gainers, losers]);
+  // Lesson of the day, matched to the market's mood.
+  const lesson = LESSONS[brief?.mood ?? "mixed"];
 
   const visibleNews = news.slice(0, visibleCount);
   const [hero, ...rest] = visibleNews;
