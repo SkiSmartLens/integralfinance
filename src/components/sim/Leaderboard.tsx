@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/backend";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { formatNumber } from "@/lib/yahoo";
-import { estimatedNetWorth } from "@/lib/simLedger";
+import { estimatedNetWorth, hasTraded } from "@/lib/simLedger";
 import { useCashSynced } from "@/lib/simAdmin";
 import { Trophy, Loader2, Briefcase } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -21,12 +21,15 @@ export const Leaderboard = ({
   meUserId,
   startingCash,
   myCash,
+  myTraded,
 }: {
   gameId: string;
   meUserId: string;
   startingCash: number;
   /** Your cash as computed from your own trade history; overrides your stored balance. */
   myCash?: number;
+  /** Whether your own trade history has any stock trades in it. */
+  myTraded?: boolean;
 }) => {
   const [rows, setRows] = useState<Row[] | null>(null);
 
@@ -90,15 +93,31 @@ export const Leaderboard = ({
         const holdings = priced.reduce((sum, p) => sum + p.last * p.shares, 0);
         // Your own row uses your trade history; other players' trade history
         // isn't readable here, so theirs is estimated from stored cash + holdings.
-        const equity =
-          r.user_id === meUserId && myCash != null
-            ? myCash + holdings
-            : estimatedNetWorth(startingCash, r.cash, priced, synced);
-        return { ...r, equity, returnPct: startingCash > 0 ? ((equity - startingCash) / startingCash) * 100 : 0 };
+        const ownCash = r.user_id === meUserId && myCash != null ? myCash : null;
+        const equity = ownCash != null ? ownCash + holdings : estimatedNetWorth(startingCash, r.cash, priced, synced);
+        // Players who haven't traded yet get no rank (N/A) and sit below everyone ranked.
+        const traded =
+          (r.user_id === meUserId && !!myTraded) ||
+          hasTraded(startingCash, ownCash ?? r.cash, r.positions.length);
+        return {
+          ...r,
+          equity,
+          traded,
+          returnPct: startingCash > 0 ? ((equity - startingCash) / startingCash) * 100 : 0,
+        };
       })
-      .sort((a, b) => b.equity - a.equity);
-  }, [rows, priceMap, startingCash, meUserId, myCash, synced]);
+      .sort((a, b) =>
+        a.traded !== b.traded
+          ? Number(b.traded) - Number(a.traded)
+          : a.traded
+            ? b.equity - a.equity
+            : a.display_name.localeCompare(b.display_name),
+      );
+  }, [rows, priceMap, startingCash, meUserId, myCash, myTraded, synced]);
 
+  // Ranked players come first, so a ranked player's index is their rank.
+  const rankedCount = ranked.filter((r) => r.traded).length;
+  const mine = ranked.find((r) => r.user_id === meUserId);
   const myRank = ranked.findIndex((r) => r.user_id === meUserId);
   const [viewing, setViewing] = useState<(typeof ranked)[number] | null>(null);
   // Keep the open dialog's prices live instead of freezing them at click time.
@@ -110,9 +129,12 @@ export const Leaderboard = ({
         <h3 className="font-extrabold text-lg inline-flex items-center gap-2">
           <Trophy className="w-4 h-4 text-primary" /> Leaderboard
         </h3>
-        {myRank >= 0 && (
-          <span className="text-xs font-extrabold text-primary bg-accent px-2.5 py-1 rounded-full">
-            Your rank: #{myRank + 1} of {ranked.length}
+        {mine && (
+          <span
+            className="text-xs font-extrabold text-primary bg-accent px-2.5 py-1 rounded-full"
+            title={mine.traded ? undefined : "Make a trade to get ranked"}
+          >
+            Your rank: {mine.traded ? `#${myRank + 1} of ${rankedCount}` : "N/A"}
           </span>
         )}
       </div>
@@ -135,8 +157,14 @@ export const Leaderboard = ({
                 )}
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="w-6 text-center tabular-nums font-extrabold text-muted-foreground">
-                    {i + 1}
+                  <span
+                    className={cn(
+                      "w-8 shrink-0 text-center tabular-nums font-extrabold text-muted-foreground",
+                      !r.traded && "text-[11px]",
+                    )}
+                    title={r.traded ? undefined : "No trades yet, so no rank"}
+                  >
+                    {r.traded ? i + 1 : "N/A"}
                   </span>
                   <button
                     type="button"
@@ -149,16 +177,27 @@ export const Leaderboard = ({
                   </button>
                 </div>
                 <div className="text-right shrink-0 tabular-nums">
-                  <div className="font-extrabold">${formatNumber(r.equity)}</div>
-                  <div className={cn("text-[11px] font-bold", r.returnPct >= 0 ? "text-emerald-600" : "text-rose-600")}>
-                    {r.returnPct >= 0 ? "+" : ""}
-                    {formatNumber(r.returnPct)}%
+                  <div className={cn("font-extrabold", !r.traded && "text-muted-foreground")}>
+                    ${formatNumber(r.equity)}
                   </div>
+                  {r.traded ? (
+                    <div className={cn("text-[11px] font-bold", r.returnPct >= 0 ? "text-emerald-600" : "text-rose-600")}>
+                      {r.returnPct >= 0 ? "+" : ""}
+                      {formatNumber(r.returnPct)}%
+                    </div>
+                  ) : (
+                    <div className="text-[11px] font-bold text-muted-foreground">No trades yet</div>
+                  )}
                 </div>
               </li>
             );
           })}
         </ol>
+      )}
+      {rankedCount < ranked.length && (
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          Players show N/A until they make their first trade.
+        </p>
       )}
 
       <Dialog open={!!liveViewing} onOpenChange={(open) => !open && setViewing(null)}>

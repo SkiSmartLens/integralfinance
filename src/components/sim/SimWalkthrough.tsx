@@ -38,7 +38,7 @@ const STEPS = [
     icon: Trophy,
     title: "Check the leaderboard",
     body:
-      "See how you're ranked against everyone else in your game. Total equity (cash + holdings) sets your position.",
+      "See how you're ranked against everyone else in your game. Total equity (cash + holdings) sets your position. You get a rank once you've made your first trade; until then you show as N/A.",
   },
   {
     icon: GraduationCap,

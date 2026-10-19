@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { dayPnl, estimatedNetWorth, ledgerCash } from "./simLedger";
+import { dayPnl, estimatedNetWorth, hasTraded, ledgerCash } from "./simLedger";
 
 describe("ledgerCash", () => {
   it("buying moves money from cash into shares, so net worth stays $100k", () => {
@@ -52,5 +52,19 @@ describe("dayPnl", () => {
   it("shares bought today count from their fill price, not yesterday's close", () => {
     // bought 1000 at 100 today; yesterday closed at 105; now 99.8
     expect(dayPnl(1000, 99.8, 105, [{ symbol: "X", side: "buy", shares: 1000, price: 100 }])).toBeCloseTo(-200);
+  });
+});
+
+describe("hasTraded", () => {
+  it("a player who just joined has no rank", () => {
+    expect(hasTraded(100_000, 100_000, 0)).toBe(false);
+  });
+
+  it("holding any stock counts, even with cash still at the start (old engine)", () => {
+    expect(hasTraded(100_000, 100_000, 1)).toBe(true);
+  });
+
+  it("selling everything still counts, because cash moved off the start", () => {
+    expect(hasTraded(100_000, 100_412.37, 0)).toBe(true);
   });
 });

@@ -94,6 +94,15 @@ export function estimatedNetWorth(
   return untouched ? startingCash + (value - cost) : storedCash + value;
 }
 
+/**
+ * Whether a player has made a trade, judged from what the leaderboard can see.
+ * Other players' trade history is private, but any trade leaves them holding
+ * stock or with cash that has moved off the starting amount.
+ */
+export function hasTraded(startingCash: number, cash: number, positionCount: number): boolean {
+  return positionCount > 0 || Math.abs(cash - startingCash) >= 0.01;
+}
+
 export interface DayTrade extends LedgerTrade {
   created_at?: string;
 }

@@ -24,7 +24,7 @@ import { PostTradeCard } from "@/components/sim/PostTradeCard";
 import { PortfolioBar } from "@/components/sim/PortfolioBar";
 import { DevConsole } from "@/components/sim/DevConsole";
 import { isUsMarketOpen, nextOpenLabel } from "@/lib/marketHours";
-import { ledgerCash, dayPnl, type DayTrade } from "@/lib/simLedger";
+import { ledgerCash, dayPnl, CASH_ADJUSTMENT_SYMBOL, type DayTrade } from "@/lib/simLedger";
 
 /**
  * A member's full trade history. Pages until an empty page rather than
@@ -589,7 +589,13 @@ const Sim = () => {
 
             <HoldingsPanel holdings={holdings} onSelect={setSelected} />
             {member && game && userId && (
-              <Leaderboard gameId={game.id} meUserId={userId} startingCash={startingCash} myCash={dataReady ? cash : undefined} />
+              <Leaderboard
+                gameId={game.id}
+                meUserId={userId}
+                startingCash={startingCash}
+                myCash={dataReady ? cash : undefined}
+                myTraded={dataReady && trades.some((t) => t.symbol.toUpperCase() !== CASH_ADJUSTMENT_SYMBOL)}
+              />
             )}
           </section>
 
