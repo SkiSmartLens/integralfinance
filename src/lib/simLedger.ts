@@ -103,6 +103,16 @@ export function hasTraded(startingCash: number, cash: number, positionCount: num
   return positionCount > 0 || Math.abs(cash - startingCash) >= 0.01;
 }
 
+/**
+ * The most a buy may cost: leverage × the cash you have. With 2× and $10k in
+ * cash that's $20k; with no cash left, or cash already borrowed below zero,
+ * it's $0. Same rule as apply_order_fill in
+ * supabase/migrations/20261020190000_sim_leverage_multiplies_cash.sql.
+ */
+export function buyLimit(cash: number, leverage: number): number {
+  return Math.max(1, leverage) * Math.max(0, cash);
+}
+
 export interface DayTrade extends LedgerTrade {
   created_at?: string;
 }

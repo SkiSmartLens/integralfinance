@@ -24,7 +24,7 @@ import { PostTradeCard } from "@/components/sim/PostTradeCard";
 import { PortfolioBar } from "@/components/sim/PortfolioBar";
 import { DevConsole } from "@/components/sim/DevConsole";
 import { isUsMarketOpen, nextOpenLabel } from "@/lib/marketHours";
-import { ledgerCash, dayPnl, CASH_ADJUSTMENT_SYMBOL, type DayTrade } from "@/lib/simLedger";
+import { ledgerCash, dayPnl, buyLimit, CASH_ADJUSTMENT_SYMBOL, type DayTrade } from "@/lib/simLedger";
 
 /**
  * A member's full trade history. Pages until an empty page rather than
@@ -267,9 +267,11 @@ const Sim = () => {
   const cash = dataReady ? ledgerCash(startingCash, trades, positions) : Number(member?.cash ?? 0);
   const leverage = Math.max(1, Number(game?.leverage ?? 1) || 1);
   const buyingPower = startingCash * leverage;
-  // Same limit the trading engine enforces: cash may go negative down to the
-  // borrowed amount, startingCash × (leverage − 1).
-  const spendable = cash + startingCash * (leverage - 1);
+  // Leverage multiplies the cash you have, not your starting cash.
+  const spendable = buyLimit(cash, leverage);
+  // Covering a short can still borrow down to startingCash × (leverage − 1),
+  // so a short can always be closed.
+  const coverPower = cash + startingCash * (leverage - 1);
   const heldShares = Number(positions.find((p) => p.symbol === selected)?.shares ?? 0);
 
   const holdings: Holding[] = positions
@@ -608,6 +610,7 @@ const Sim = () => {
                 price={selPrice}
                 cash={cash}
                 spendable={spendable}
+                coverPower={coverPower}
                 leverage={leverage}
                 shortPower={Math.max(0, buyingPower - Math.abs(holdingsValue))}
                 heldShares={heldShares}

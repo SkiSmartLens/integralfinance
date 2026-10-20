@@ -8,8 +8,10 @@ interface Props {
   price?: number;
   /** Actual cash: starting cash + realized gains − what's invested. Negative while borrowing. */
   cash: number;
-  /** Cash plus whatever leverage still lets you borrow. Caps buys and covers. Defaults to cash. */
+  /** Leverage × your cash (never below 0). Caps buys. Defaults to cash. */
   spendable?: number;
+  /** Caps covers. Defaults to spendable. */
+  coverPower?: number;
   /** The game's leverage (1 = no borrowing). */
   leverage?: number;
   /** Total remaining margin capacity (starting cash × leverage − deployed). Caps shorts. */
@@ -30,6 +32,7 @@ export const TradeTicket = ({
   price,
   cash,
   spendable,
+  coverPower,
   leverage = 1,
   shortPower,
   heldShares,
@@ -43,9 +46,12 @@ export const TradeTicket = ({
   const [qty, setQty] = useState(1);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // The most this order may cost: buys can go past your cash into whatever
-  // leverage lets you borrow; shorts draw on margin capacity.
-  const tradingPower = Math.max(0, side === "short" ? shortPower ?? 0 : spendable ?? cash);
+  // The most this order may cost: buys can go past your cash up to leverage ×
+  // your cash; covers and shorts draw on margin capacity.
+  const tradingPower = Math.max(
+    0,
+    side === "short" ? shortPower ?? 0 : side === "cover" ? coverPower ?? spendable ?? cash : spendable ?? cash,
+  );
   // What the slider and % buttons size against. For buys that's your actual
   // cash, never the leveraged limit — typing a bigger number still borrows.
   const budget = side === "buy" ? Math.min(Math.max(0, cash), tradingPower) : tradingPower;
@@ -250,6 +256,9 @@ export const TradeTicket = ({
           value={price ? `$${formatNumber(estCost)}` : "—"}
           bold
         />
+        {leveraged && side === "buy" && (
+          <Row label={`Buying power (${leverage}× your cash)`} value={`$${formatNumber(tradingPower)}`} />
+        )}
         {leveraged && side === "buy" && !!price && estCost > Math.max(0, cash) && (
           <Row
             label="Paid with borrowed money"

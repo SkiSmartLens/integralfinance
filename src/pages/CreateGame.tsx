@@ -252,7 +252,8 @@ const CreateGame = () => {
               </div>
             )}
             <p className="text-xs text-muted-foreground mt-2">
-              Leverage multiplies both wins and losses — beginners should keep this at 1×.
+              Players can buy up to this many times the cash they have, borrowing the rest. Leverage multiplies both
+              wins and losses — beginners should keep this at 1×.
             </p>
           </Field>
 

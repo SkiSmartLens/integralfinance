@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { dayPnl, estimatedNetWorth, hasTraded, ledgerCash } from "./simLedger";
+import { buyLimit, dayPnl, estimatedNetWorth, hasTraded, ledgerCash } from "./simLedger";
 
 describe("ledgerCash", () => {
   it("buying moves money from cash into shares, so net worth stays $100k", () => {
@@ -66,5 +66,20 @@ describe("hasTraded", () => {
 
   it("selling everything still counts, because cash moved off the start", () => {
     expect(hasTraded(100_000, 100_412.37, 0)).toBe(true);
+  });
+});
+
+describe("buyLimit", () => {
+  it("2x leverage doubles the cash you have, not the starting cash", () => {
+    expect(buyLimit(0.01, 2)).toBeCloseTo(0.02);
+    expect(buyLimit(100_000, 2)).toBe(200_000);
+  });
+  it("no cash, or cash already borrowed, leaves nothing to borrow against", () => {
+    expect(buyLimit(0, 2)).toBe(0);
+    expect(buyLimit(-50_000, 2)).toBe(0);
+  });
+  it("1x (or no leverage set) is just your cash", () => {
+    expect(buyLimit(1_000, 1)).toBe(1_000);
+    expect(buyLimit(1_000, 0)).toBe(1_000);
   });
 });
