@@ -10,14 +10,95 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 
 interface Row {
   member_id: string;
-  user_id: string;
+  /** This row is the signed-in player. */
+  me: boolean;
   cash: number;
+  /** cash comes from the trade history, so it's exact. */
+  ledgerCash: boolean;
+  /** Whether they've made a stock trade, when the trade history was checked. */
+  traded?: boolean;
   positions: { symbol: string; shares: number; avgCost: number }[];
   display_name: string;
 }
 
 // Other players' rows are re-read this often so their trades show up.
 const REFRESH_MS = 30_000;
+
+type LeaderboardFn = (
+  name: "sim_leaderboard",
+  args: { _game_id: string },
+) => Promise<{
+  data:
+    | {
+        member_id: string;
+        is_me: boolean;
+        display_name: string;
+        cash: number | string;
+        traded: boolean;
+        positions: { symbol: string; shares: number | string; avg_cost: number | string }[];
+      }[]
+    | null;
+  error: { code?: string; message: string } | null;
+}>;
+
+/**
+ * Every player in the game. Players can only read their own portfolio rows,
+ * so this goes through the sim_leaderboard database function
+ * (supabase/migrations/20261020180000_sim_leaderboard.sql, pasted into
+ * Lovable's SQL editor). Until that's installed it reads the tables directly,
+ * which only admins can do for other players. Null if the read failed.
+ */
+async function loadRows(gameId: string, meUserId: string): Promise<Row[] | null> {
+  const rpc = (supabase as unknown as { rpc: LeaderboardFn }).rpc.bind(supabase);
+  const { data, error } = await rpc("sim_leaderboard", { _game_id: gameId });
+  if (!error) {
+    return (data ?? []).map((r) => ({
+      member_id: r.member_id,
+      me: r.is_me,
+      cash: Number(r.cash),
+      ledgerCash: true,
+      traded: r.traded,
+      positions: (r.positions ?? []).map((p) => ({ symbol: p.symbol, shares: Number(p.shares), avgCost: Number(p.avg_cost) })),
+      display_name: r.display_name,
+    }));
+  }
+  const missing = error.code === "PGRST202" || /could not find the function/i.test(error.message);
+  if (!missing) {
+    console.error("sim_leaderboard failed", error);
+    return null;
+  }
+
+  const { data: members, error: mErr } = await supabase
+    .from("game_members")
+    .select("id, user_id, cash")
+    .eq("game_id", gameId);
+  if (mErr) return null;
+  const memberIds = (members ?? []).map((m) => m.id);
+  const [{ data: positions }, { data: profs }] = await Promise.all([
+    memberIds.length
+      ? supabase.from("positions").select("member_id, symbol, shares, avg_cost").in("member_id", memberIds)
+      : Promise.resolve({ data: [] as { member_id: string; symbol: string; shares: number; avg_cost: number }[] }),
+    supabase
+      .from("profiles")
+      .select("user_id, display_name")
+      .in("user_id", (members ?? []).map((m) => m.user_id)),
+  ]);
+  const byMember = new Map<string, { symbol: string; shares: number; avgCost: number }[]>();
+  (positions ?? []).forEach((p) => {
+    const list = byMember.get(p.member_id) ?? [];
+    list.push({ symbol: p.symbol, shares: Number(p.shares), avgCost: Number(p.avg_cost) });
+    byMember.set(p.member_id, list);
+  });
+  const nameByUser = new Map((profs ?? []).map((p) => [p.user_id, p.display_name ?? "Player"]));
+  return (members ?? []).map((m) => ({
+    member_id: m.id,
+    me: m.user_id === meUserId,
+    cash: Number(m.cash),
+    ledgerCash: false,
+    positions: byMember.get(m.id) ?? [],
+    display_name: nameByUser.get(m.user_id) ?? "Player",
+  }));
+}
 
 export const Leaderboard = ({
   gameId,
@@ -45,37 +126,9 @@ export const Leaderboard = ({
   useEffect(() => {
     let alive = true;
     const load = async () => {
-      const { data: members } = await supabase
-        .from("game_members")
-        .select("id, user_id, cash")
-        .eq("game_id", gameId);
-      const memberIds = (members ?? []).map((m: any) => m.id);
-      const [{ data: positions }, { data: profs }] = await Promise.all([
-        memberIds.length
-          ? supabase.from("positions").select("member_id, symbol, shares, avg_cost").in("member_id", memberIds)
-          : Promise.resolve({ data: [] as any[] }),
-        supabase
-          .from("profiles")
-          .select("user_id, display_name")
-          .in("user_id", (members ?? []).map((m: any) => m.user_id)),
-      ]);
-      const byMember = new Map<string, { symbol: string; shares: number; avgCost: number }[]>();
-      (positions ?? []).forEach((p: any) => {
-        const list = byMember.get(p.member_id) ?? [];
-        list.push({ symbol: p.symbol, shares: Number(p.shares), avgCost: Number(p.avg_cost) });
-        byMember.set(p.member_id, list);
-      });
-      const nameByUser = new Map((profs ?? []).map((p: any) => [p.user_id, p.display_name as string]));
-      if (!alive) return;
-      setRows(
-        (members ?? []).map((m: any) => ({
-          member_id: m.id,
-          user_id: m.user_id,
-          cash: Number(m.cash),
-          positions: byMember.get(m.id) ?? [],
-          display_name: nameByUser.get(m.user_id) ?? "Player",
-        })),
-      );
+      // A failed refresh keeps the rows already shown.
+      const next = await loadRows(gameId, meUserId);
+      if (alive && next) setRows(next);
     };
     load();
     const timer = window.setInterval(load, REFRESH_MS);
@@ -83,7 +136,7 @@ export const Leaderboard = ({
       alive = false;
       clearInterval(timer);
     };
-  }, [gameId]);
+  }, [gameId, meUserId]);
 
   const symbols = useMemo(() => {
     const s = new Set<string>();
@@ -108,19 +161,21 @@ export const Leaderboard = ({
     if (!rows) return [];
     return rows
       .map((r) => {
-        const me = r.user_id === meUserId;
         const priced =
-          me && myHoldings
+          r.me && myHoldings
             ? myHoldings
             : r.positions.map((p) => ({ ...p, last: priceMap.get(p.symbol) ?? p.avgCost }));
         const holdings = priced.reduce((sum, p) => sum + p.last * p.shares, 0);
         // Your own row uses your trade history and live holdings, so it matches
-        // the net worth at the top of the page. Other players' trade history
-        // isn't readable here, so theirs is estimated from stored cash + holdings.
-        const ownCash = me && myCash != null ? myCash : null;
-        const equity = ownCash != null ? ownCash + holdings : estimatedNetWorth(startingCash, r.cash, priced, synced);
+        // the net worth at the top of the page. Other players' cash comes from
+        // their trade history when the database function supplies it, and is
+        // estimated from their stored cash otherwise.
+        const ownCash = r.me && myCash != null ? myCash : null;
+        const equity =
+          ownCash != null ? ownCash + holdings : estimatedNetWorth(startingCash, r.cash, priced, synced || r.ledgerCash);
         // Players who haven't traded yet get no rank (N/A) and sit below everyone ranked.
-        const traded = (me && !!myTraded) || hasTraded(startingCash, ownCash ?? r.cash, priced.length);
+        const traded =
+          (r.me && !!myTraded) || (r.traded ?? hasTraded(startingCash, ownCash ?? r.cash, priced.length));
         return {
           ...r,
           priced,
@@ -136,12 +191,12 @@ export const Leaderboard = ({
             ? b.equity - a.equity
             : a.display_name.localeCompare(b.display_name),
       );
-  }, [rows, priceMap, startingCash, meUserId, myCash, myHoldings, myTraded, synced]);
+  }, [rows, priceMap, startingCash, myCash, myHoldings, myTraded, synced]);
 
   // Ranked players come first, so a ranked player's index is their rank.
   const rankedCount = ranked.filter((r) => r.traded).length;
-  const mine = ranked.find((r) => r.user_id === meUserId);
-  const myRank = ranked.findIndex((r) => r.user_id === meUserId);
+  const mine = ranked.find((r) => r.me);
+  const myRank = ranked.findIndex((r) => r.me);
   const [viewing, setViewing] = useState<(typeof ranked)[number] | null>(null);
   // Keep the open dialog's prices live instead of freezing them at click time.
   const liveViewing = viewing ? ranked.find((r) => r.member_id === viewing.member_id) ?? viewing : null;
@@ -170,7 +225,7 @@ export const Leaderboard = ({
       ) : (
         <ol className="space-y-1.5">
           {ranked.map((r, i) => {
-            const me = r.user_id === meUserId;
+            const me = r.me;
             return (
               <li
                 key={r.member_id}
