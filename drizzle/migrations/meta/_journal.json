@@ -43,6 +43,13 @@
       "when": 1792159444871,
       "tag": "0005_allow_db_admin_cash_fix",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792520102106,
+      "tag": "0006_sim_leaderboard_and_current_cash_leverage",
+      "breakpoints": true
     }
   ]
 }

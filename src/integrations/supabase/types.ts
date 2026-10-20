@@ -474,6 +474,17 @@ export type Database = {
         }
         Returns: undefined
       }
+      sim_leaderboard: {
+        Args: { _game_id: string }
+        Returns: {
+          cash: number
+          display_name: string
+          is_me: boolean
+          member_id: string
+          positions: Json
+          traded: boolean
+        }[]
+      }
       sim_ledger_cash: { Args: { _member_id: string }; Returns: number }
       sim_record_cash_adjustment: {
         Args: { _amount: number; _member_id: string }
