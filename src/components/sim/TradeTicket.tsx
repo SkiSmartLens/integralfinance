@@ -95,7 +95,7 @@ export const TradeTicket = ({
   const validationMsg = invalidQty
     ? "Enter a whole number of shares."
     : insufficient
-    ? "Not enough buying power for this order."
+    ? `${qty === 1 ? "1 share" : `${qty.toLocaleString()} shares`} of ${symbol} ${qty === 1 ? "costs" : "cost"} $${formatNumber(estCost)}, but you only have $${formatNumber(tradingPower)} ${leveraged ? "of buying power" : "in cash"}.${maxShares >= 1 ? " Try fewer shares." : " Sell some stock to free up cash."}`
     : overSell
     ? `You only hold ${heldShares} shares.`
     : overCover

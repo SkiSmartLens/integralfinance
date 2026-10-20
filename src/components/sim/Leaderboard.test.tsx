@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import { Leaderboard } from "./Leaderboard";
 
@@ -30,14 +30,14 @@ vi.mock("@/lib/backend", () => {
   };
   return { supabase: { from: query } };
 });
-vi.mock("@/hooks/useLiveQuotes", () => ({
-  useLiveQuotes: () => ({
-    quotes: [
-      { symbol: "AAPL", regularMarketPrice: 120 },
-      { symbol: "MSFT", regularMarketPrice: 400 },
-    ],
-  }),
-}));
+let quotes: { symbol: string; regularMarketPrice?: number }[] = [];
+vi.mock("@/hooks/useLiveQuotes", () => ({ useLiveQuotes: () => ({ quotes }) }));
+beforeEach(() => {
+  quotes = [
+    { symbol: "AAPL", regularMarketPrice: 120 },
+    { symbol: "MSFT", regularMarketPrice: 400 },
+  ];
+});
 vi.mock("@/lib/simAdmin", () => ({ useCashSynced: () => true }));
 
 const rowFor = (name: string) => screen.getByTitle(`See ${name}'s holdings`).closest("li")!;
@@ -66,5 +66,33 @@ describe("Leaderboard", () => {
     expect(within(rowFor("Me")).getByText("2")).toBeTruthy();
     expect(screen.getByText("Your rank: #2 of 3")).toBeTruthy();
     expect(within(rowFor("Cy")).getByText("N/A")).toBeTruthy();
+  });
+
+  it("your row counts stocks bought since the leaderboard loaded", async () => {
+    // The loaded rows still show you with $100k and no stocks, but you've since
+    // spent all but $150 on HOOD. Cash alone would put you at $150.
+    render(
+      <Leaderboard
+        gameId="g"
+        meUserId="u-me"
+        startingCash={100_000}
+        myCash={150}
+        myHoldings={[{ symbol: "HOOD", shares: 1000, avgCost: 99.85, last: 98.62 }]}
+        myTraded
+      />,
+    );
+    await screen.findByText("Ana");
+
+    expect(within(rowFor("Me")).getByText("$98,770")).toBeTruthy();
+    expect(screen.getByText("Your rank: #3 of 3")).toBeTruthy();
+  });
+
+  it("a stock with no live price counts at its average cost, not $0", async () => {
+    quotes = [{ symbol: "AAPL" }, { symbol: "MSFT", regularMarketPrice: 400 }];
+    render(<Leaderboard gameId="g" meUserId="u-me" startingCash={100_000} myCash={100_000} myTraded={false} />);
+    await screen.findByText("Ana");
+
+    // Ana: $90k cash + 100 AAPL at their $100 average cost.
+    expect(within(rowFor("Ana")).getByText("$100,000")).toBeTruthy();
   });
 });

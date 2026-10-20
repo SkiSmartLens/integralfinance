@@ -594,6 +594,7 @@ const Sim = () => {
                 meUserId={userId}
                 startingCash={startingCash}
                 myCash={dataReady ? cash : undefined}
+                myHoldings={dataReady ? holdings : undefined}
                 myTraded={dataReady && trades.some((t) => t.symbol.toUpperCase() !== CASH_ADJUSTMENT_SYMBOL)}
               />
             )}

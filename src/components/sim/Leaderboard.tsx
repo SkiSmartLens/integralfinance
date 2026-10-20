@@ -16,11 +16,15 @@ interface Row {
   display_name: string;
 }
 
+// Other players' rows are re-read this often so their trades show up.
+const REFRESH_MS = 30_000;
+
 export const Leaderboard = ({
   gameId,
   meUserId,
   startingCash,
   myCash,
+  myHoldings,
   myTraded,
 }: {
   gameId: string;
@@ -28,6 +32,11 @@ export const Leaderboard = ({
   startingCash: number;
   /** Your cash as computed from your own trade history; overrides your stored balance. */
   myCash?: number;
+  /**
+   * Your stocks at the prices the rest of the page shows; overrides the
+   * positions loaded here, which fall behind as soon as you trade.
+   */
+  myHoldings?: { symbol: string; shares: number; avgCost: number; last: number }[];
   /** Whether your own trade history has any stock trades in it. */
   myTraded?: boolean;
 }) => {
@@ -35,7 +44,7 @@ export const Leaderboard = ({
 
   useEffect(() => {
     let alive = true;
-    (async () => {
+    const load = async () => {
       const { data: members } = await supabase
         .from("game_members")
         .select("id, user_id, cash")
@@ -67,9 +76,12 @@ export const Leaderboard = ({
           display_name: nameByUser.get(m.user_id) ?? "Player",
         })),
       );
-    })();
+    };
+    load();
+    const timer = window.setInterval(load, REFRESH_MS);
     return () => {
       alive = false;
+      clearInterval(timer);
     };
   }, [gameId]);
 
@@ -80,8 +92,15 @@ export const Leaderboard = ({
   }, [rows]);
   const { quotes } = useLiveQuotes(symbols, 10000);
   const synced = useCashSynced();
+  // A symbol whose quote failed has no price; it falls back to average cost
+  // below instead of counting as $0.
   const priceMap = useMemo(
-    () => new Map(quotes.map((q) => [q.symbol, q.regularMarketPrice ?? 0])),
+    () =>
+      new Map(
+        quotes
+          .filter((q) => Number.isFinite(q.regularMarketPrice) && q.regularMarketPrice! > 0)
+          .map((q) => [q.symbol, q.regularMarketPrice!]),
+      ),
     [quotes],
   );
 
@@ -89,18 +108,22 @@ export const Leaderboard = ({
     if (!rows) return [];
     return rows
       .map((r) => {
-        const priced = r.positions.map((p) => ({ ...p, last: priceMap.get(p.symbol) ?? p.avgCost }));
+        const me = r.user_id === meUserId;
+        const priced =
+          me && myHoldings
+            ? myHoldings
+            : r.positions.map((p) => ({ ...p, last: priceMap.get(p.symbol) ?? p.avgCost }));
         const holdings = priced.reduce((sum, p) => sum + p.last * p.shares, 0);
-        // Your own row uses your trade history; other players' trade history
+        // Your own row uses your trade history and live holdings, so it matches
+        // the net worth at the top of the page. Other players' trade history
         // isn't readable here, so theirs is estimated from stored cash + holdings.
-        const ownCash = r.user_id === meUserId && myCash != null ? myCash : null;
+        const ownCash = me && myCash != null ? myCash : null;
         const equity = ownCash != null ? ownCash + holdings : estimatedNetWorth(startingCash, r.cash, priced, synced);
         // Players who haven't traded yet get no rank (N/A) and sit below everyone ranked.
-        const traded =
-          (r.user_id === meUserId && !!myTraded) ||
-          hasTraded(startingCash, ownCash ?? r.cash, r.positions.length);
+        const traded = (me && !!myTraded) || hasTraded(startingCash, ownCash ?? r.cash, priced.length);
         return {
           ...r,
+          priced,
           equity,
           traded,
           returnPct: startingCash > 0 ? ((equity - startingCash) / startingCash) * 100 : 0,
@@ -113,7 +136,7 @@ export const Leaderboard = ({
             ? b.equity - a.equity
             : a.display_name.localeCompare(b.display_name),
       );
-  }, [rows, priceMap, startingCash, meUserId, myCash, myTraded, synced]);
+  }, [rows, priceMap, startingCash, meUserId, myCash, myHoldings, myTraded, synced]);
 
   // Ranked players come first, so a ranked player's index is their rank.
   const rankedCount = ranked.filter((r) => r.traded).length;
@@ -219,7 +242,7 @@ export const Leaderboard = ({
                   </div>
                 </div>
               </div>
-              {liveViewing.positions.length === 0 ? (
+              {liveViewing.priced.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-6">No positions yet.</p>
               ) : (
                 <div className="overflow-x-auto -mx-1">
@@ -232,18 +255,15 @@ export const Leaderboard = ({
                       </tr>
                     </thead>
                     <tbody>
-                      {liveViewing.positions.map((p) => {
-                        const price = priceMap.get(p.symbol) ?? p.avgCost;
-                        return (
-                          <tr key={p.symbol} className="border-b last:border-0">
-                            <td className="px-2 py-2 font-bold">{p.symbol}</td>
-                            <td className="px-2 text-right tabular-nums">{p.shares}</td>
-                            <td className="px-2 text-right tabular-nums font-semibold">
-                              ${formatNumber(price * p.shares)}
-                            </td>
-                          </tr>
-                        );
-                      })}
+                      {liveViewing.priced.map((p) => (
+                        <tr key={p.symbol} className="border-b last:border-0">
+                          <td className="px-2 py-2 font-bold">{p.symbol}</td>
+                          <td className="px-2 text-right tabular-nums">{p.shares}</td>
+                          <td className="px-2 text-right tabular-nums font-semibold">
+                            ${formatNumber(p.last * p.shares)}
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
