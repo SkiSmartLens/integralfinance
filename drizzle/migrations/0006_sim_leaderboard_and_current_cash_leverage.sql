@@ -1,0 +1,83 @@
+CREATE OR REPLACE FUNCTION public.sim_leaderboard(_game_id uuid)
+RETURNS TABLE (member_id uuid, is_me boolean, display_name text, cash numeric, traded boolean, positions jsonb)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $fn$
+ SELECT gm.id, gm.user_id = auth.uid(), coalesce(p.display_name, 'Player'),
+ coalesce(public.sim_ledger_cash(gm.id), gm.cash),
+ EXISTS (SELECT 1 FROM public.transactions t WHERE t.member_id = gm.id AND upper(t.symbol) <> '$CASH'),
+ coalesce((SELECT jsonb_agg(jsonb_build_object('symbol', pos.symbol, 'shares', pos.shares, 'avg_cost', pos.avg_cost) ORDER BY pos.symbol) FROM public.positions pos WHERE pos.member_id = gm.id AND pos.shares <> 0), '[]'::jsonb)
+ FROM public.game_members gm LEFT JOIN public.profiles p ON p.user_id = gm.user_id
+ WHERE gm.game_id = _game_id AND auth.uid() IS NOT NULL
+ AND (EXISTS (SELECT 1 FROM public.game_members me WHERE me.game_id = _game_id AND me.user_id = auth.uid()) OR EXISTS (SELECT 1 FROM public.user_roles r WHERE r.user_id = auth.uid() AND r.role = 'admin'))
+$fn$;
+REVOKE ALL ON FUNCTION public.sim_leaderboard(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.sim_leaderboard(uuid) TO authenticated;
+CREATE OR REPLACE FUNCTION public.apply_order_fill(
+ _member_id uuid, _order_id uuid, _symbol text, _side public.order_side,
+ _shares numeric, _price numeric, _margin_floor numeric DEFAULT 0
+) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+ cost numeric := _price * _shares;
+ sym text := upper(_symbol);
+ pos_id uuid;
+ cur numeric := 0;
+ cur_avg numeric := 0;
+ new_shares numeric;
+ new_avg numeric;
+ new_cash numeric;
+ abs_old numeric;
+ abs_new numeric;
+ locked uuid;
+ cur_cash numeric;
+ lev numeric;
+ buy_floor numeric;
+BEGIN
+ IF _shares IS NULL OR _shares <= 0 OR _price IS NULL OR _price <= 0 THEN
+ RETURN jsonb_build_object('error', 'invalid fill input'); END IF;
+ SELECT id INTO locked FROM public.game_members WHERE id = _member_id FOR UPDATE;
+ IF locked IS NULL THEN RETURN jsonb_build_object('error', 'portfolio not found'); END IF;
+ SELECT gm.cash, greatest(coalesce(g.leverage, 1), 1) INTO cur_cash, lev
+ FROM public.game_members gm JOIN public.games g ON g.id = gm.game_id WHERE gm.id = _member_id;
+ lev := coalesce(lev, 1);
+ SELECT id, shares, avg_cost INTO pos_id, cur, cur_avg FROM public.positions WHERE member_id = _member_id AND symbol = sym FOR UPDATE;
+ cur := coalesce(cur, 0); cur_avg := coalesce(cur_avg, 0);
+ IF _side = 'buy' THEN
+ IF cur < 0 THEN RETURN jsonb_build_object('error', 'you have a short position — use COVER'); END IF;
+ buy_floor := CASE WHEN _margin_floor <= -1e14 THEN _margin_floor ELSE -(lev - 1) * greatest(coalesce(cur_cash, 0), 0) END;
+ UPDATE public.game_members SET cash = cash - cost WHERE id = _member_id AND cash - cost >= buy_floor RETURNING cash INTO new_cash;
+ IF new_cash IS NULL THEN RETURN jsonb_build_object('error', format('Not enough buying power: you can spend up to $%s right now.', to_char(lev * greatest(coalesce(cur_cash, 0), 0), 'FM999,999,999,990.00'))); END IF;
+ new_shares := cur + _shares;
+ new_avg := CASE WHEN cur > 0 THEN (cur * cur_avg + cost) / new_shares ELSE _price END;
+ IF pos_id IS NULL THEN INSERT INTO public.positions (member_id, symbol, shares, avg_cost) VALUES (_member_id, sym, new_shares, new_avg);
+ ELSE UPDATE public.positions SET shares = new_shares, avg_cost = new_avg WHERE id = pos_id; END IF;
+ ELSIF _side = 'sell' THEN
+ IF cur <= 0 OR cur < _shares THEN RETURN jsonb_build_object('error', 'insufficient shares'); END IF;
+ new_shares := cur - _shares;
+ IF new_shares = 0 THEN DELETE FROM public.positions WHERE id = pos_id;
+ ELSE UPDATE public.positions SET shares = new_shares WHERE id = pos_id; END IF;
+ UPDATE public.game_members SET cash = cash + cost WHERE id = _member_id RETURNING cash INTO new_cash;
+ ELSIF _side = 'short' THEN
+ IF cur > 0 THEN RETURN jsonb_build_object('error', 'you have a long position — SELL first'); END IF;
+ new_shares := cur - _shares; abs_old := abs(cur); abs_new := abs(new_shares);
+ new_avg := CASE WHEN abs_old > 0 THEN (abs_old * cur_avg + _shares * _price) / abs_new ELSE _price END;
+ IF pos_id IS NULL THEN INSERT INTO public.positions (member_id, symbol, shares, avg_cost) VALUES (_member_id, sym, -_shares, _price);
+ ELSE UPDATE public.positions SET shares = new_shares, avg_cost = new_avg WHERE id = pos_id; END IF;
+ UPDATE public.game_members SET cash = cash + cost WHERE id = _member_id RETURNING cash INTO new_cash;
+ ELSIF _side = 'cover' THEN
+ IF cur >= 0 THEN RETURN jsonb_build_object('error', 'no short position to cover'); END IF;
+ IF abs(cur) < _shares THEN RETURN jsonb_build_object('error', 'cover size exceeds short'); END IF;
+ UPDATE public.game_members SET cash = cash - cost WHERE id = _member_id AND cash - cost >= _margin_floor RETURNING cash INTO new_cash;
+ IF new_cash IS NULL THEN RETURN jsonb_build_object('error', 'insufficient buying power to cover'); END IF;
+ new_shares := cur + _shares;
+ IF new_shares = 0 THEN DELETE FROM public.positions WHERE id = pos_id;
+ ELSE UPDATE public.positions SET shares = new_shares WHERE id = pos_id; END IF;
+ ELSE RETURN jsonb_build_object('error', 'invalid side'); END IF;
+ UPDATE public.orders SET status = 'filled', filled_price = _price, filled_at = now() WHERE id = _order_id;
+ INSERT INTO public.transactions (member_id, order_id, symbol, side, shares, price, commission) VALUES (_member_id, _order_id, sym, _side, _shares, _price, 0);
+ RETURN jsonb_build_object('filled', true, 'price', _price, 'cash', new_cash);
+END;
+$$;
+REVOKE ALL ON FUNCTION public.apply_order_fill(uuid, uuid, text, public.order_side, numeric, numeric, numeric) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.apply_order_fill(uuid, uuid, text, public.order_side, numeric, numeric, numeric) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.apply_order_fill(uuid, uuid, text, public.order_side, numeric, numeric, numeric) TO service_role;
+NOTIFY pgrst, 'reload schema';
