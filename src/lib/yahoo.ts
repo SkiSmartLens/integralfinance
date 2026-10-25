@@ -3,6 +3,8 @@
 // by the public home page, and the generated client throws before React mounts when
 // a published build is missing Vite env vars, leaving users on the static loader.
 
+import { fetchCnbcNews, pickStories } from "@/lib/news";
+
 const env = import.meta.env as Record<string, string | undefined>;
 const normalizeUrl = (value?: string) => {
   if (!value) return undefined;
@@ -172,6 +174,8 @@ export async function fetchChart(
 export interface NewsItem {
   uuid: string;
   title: string;
+  /** Short description, when the source gives one. */
+  summary?: string;
   publisher: string;
   link: string;
   providerPublishTime: number;
@@ -181,12 +185,20 @@ export interface NewsItem {
 }
 
 /**
- * Fetch news for one query, or merge + dedupe results across several queries.
- * Multiple queries help for indices (e.g. ^GSPC) where a single plain-text
- * search returns stale stories.
+ * News for one query, or several merged: market-wide queries ("S&P 500",
+ * "^GSPC") get every story, a ticker or company name gets the stories that
+ * mention it. Stories come from CNBC (see lib/news.ts), whose articles the
+ * AI summarizer can read; Yahoo's search is only used if CNBC can't be reached.
  */
 export async function fetchNews(query: string | string[] = "stock market"): Promise<NewsItem[]> {
   const queries = Array.isArray(query) ? query : [query];
+  const cnbc = await fetchCnbcNews().catch(() => []);
+  if (cnbc.length) return pickStories(cnbc, queries);
+  return fetchYahooNews(queries);
+}
+
+/** Yahoo news search, merged + deduped across queries. */
+async function fetchYahooNews(queries: string[]): Promise<NewsItem[]> {
   const results = await Promise.all(
     queries.map((q) => callProxy({ kind: "search", q }).catch(() => null)),
   );

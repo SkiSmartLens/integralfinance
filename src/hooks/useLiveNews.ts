@@ -9,6 +9,12 @@ export function useLiveNews(query: string | string[], refreshMs = 30000) {
 
   useEffect(() => {
     mounted.current = true;
+    // No query: nothing to load (lets callers turn a feed off).
+    if (!key) {
+      setNews([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     let timer: number | undefined;
     const query = key.split("|");

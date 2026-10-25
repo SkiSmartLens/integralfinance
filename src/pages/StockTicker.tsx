@@ -159,7 +159,7 @@ const StockTicker = () => {
               {symbol} News <span className="text-muted-foreground font-normal text-base">· latest stories</span>
             </h2>
             <Suspense fallback={<div className="text-muted-foreground py-8 text-center">Loading stories…</div>}>
-              <NewsList query={symbol} />
+              <NewsList query={[symbol, name]} subject={symbol} fallbackQuery="stock market" />
             </Suspense>
           </section>
         )}

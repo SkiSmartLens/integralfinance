@@ -9,6 +9,10 @@ interface Props {
   query: string | string[];
   /** Optional related-blog link shown under the news grid. */
   blogLinkLabel?: string;
+  /** Shown instead, with a note, when nothing matches `query`. */
+  fallbackQuery?: string | string[];
+  /** What `query` is about, for that note (e.g. "NVDA"). */
+  subject?: string;
 }
 
 function timeAgo(ts: number) {
@@ -65,7 +69,8 @@ const NewsCard = ({ n, featured = false }: { n: NewsItem; featured?: boolean }) 
           type="button"
           onClick={() =>
             navigate(
-              `/translate?url=${encodeURIComponent(n.link)}${n.uuid ? `&uuid=${encodeURIComponent(n.uuid)}` : ""}`,
+              // Only Yahoo stories carry an ID the translator can use.
+              `/translate?url=${encodeURIComponent(n.link)}${n.uuid && n.link.includes("yahoo.com") ? `&uuid=${encodeURIComponent(n.uuid)}` : ""}`,
             )
           }
           className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-primary/40 bg-accent/60 px-3 py-2 text-xs font-extrabold text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
@@ -82,9 +87,13 @@ const NewsCard = ({ n, featured = false }: { n: NewsItem; featured?: boolean }) 
 const MIN_AGE_SEC = 60 * 5;
 const MAX_AGE_SEC = 60 * 60 * 48;
 
-export const NewsList = ({ query, blogLinkLabel = "Read the blog" }: Props) => {
-  const { news, loading } = useLiveNews(query);
+export const NewsList = ({ query, blogLinkLabel = "Read the blog", fallbackQuery, subject }: Props) => {
+  const main = useLiveNews(query);
+  const fallback = useLiveNews(fallbackQuery ?? []);
   const [visible, setVisible] = useState(9);
+  const usingFallback = !main.loading && !main.news.length && fallback.news.length > 0;
+  const news = usingFallback ? fallback.news : main.news;
+  const loading = main.loading || (!main.news.length && fallback.loading);
 
   const nowSec = Math.floor(Date.now() / 1000);
   const filtered = news.filter((n) => {
@@ -106,6 +115,11 @@ export const NewsList = ({ query, blogLinkLabel = "Read the blog" }: Props) => {
 
   return (
     <div className="space-y-6">
+      {usingFallback && (
+        <p className="text-sm text-muted-foreground rounded-lg border bg-muted/40 px-4 py-3">
+          No recent stories mention {subject ?? "this"}. Here's the latest market news instead.
+        </p>
+      )}
       <NewsCard n={hero} featured />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {rest.map((n) => (

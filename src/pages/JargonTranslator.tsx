@@ -180,6 +180,14 @@ function parseChunk(acc: string): Omit<Result, "sourceUrl" | "partial" | "error"
   return { plain, glossary, keyTakeaways };
 }
 
+const isYahooUrl = (u: string) => {
+  try {
+    return /(^|\.)yahoo\.com$/i.test(new URL(u).hostname);
+  } catch {
+    return false;
+  }
+};
+
 const JargonTranslator = () => {
   const [params] = useSearchParams();
   const prefillUrl = params.get("url") ?? "";
@@ -356,6 +364,16 @@ const JargonTranslator = () => {
             {/credit/i.test(result.error) ? "AI credits are temporarily exhausted. Please try again later." :
              /rate limit/i.test(result.error) ? "Too many requests right now. Please try again in a moment." :
              `Couldn’t translate that: ${result.error}`}
+            {mode === "url" && isYahooUrl(url) && (
+              <p className="mt-2">
+                Yahoo Finance doesn't let automated readers open its articles. Stories from CNBC, Investor's Business
+                Daily, the BBC, NPR and ABC News work, and every story on our{" "}
+                <Link to="/market-brief" className="text-primary font-semibold hover:underline">
+                  News page
+                </Link>{" "}
+                can be summarized.
+              </p>
+            )}
           </div>
         )}
 
