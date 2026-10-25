@@ -1,19 +1,115 @@
-import { Search } from "lucide-react";
+import { ChevronDown, Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { fetchSearchQuotes, fetchQuotes, formatNumber, SearchQuote } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import logo from "@/assets/logo.webp";
 
 type EnrichedResult = SearchQuote & { price?: number; changePct?: number };
 
-const NAV_LINKS = [
-  { to: "/stocks", label: "Stocks" },
-  { to: "/market-brief", label: "News" },
-  { to: "/learn", label: "Learn" },
-  { to: "/watchlist", label: "Watchlist" },
-  { to: "/simulator", label: "Practice", accent: true },
+type NavEntry =
+  | { label: string; items: { to: string; label: string }[] }
+  | {
+      label: string;
+      to: string;
+      /** Other URLs that show the same page, e.g. /stocks is the dashboard too. */
+      paths?: string[];
+    };
+
+// The footer's Markets and Learn & Play pages, as menus, then the main pages.
+const NAV: NavEntry[] = [
+  {
+    label: "Market",
+    items: [
+      { to: "/screener", label: "Screener" },
+      { to: "/calendar", label: "Economic Calendar" },
+    ],
+  },
+  {
+    label: "Learn & Play",
+    items: [
+      { to: "/learn", label: "Learn Investing" },
+      { to: "/learn/glossary", label: "Glossary" },
+      { to: "/academy", label: "Investor Academy" },
+      { to: "/simulator", label: "Trading Simulator" },
+      { to: "/teachers", label: "For Teachers & Clubs" },
+      { to: "/translate", label: "Jargon Translator" },
+      { to: "/tools", label: "Finance Tools" },
+      { to: "/blog", label: "Blog" },
+      { to: "/faq", label: "FAQ" },
+      { to: "/about", label: "About" },
+    ],
+  },
+  { label: "News", to: "/market-brief", paths: ["/news"] },
+  { label: "Watchlist", to: "/watchlist" },
+  { label: "Dashboard", to: "/dashboard", paths: ["/stocks"] },
 ];
+
+/** A menu item is current on its own page and the pages under it (/learn/basics is under /learn). */
+const isUnder = (path: string, to: string) => path === to || path.startsWith(`${to}/`);
+
+/** The item in a menu for the current page: the closest match, so /learn/glossary is Glossary, not Learn Investing. */
+const currentItem = (items: { to: string }[], path: string) =>
+  items
+    .filter((i) => isUnder(path, i.to))
+    .sort((a, b) => b.to.length - a.to.length)[0];
+
+/** Which entry the current page belongs to, so it can be highlighted. */
+const isCurrent = (entry: NavEntry, path: string) =>
+  "items" in entry
+    ? entry.items.some((i) => isUnder(path, i.to) || (i.to === "/simulator" && isUnder(path, "/sim")))
+    : [entry.to, ...(entry.paths ?? [])].includes(path);
+
+const NavMenu = ({ mobile }: { mobile?: boolean }) => {
+  const { pathname } = useLocation();
+  const itemCls = (current: boolean) =>
+    mobile
+      ? cn(
+          "min-w-max flex-1 inline-flex items-center justify-center gap-0.5 px-1.5 sm:px-4 py-2.5 text-xs sm:text-sm font-bold whitespace-nowrap transition-colors outline-none",
+          current ? "text-foreground bg-muted" : "text-muted-foreground",
+        )
+      : cn(
+          "inline-flex items-center gap-1 px-3.5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          current ? "bg-accent text-accent-foreground" : "text-foreground hover:bg-muted data-[state=open]:bg-muted",
+        );
+
+  return (
+    <>
+      {NAV.map((entry) =>
+        "items" in entry ? (
+          <DropdownMenu key={entry.label}>
+            <DropdownMenuTrigger className={cn(itemCls(isCurrent(entry, pathname)), "group")}>
+              {entry.label}
+              <ChevronDown className="w-3 h-3 lg:w-3.5 lg:h-3.5 transition-transform group-data-[state=open]:rotate-180" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[13rem]">
+              {entry.items.map((item) => (
+                <DropdownMenuItem key={item.to} asChild>
+                  <Link
+                    to={item.to}
+                    className={cn("cursor-pointer font-semibold", currentItem(entry.items, pathname) === item && "text-primary")}
+                  >
+                    {item.label}
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <NavLink key={entry.to} to={entry.to} className={itemCls(isCurrent(entry, pathname))}>
+            {entry.label}
+          </NavLink>
+        ),
+      )}
+    </>
+  );
+};
 
 interface Props {
   onSearch?: (sym: string) => void;
@@ -163,46 +259,12 @@ export const Header = ({ onSearch }: Props) => {
             </div>
           )}
         </div>
-        <nav className="hidden md:flex items-center gap-1 shrink-0">
-          {NAV_LINKS.map((l) => (
-            <NavLink
-              key={l.to}
-              to={l.to}
-              className={({ isActive }) =>
-                cn(
-                  "px-3.5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-colors",
-                  l.accent
-                    ? "bg-primary text-primary-foreground shadow-sm hover:opacity-90"
-                    : isActive
-                      ? "bg-accent text-accent-foreground"
-                      : "text-foreground hover:bg-muted",
-                )
-              }
-            >
-              {l.label}
-            </NavLink>
-          ))}
+        <nav className="hidden lg:flex items-center gap-1 shrink-0">
+          <NavMenu />
         </nav>
       </div>
-      <nav className="md:hidden border-t flex items-stretch overflow-x-auto no-scrollbar">
-        {NAV_LINKS.map((l) => (
-          <NavLink
-            key={l.to}
-            to={l.to}
-            className={({ isActive }) =>
-              cn(
-                "min-w-max flex-1 text-center px-4 py-2.5 text-sm font-bold whitespace-nowrap transition-colors",
-                l.accent
-                  ? "text-primary bg-primary/10 font-extrabold"
-                  : isActive
-                    ? "text-foreground bg-muted"
-                    : "text-muted-foreground",
-              )
-            }
-          >
-            {l.label}
-          </NavLink>
-        ))}
+      <nav className="lg:hidden border-t flex items-stretch overflow-x-auto no-scrollbar">
+        <NavMenu mobile />
       </nav>
     </header>
   );

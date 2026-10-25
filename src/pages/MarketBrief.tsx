@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, GraduationCap, Clock, Newspaper, Share2, Check } from "lucide-react";
-import { HomeHeader } from "@/components/HomeHeader";
+import { Header } from "@/components/Header";
 import { SEO } from "@/components/SEO";
 import { SiteFooter } from "@/components/SiteFooter";
 import { formatNumber, ScreenerQuote } from "@/lib/yahoo";
@@ -125,7 +125,7 @@ const MarketBrief = () => {
           url: "https://integralstocks.com/market-brief",
         }}
       />
-      <HomeHeader />
+      <Header />
 
       {/* Hero */}
       <section className="bg-secondary/60">
