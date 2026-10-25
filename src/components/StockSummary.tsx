@@ -3,6 +3,8 @@ import { fetchStockSummary, getCachedSummary, type StockSummaryData } from "@/li
 import { fetchQuotes } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
 import { CitedText } from "@/components/CitedText";
+import { useLiveNews } from "@/hooks/useLiveNews";
+import { timeAgo } from "@/lib/marketBrief";
 
 import { Sparkles, TrendingUp, TrendingDown, Calendar, Eye, BarChart3, DollarSign, Percent, Landmark, Shield, LineChart, ChevronDown, Zap, Newspaper, ExternalLink } from "lucide-react";
 
@@ -85,6 +87,13 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
     return () => { alive = false; };
   }, [symbol]);
 
+
+  // The articles the AI was given, then recent stories about the company that it
+  // wasn't (the same ones as the stock's News tab), as further reading.
+  const sources = (data?.sources ?? []).filter((s) => s.url);
+  const { news } = useLiveNews([symbol, companyName]);
+  const sourceUrls = new Set(sources.map((s) => s.url));
+  const coverage = news.filter((n) => !sourceUrls.has(n.link)).slice(0, 5);
 
   const askIntegral = (question?: string) => {
     const who = companyName ? `${companyName} (${symbol})` : symbol;
@@ -188,36 +197,52 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
           <CollapsibleRow icon={<Eye className="w-4 h-4 text-primary" />} title="Outlook">
             <p className="text-sm">{data.outlook}</p>
           </CollapsibleRow>
-          {data.sources && data.sources.length > 0 && (
-            <CollapsibleRow icon={<Newspaper className="w-4 h-4 text-primary" />} title={`Sources (${data.sources.length})`}>
-              <ul className="space-y-2 text-sm">
-                {data.sources.map((s, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <ExternalLink className="w-3.5 h-3.5 mt-1 text-muted-foreground shrink-0" />
-                    <div className="min-w-0">
-                      <a
-                        href={s.url}
-                        target="_blank"
-                        rel="noopener noreferrer nofollow"
-                        className="font-semibold hover:underline break-words"
-                      >
-                        {s.title}
-                      </a>
-                      <div className="text-xs text-muted-foreground">{s.publisher}</div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              <p className="text-[11px] text-muted-foreground mt-3">
-                AI insights above are grounded in these real, recently published headlines about the company.
-              </p>
-            </CollapsibleRow>
+          {(sources.length > 0 || coverage.length > 0) && (
+            <div className="bg-muted/40 rounded-md p-3">
+              <h4 className="flex items-center gap-2 font-semibold mb-3">
+                <Newspaper className="w-4 h-4 text-primary" /> Sources
+              </h4>
+              {sources.length > 0 && (
+                <>
+                  <SourceList items={sources.map((s) => ({ title: s.title, url: s.url, meta: s.publisher }))} />
+                  <p className="text-[11px] text-muted-foreground mt-3">
+                    The AI insights above are based on these recently published articles about the company.
+                  </p>
+                </>
+              )}
+              {coverage.length > 0 && (
+                <div className={cn(sources.length > 0 && "mt-4 pt-3 border-t")}>
+                  <p className="text-xs font-semibold text-muted-foreground mb-2">
+                    Latest news about {companyName || symbol}
+                  </p>
+                  <SourceList
+                    items={coverage.map((n) => ({ title: n.title, url: n.link, meta: `${n.publisher} · ${timeAgo(n.providerPublishTime)}` }))}
+                  />
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}
     </section>
   );
 };
+
+const SourceList = ({ items }: { items: { title: string; url: string; meta: string }[] }) => (
+  <ul className="space-y-2 text-sm">
+    {items.map((s) => (
+      <li key={s.url} className="flex items-start gap-2">
+        <ExternalLink className="w-3.5 h-3.5 mt-1 text-muted-foreground shrink-0" />
+        <div className="min-w-0">
+          <a href={s.url} target="_blank" rel="noopener noreferrer nofollow" className="font-semibold hover:underline break-words">
+            {s.title}
+          </a>
+          <div className="text-xs text-muted-foreground">{s.meta}</div>
+        </div>
+      </li>
+    ))}
+  </ul>
+);
 
 const CollapsibleRow = ({
   icon, title, children, defaultOpen = false,

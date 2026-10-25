@@ -96,7 +96,7 @@ const StockTicker = () => {
       <Header onSearch={(s) => nav(`/stocks/${s.toLowerCase()}`)} />
 
       <div className="border-b bg-gradient-to-r from-card via-card to-muted/30">
-        <div className="px-4 sm:px-6 py-3 flex items-center gap-3 flex-wrap max-w-5xl">
+        <div className="px-4 sm:px-6 py-3 flex items-center gap-3 flex-wrap max-w-5xl mx-auto">
           <Link to="/" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
             <ArrowLeft className="w-4 h-4" /> Home
           </Link>
@@ -116,7 +116,7 @@ const StockTicker = () => {
       </div>
 
       <div className="border-b bg-background sticky top-0 z-10">
-        <div className="px-4 sm:px-6 max-w-5xl flex gap-1" role="tablist" aria-label="Stock sections">
+        <div className="px-4 sm:px-6 max-w-5xl mx-auto flex gap-1" role="tablist" aria-label="Stock sections">
           {TABS.map((t) => {
             const Icon = t.icon;
             const active = tab === t.id;
@@ -141,7 +141,7 @@ const StockTicker = () => {
         </div>
       </div>
 
-      <main className="px-4 sm:px-6 py-6 space-y-6 max-w-5xl">
+      <main className="px-4 sm:px-6 py-6 space-y-6 max-w-5xl mx-auto">
         {tab === "overview" && (
           <>
             <div id="chart"><StockChart symbol={symbol} /></div>
