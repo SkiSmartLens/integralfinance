@@ -27,8 +27,11 @@ const NAV: NavEntry[] = [
   {
     label: "Market",
     items: [
+      { to: "/stocks", label: "Stocks" },
+      { to: "/market-brief", label: "Market Brief" },
       { to: "/screener", label: "Screener" },
       { to: "/calendar", label: "Economic Calendar" },
+      { to: "/watchlist", label: "Watchlist" },
     ],
   },
   {
@@ -60,11 +63,19 @@ const currentItem = (items: { to: string }[], path: string) =>
     .filter((i) => isUnder(path, i.to))
     .sort((a, b) => b.to.length - a.to.length)[0];
 
-/** Which entry the current page belongs to, so it can be highlighted. */
+const isLinkCurrent = (entry: NavEntry, path: string) =>
+  !("items" in entry) && [entry.to, ...(entry.paths ?? [])].includes(path);
+
+/**
+ * Which entry the current page belongs to, so it can be highlighted. Pages that
+ * have their own top-level link (News, Watchlist, Dashboard) highlight that link,
+ * not the menu that also lists them.
+ */
 const isCurrent = (entry: NavEntry, path: string) =>
   "items" in entry
-    ? entry.items.some((i) => isUnder(path, i.to) || (i.to === "/simulator" && isUnder(path, "/sim")))
-    : [entry.to, ...(entry.paths ?? [])].includes(path);
+    ? !NAV.some((e) => isLinkCurrent(e, path)) &&
+      entry.items.some((i) => isUnder(path, i.to) || (i.to === "/simulator" && isUnder(path, "/sim")))
+    : isLinkCurrent(entry, path);
 
 const NavMenu = ({ mobile }: { mobile?: boolean }) => {
   const { pathname } = useLocation();
