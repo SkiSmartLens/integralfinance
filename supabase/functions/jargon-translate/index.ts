@@ -512,6 +512,8 @@ Rules:
 - 5–8 key takeaways max, each ≤ 20 words, one per line starting with "- ".
 - Glossary: only truly jargon-y terms actually used in the source (max 12), one per line as "Term: meaning". Omit the line entirely for a source with no jargon — do not invent one.
 - Do not invent facts. If the source is thin, keep the rewrite short.
+- Pages are scraped, so ignore clutter that isn't the article: ads, newsletter or subscription prompts, author bios, photo credits, "related stories" lists.
+- Keep it proportional: cover the article's key facts in its own order, in at most about 500 words, even for a long article.
 - Always include all four markers (===PLAIN===, ===GLOSSARY===, ===TAKEAWAYS===, ===END===) even if a section has nothing under it.`;
 
 Deno.serve(async (req) => {
@@ -582,9 +584,13 @@ Deno.serve(async (req) => {
     let res: Response | null = null;
     const GROQ = "https://api.groq.com/openai/v1/chat/completions";
     if (GROQ_API_KEY) {
-      // llama-3.3-70b-versatile is decommissioned on Groq; 8b-instant gives the fastest first token.
-      res = await tryModel(GROQ, GROQ_API_KEY, "llama-3.1-8b-instant");
-      if (!res) res = await tryModel(GROQ, GROQ_API_KEY, "openai/gpt-oss-120b");
+      // Strongest first: the 120b keeps facts and numbers straight far better
+      // than 8b-instant, and with low reasoning effort it still starts quickly.
+      // Each model has its own rate limit, so a busy one falls through.
+      for (const model of ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "llama-3.1-8b-instant"]) {
+        res = await tryModel(GROQ, GROQ_API_KEY, model);
+        if (res) break;
+      }
     }
     if (!res && LOVABLE_API_KEY) {
       res = await call("https://ai.gateway.lovable.dev/v1/chat/completions", LOVABLE_API_KEY, "google/gemini-2.5-flash");

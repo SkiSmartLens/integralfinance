@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mixPublishers, parseRss, pickStories, shortCompanyName } from "./news";
+import { companyNames, mixPublishers, parseRss, pickStories, shortCompanyName } from "./news";
 import type { NewsItem } from "./yahoo";
 
 // Trimmed from a real CNBC feed (search.cnbc.com/rs/search/combinedcms/view.xml).
@@ -39,6 +39,15 @@ describe("parseRss", () => {
       link: "https://www.cnbc.com/2026/10/25/nvidia-earnings-preview.html",
       providerPublishTime: Date.UTC(2026, 9, 25, 12, 0, 1) / 1000,
     });
+  });
+  it("drops the 'The post ... appeared first on' line WordPress feeds add", () => {
+    const xml = `<rss version="2.0"><channel><item>
+      <link>https://www.investors.com/news/nvidia-meta/</link>
+      <title>Nvidia, AMD Get Their Jollies Hooking Up With Meta's Muse</title>
+      <description><![CDATA[<p>Nvidia and AMD announced deals with Meta.</p>
+<p>The post <a href="https://www.investors.com/news/nvidia-meta/">Nvidia, AMD Get Their Jollies</a> appeared first on <a href="https://www.investors.com">Investor's Business Daily</a>.</p>]]></description>
+    </item></channel></rss>`;
+    expect(parseRss(xml, "Investor's Business Daily")[0].summary).toBe("Nvidia and AMD announced deals with Meta.");
   });
   it("returns nothing for a broken feed", () => {
     expect(parseRss("not xml at all", "CNBC")).toEqual([]);
@@ -138,5 +147,17 @@ describe("shortCompanyName", () => {
     expect(shortCompanyName("Meta Platforms, Inc.")).toBe("Meta");
     expect(shortCompanyName("Berkshire Hathaway Inc. Class B")).toBe("Berkshire Hathaway");
     expect(shortCompanyName("Tesla, Inc.")).toBe("Tesla");
+  });
+});
+
+describe("companyNames", () => {
+  it("adds a distinctive first word, since stories say Ford and JPMorgan", () => {
+    expect(companyNames("Ford Motor Company")).toEqual(["Ford Motor", "Ford"]);
+    expect(companyNames("JPMorgan Chase & Co.")).toEqual(["JPMorgan Chase", "JPMorgan"]);
+    expect(companyNames("NVIDIA Corporation")).toEqual(["NVIDIA"]);
+  });
+  it("skips first words that would match other companies", () => {
+    expect(companyNames("General Motors Company")).toEqual(["General Motors"]);
+    expect(companyNames("American Express Company")).toEqual(["American Express"]);
   });
 });

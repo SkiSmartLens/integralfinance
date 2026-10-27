@@ -55,6 +55,9 @@ function htmlToText(html: string): string {
     .trim();
 }
 
+/** WordPress feeds (IBD) end every summary with "The post X appeared first on Y." */
+const FEED_BOILERPLATE = /\s*The post .{0,300}? appeared first on [^.\n]{0,80}\.?\s*$/s;
+
 /** The first image URL an item offers (media:content, media:thumbnail or an image enclosure). */
 function imageOf(item: Element): string | undefined {
   for (const tag of ["media:content", "media:thumbnail", "enclosure"]) {
@@ -86,7 +89,7 @@ export function parseRss(xml: string, publisher: string): NewsItem[] {
     out.push({
       uuid: `${publisher}-${text("guid") || link}`,
       title,
-      summary: htmlToText(text("description")),
+      summary: htmlToText(text("description")).replace(FEED_BOILERPLATE, "").trim(),
       ...(content.length >= 400 ? { content } : {}),
       publisher,
       link,
@@ -183,9 +186,27 @@ export function shortCompanyName(name: string): string {
   let n = name.trim().replace(/\.com\b/i, "");
   for (let prev = ""; prev !== n; ) {
     prev = n;
-    n = n.replace(COMPANY_SUFFIX, "").replace(/[,.\s]+$/, "");
+    n = n.replace(COMPANY_SUFFIX, "").replace(/(\s+(&|and))?[,.\s]*$/i, "");
   }
   return n;
+}
+
+// First words too common to identify a company on their own ("General Motors").
+const GENERIC_FIRST_WORDS = new Set(
+  "general american united international national first global digital new western southern northern eastern royal advanced applied texas union capital energy health bank the".split(" "),
+);
+
+/**
+ * The names stories use for a company: its short name, plus its first word
+ * when that's distinctive, since stories say "Ford" and "JPMorgan", not "Ford
+ * Motor" or "JPMorgan Chase".
+ */
+export function companyNames(name: string): string[] {
+  const short = shortCompanyName(name);
+  const first = short.split(/\s+/)[0] ?? "";
+  const names = [short];
+  if (first !== short && first.length >= 4 && !GENERIC_FIRST_WORDS.has(first.toLowerCase())) names.push(first);
+  return names.filter((n) => n.length >= 3);
 }
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -205,8 +226,7 @@ function patternsFor(q: string): RegExp[] {
     for (const a of ALIASES[t] ?? []) pats.push(new RegExp(`\\b${escape(a)}\\b`, "i"));
     return pats;
   }
-  const name = shortCompanyName(t);
-  return name.length >= 3 ? [new RegExp(`\\b${escape(name)}\\b`, "i")] : [];
+  return companyNames(t).map((n) => new RegExp(`\\b${escape(n)}\\b`, "i"));
 }
 
 /**

@@ -6,7 +6,7 @@ const corsHeaders = {
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 // Bump when the prompt or response schema changes: invalidates both cache levels.
-const CACHE_VERSION = "v8";
+const CACHE_VERSION = "v9";
 
 // Level 1: per-instance memory. Level 2: public.stock_summary_cache, shared across
 // instances (edge instances are short-lived, so level 1 alone was mostly cold).
@@ -119,6 +119,13 @@ Deno.serve(async (req) => {
     }
     const sym = symbol.toUpperCase();
     const isBeginner = mode === "beginner";
+    const today = new Date().toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      timeZone: "America/New_York",
+    });
     // "priority" = whyMoved/positives/negatives/whatItDoes/outlook — the fields the
     // UI renders first. "extended" = the deep-dive fields (revenue, margins, moat,
     // forecast, ...) that render further down in collapsed rows. Splitting these into
@@ -164,6 +171,18 @@ Deno.serve(async (req) => {
       `${SUPABASE_URL}/functions/v1/yahoo-proxy?kind=search&q=${encodeURIComponent(sym)}`,
       { headers: { apikey: anon } },
     ).then((r) => r.json()).catch(() => ({}));
+
+    // Revenue, margins, debt and cash from the company's SEC filings; nothing
+    // for funds, crypto and non-US stocks.
+    const fundamentalsPromise: Promise<string[]> = isBeginner
+      ? Promise.resolve([])
+      : fetch(`${SUPABASE_URL}/functions/v1/yahoo-proxy?kind=fundamentals&symbol=${encodeURIComponent(sym)}`, {
+          headers: { apikey: anon },
+          signal: AbortSignal.timeout(12000),
+        })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((j) => (Array.isArray(j?.lines) ? j.lines : []))
+          .catch(() => []);
 
     // Firecrawl web search — real, recent articles about why the stock moved,
     // plus a second pass for bull/bear/analyst-outlook material so the
@@ -281,6 +300,29 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Stories from the site's news feeds (CNBC, Fox Business, IBD, ...): the
+    // headline and summary, or the full article when the feed carries it.
+    // Numbered after any Firecrawl results, so citations line up with sources.
+    if (needsWebResearch) {
+      try {
+        const j = await fetch(
+          `${SUPABASE_URL}/functions/v1/yahoo-proxy?kind=news&limit=6&q=${encodeURIComponent(sym)}&name=${encodeURIComponent(companyName)}`,
+          { headers: { apikey: anon }, signal: AbortSignal.timeout(10000) },
+        ).then((r) => (r.ok ? r.json() : null));
+        const lines: string[] = [];
+        for (const st of (j?.stories ?? []) as { title: string; publisher: string; url: string; published: number; summary: string; text: string }[]) {
+          if (webSources.length >= 8 || webSources.some((w) => w.url === st.url)) continue;
+          const n = webSources.length + 1;
+          webSources.push({ title: st.title, publisher: st.publisher, url: st.url });
+          const age = st.published ? formatAge(ageDays({ providerPublishTime: st.published })) : "date unknown";
+          lines.push(`[${n}] ${st.title} — ${st.publisher} (${age})\n${(st.text || st.summary || "(headline only)").slice(0, 1500)}`);
+        }
+        if (lines.length) webContext = [webContext, ...lines].filter(Boolean).join("\n\n");
+      } catch (e) {
+        console.warn("feed news error", e instanceof Error ? e.message : e);
+      }
+    }
+
     const webBlock = webContext
       ? `\n\nRESEARCH — real, recently published articles about ${companyName} (${sym}), fetched from the live web. These are the SOURCE OF TRUTH for "whyMoved", "positives" and "negatives":\n${webContext}\n\nWhen you use a fact from an article above, append its bracket number (e.g. [1], [2]) to that sentence or bullet. Never cite a number that is not listed above. Do not invent facts that are not in these articles.\n`
       : "";
@@ -304,38 +346,48 @@ Return strict JSON: {"whatItDoes": string, "whyPeopleBuy": string, "whatToWatch"
 - whatToWatch: 1-2 sentences on risks specific to ${companyName}. No other company names.
 No disclaimers, no markdown, no jargon.`;
 
-    const quoteBlock = `Stock: ${companyName} (${sym})
-Sector: ${q.sector ?? "?"}  Industry: ${q.industry ?? "?"}
-Price: ${q.regularMarketPrice} ${q.currency ?? ""}
-Change: ${q.regularMarketChangePercent?.toFixed?.(2)}%
-Day range: ${q.regularMarketDayLow}-${q.regularMarketDayHigh}
-52w range: ${q.fiftyTwoWeekLow}-${q.fiftyTwoWeekHigh}
-Mkt cap: ${q.marketCap}
-Trailing P/E: ${q.trailingPE ?? "?"}  Forward P/E: ${q.forwardPE ?? "?"}
-EPS (ttm): ${q.epsTrailingTwelveMonths ?? "?"}  EPS fwd: ${q.epsForward ?? "?"}
-Profit margin: ${q.profitMargins ?? q.netMargins ?? "?"}  Operating margin: ${q.operatingMargins ?? "?"}
-Debt/Equity: ${q.debtToEquity ?? "?"}  Total debt: ${q.totalDebt ?? "?"}
-Beta: ${q.beta ?? "?"}  Avg vol: ${q.averageDailyVolume10Day ?? q.averageVolume ?? "?"}
-Held by institutions %: ${q.heldPercentInstitutions ?? "?"}
-52w change vs price: low ${q.fiftyTwoWeekLow ?? "?"} / high ${q.fiftyTwoWeekHigh ?? "?"}
-Dividend yield: ${q.trailingAnnualDividendYield ?? q.dividendYield ?? "?"}
-Avg analyst target: ${q.targetMeanPrice ?? "?"}  (low ${q.targetLowPrice ?? "?"} / high ${q.targetHighPrice ?? "?"})
-Recommendation: ${q.averageAnalystRating ?? q.recommendationKey ?? "?"}`;
+    // Only the figures we actually have. Listing missing ones as "?" invited the
+    // model to fill them in from memory, which is where made-up margins and
+    // analyst targets came from.
+    const num = (v: unknown, digits = 2) => (typeof v === "number" && Number.isFinite(v) ? v.toFixed(digits) : null);
+    const big = (v: unknown) =>
+      typeof v === "number" && v > 0 ? (v >= 1e12 ? `$${(v / 1e12).toFixed(2)}T` : v >= 1e9 ? `$${(v / 1e9).toFixed(1)}B` : `$${(v / 1e6).toFixed(0)}M`) : null;
+    const earningsTs = q.earningsTimestampStart ?? q.earningsTimestamp;
+    const quoteLines = [
+      `Today: ${today}`,
+      `Stock: ${companyName} (${sym})`,
+      num(q.regularMarketPrice) && `Price: ${num(q.regularMarketPrice)} ${q.currency ?? ""}`.trim(),
+      num(q.regularMarketChangePercent) && `Change today: ${num(q.regularMarketChangePercent)}%`,
+      num(q.regularMarketDayLow) && num(q.regularMarketDayHigh) && `Day range: ${num(q.regularMarketDayLow)}-${num(q.regularMarketDayHigh)}`,
+      num(q.fiftyTwoWeekLow) && num(q.fiftyTwoWeekHigh) && `52-week range: ${num(q.fiftyTwoWeekLow)}-${num(q.fiftyTwoWeekHigh)}`,
+      big(q.marketCap) && `Market cap: ${big(q.marketCap)}`,
+      num(q.trailingPE, 1) && `Trailing P/E: ${num(q.trailingPE, 1)}`,
+      num(q.forwardPE, 1) && `Forward P/E: ${num(q.forwardPE, 1)}`,
+      num(q.epsTrailingTwelveMonths) && `EPS (trailing 12 months): ${num(q.epsTrailingTwelveMonths)}`,
+      num(q.dividendYield) && `Dividend yield: ${num(q.dividendYield)}%`,
+      // Yahoo keeps the last report's date until the next one is scheduled.
+      typeof earningsTs === "number" && earningsTs > 0 &&
+        `${earningsTs * 1000 > Date.now() ? "Next" : "Last"} earnings report: ${new Date(earningsTs * 1000).toISOString().slice(0, 10)}`,
+    ].filter(Boolean);
+    const fundamentalLines = await fundamentalsPromise;
+    const quoteBlock = `${quoteLines.join("\n")}
+${fundamentalLines.length ? `\nRESULTS FROM ${companyName.toUpperCase()}'S SEC FILINGS:\n${fundamentalLines.map((l) => `- ${l}`).join("\n")}\n` : ""}
+These are the ONLY figures available about ${companyName}. Never state, estimate or imply any other figure about it (for example analyst price targets or ratings, beta, institutional ownership, or margins and debt that aren't listed). If a point would need one, make the point without the number or leave it out.`;
 
     const headlinesBlock = `Recent headlines about ${companyName} (${sym}):
 ${headlines.join("\n") || "(no recent headlines)"}`;
 
-    const scopeGuard = `CRITICAL: ONLY analyze ${companyName} (${sym}). Do NOT discuss any other ticker or company. Ignore any headline above that is not directly about ${companyName}.`;
+    const scopeGuard = `CRITICAL: This analysis is about ${companyName} (${sym}) only. Mention another company only where a story above ties it directly to ${companyName} (a deal, customer, partner or rival in that story), and never analyze another company's own stock. Ignore any headline above that is not about ${companyName}.`;
 
     const priorityHardRules = `HARD RULES for whyMoved (violating these is a failure):
 - NEVER say "broad market action", "no recent headlines", "no news", "market sentiment", "general market conditions", or any similar filler.
 - If a RESEARCH article above is provided, whyMoved MUST be built from it and MUST include at least one bracket citation like [1]. Name the actual catalyst and the reported number (earnings, guidance, analyst action, product/legal/macro event) as reported.
 - Never state a catalyst that is not supported by the research or headlines above. If the research is thin, say what IS known and then explain the rest from the structural data.
 - Every headline above is dated. NEVER treat a headline marked more than a few days old as the reason for TODAY's move, and NEVER cite a macroeconomic event (a Fed rate decision, a jobs or CPI report, an election, etc.) from memory — only if that exact event appears in the RESEARCH or a headline above dated within the last few days. If nothing recent is given, fall back to the structural data rule below instead of guessing a stale macro cause.
-- If they do NOT give a concrete catalyst, explain the move from the STRUCTURAL data above. Call out whichever apply and cite the numbers: extreme under- or over-performance vs the 52-week range, severe unprofitability (negative EPS, negative operating/profit margins), lack of institutional backing (low heldPercentInstitutions), heavy debt load (high debtToEquity / totalDebt), or high volatility (beta well above 1, wide day range). Tie those structural facts to why the price is reacting the way it is today.
+- If they do NOT give a concrete catalyst, explain the move from the figures above, citing the numbers: where the price sits in its 52-week range, profitability and growth from the SEC filing results, debt, or an unusually wide day range. Never present a guess as the cause.
 - 3-5 sentences. Concrete numbers, not adjectives.
 HARD RULES for positives and negatives (violating these is a failure):
-- Every bullet MUST be grounded in EITHER (a) a RESEARCH article / headline above, or (b) the structural quote data above (valuation, margins, EPS, debt, growth, beta, institutional ownership, 52-week range, analyst target). NEVER invent a claim from general knowledge or memory.
+- Every bullet MUST be grounded in EITHER (a) a RESEARCH article / headline above, or (b) the figures listed above (price data, valuation, and the SEC filing results: revenue growth, margins, profit, cash, debt). NEVER invent a claim or a number from general knowledge or memory.
 - When a bullet draws on a RESEARCH article, it MUST end with that article's bracket citation (e.g. [1], [2]), using the SAME numbering as whyMoved. Never cite a number that is not listed above.
 - When there is not enough research to support a specific bullish or bearish claim, do NOT guess: fall back explicitly to the structural financial data above and cite the actual figure (e.g. "Forward P/E of 18.4 vs trailing 24.1 implies expected earnings growth", "Debt/Equity of 162 leaves little cushion").
 - No generic filler ("strong brand", "faces competition", "macro uncertainty") unless it is tied to a cited article or a specific number above.
@@ -346,7 +398,7 @@ HARD RULES for positives and negatives (violating these is a failure):
 - 4-6 bullets each, 1-2 sentences, concrete numbers over adjectives.
 HARD RULES for stanceScore and stanceReason (where this stock sits between its bear case and its bull case):
 - stanceScore is an integer from -100 (the bear case clearly dominates) to 100 (the bull case clearly dominates); 0 means the two cases are evenly matched.
-- Score it from YOUR positives and negatives, weighed by materiality, for someone holding the stock for the next 12 months: growth vs valuation, profitability, balance sheet, analyst target vs the current price, and the 52-week trend. Today's move alone must NOT decide it.
+- Score it from YOUR positives and negatives, weighed by materiality, for someone holding the stock for the next 12 months: growth vs valuation, profitability, balance sheet, and the 52-week trend. Today's move alone must NOT decide it.
 - Most stocks belong between -50 and 50. Go beyond 60 either way only when one side clearly outweighs the other on several of those factors.
 - stanceReason: ONE plain-English sentence for a beginner that names the single strongest bull point and the single strongest bear point and says which one outweighs the other. No citations, no jargon.`;
 
@@ -359,7 +411,7 @@ ${headlinesBlock}
 ${webBlock}
 ${scopeGuard}
 
-Produce a DETAILED, in-depth analyst-grade summary. Be specific and quantitative — cite the actual numbers above (% change, margins, P/E, EPS, debt levels, beta, institutional ownership). Plain English, no disclaimers.
+Produce a DETAILED, in-depth analyst-grade summary. Be specific and quantitative — cite the actual numbers above (% change, P/E, EPS, revenue growth, margins, cash and debt). Plain English, no disclaimers.
 
 ${priorityHardRules}
 
@@ -382,18 +434,18 @@ Return strict JSON with shape:
 ${headlinesBlock}
 ${scopeGuard}
 
-Produce a DETAILED, in-depth analyst-grade summary. Be specific and quantitative — cite the actual numbers above (% change, margins, P/E, EPS, debt levels, beta, institutional ownership). Plain English, no disclaimers.
+Produce a DETAILED, in-depth analyst-grade summary. Be specific and quantitative — cite the actual numbers above (% change, P/E, EPS, revenue growth, margins, cash and debt). Plain English, no disclaimers.
 
 Return strict JSON with shape:
 {
-  "predictedRevenue": string,      // a CONCRETE estimated next-fiscal-year TOTAL revenue figure as a dollar amount (e.g. "~$412B" or "~$8.5B"). Base it on the latest reported revenue and the expected growth rate. ALWAYS give a specific number, not a range of words. If genuinely unknown, give your best quantitative estimate and note it is approximate.
+  "predictedRevenue": string,      // a CONCRETE estimated next-fiscal-year TOTAL revenue figure as a dollar amount (e.g. "~$412B" or "~$8.5B"), then one short clause on how you got it. Base it on the SEC filing results above (latest fiscal year revenue and the latest quarter's growth). If no revenue figure is listed above, say "Not enough reported data to estimate" instead of guessing.
   "revenueGrowth": string,         // 2-3 sentences on historical + expected revenue growth trajectory, cite YoY % if known
   "earningsGrowth": string,        // 2-3 sentences on EPS trend, beat/miss history, forward growth expectations
   "margins": string,               // 2-3 sentences on gross/operating/net margin quality vs peers
-  "balanceSheet": string,          // 2-3 sentences on debt levels (cite debtToEquity / totalDebt above), cash position, and leverage manageability. Do not hand-wave — mention the actual debt figure.
+  "balanceSheet": string,          // 2-3 sentences on debt, cash and leverage using the balance sheet figures above. If none are listed, say the filings data isn't available rather than guessing.
   "moat": string,                  // 2-3 sentences on competitive edge: brand, scale, network effects, switching costs, IP
   "earnings": string,              // 2-3 sentences on most recent + upcoming earnings event
-  "forecast": string               // 3-4 sentences: 12-month price/business outlook, analyst consensus, key catalysts to watch
+  "forecast": string               // 3-4 sentences: 12-month business outlook and the key catalysts to watch, from the figures and headlines above. Never claim an analyst consensus or price target; none is given.
 }`;
 
     // Legacy "full" — all 13 fields in one call, unchanged. Kept for any caller
@@ -404,7 +456,7 @@ ${headlinesBlock}
 ${webBlock}
 ${scopeGuard}
 
-Produce a DETAILED, in-depth analyst-grade summary. Be specific and quantitative — cite the actual numbers above (% change, margins, P/E, EPS, debt levels, beta, institutional ownership). Plain English, no disclaimers.
+Produce a DETAILED, in-depth analyst-grade summary. Be specific and quantitative — cite the actual numbers above (% change, P/E, EPS, revenue growth, margins, cash and debt). Plain English, no disclaimers.
 
 ${priorityHardRules}
 
@@ -416,14 +468,14 @@ Return strict JSON with shape:
   "positives": [string],           // 4-6 detailed bullets, grounded + cited per the HARD RULES above
   "negatives": [string],           // 4-6 detailed bullets, grounded + cited per the HARD RULES above
 
-  "predictedRevenue": string,      // a CONCRETE estimated next-fiscal-year TOTAL revenue figure as a dollar amount (e.g. "~$412B" or "~$8.5B"). Base it on the latest reported revenue and the expected growth rate. ALWAYS give a specific number, not a range of words. If genuinely unknown, give your best quantitative estimate and note it is approximate.
+  "predictedRevenue": string,      // a CONCRETE estimated next-fiscal-year TOTAL revenue figure as a dollar amount (e.g. "~$412B" or "~$8.5B"), then one short clause on how you got it. Base it on the SEC filing results above (latest fiscal year revenue and the latest quarter's growth). If no revenue figure is listed above, say "Not enough reported data to estimate" instead of guessing.
   "revenueGrowth": string,         // 2-3 sentences on historical + expected revenue growth trajectory, cite YoY % if known
   "earningsGrowth": string,        // 2-3 sentences on EPS trend, beat/miss history, forward growth expectations
   "margins": string,               // 2-3 sentences on gross/operating/net margin quality vs peers
-  "balanceSheet": string,          // 2-3 sentences on debt levels (cite debtToEquity / totalDebt above), cash position, and leverage manageability. Do not hand-wave — mention the actual debt figure.
+  "balanceSheet": string,          // 2-3 sentences on debt, cash and leverage using the balance sheet figures above. If none are listed, say the filings data isn't available rather than guessing.
   "moat": string,                  // 2-3 sentences on competitive edge: brand, scale, network effects, switching costs, IP
   "earnings": string,              // 2-3 sentences on most recent + upcoming earnings event
-  "forecast": string,              // 3-4 sentences: 12-month price/business outlook, analyst consensus, key catalysts to watch
+  "forecast": string,              // 3-4 sentences: 12-month business outlook and the key catalysts to watch, from the figures and headlines above. Never claim an analyst consensus or price target; none is given.
   "outlook": string,               // 2 sentence neutral synthesis
   "stanceScore": number,           // integer -100..100, per the HARD RULES above
   "stanceReason": string           // one sentence, per the HARD RULES above
@@ -498,7 +550,7 @@ Return strict JSON with shape:
     // 2200 truncates 13 fields' worth of output, so keep real headroom per call
     // rather than tune this tightly; the ceiling doesn't cost latency, only the
     // tokens actually generated do, and each split call generates much less.
-    const maxTokens = isBeginner ? 1000 : isPriority ? 2200 : isExtended ? 2000 : 3500;
+    const maxTokens = isBeginner ? 1000 : isPriority ? 2800 : isExtended ? 2400 : 3800;
     const messages = [
       { role: "system", content: (isBeginner
           ? "You explain stocks to first-time investors in friendly plain English."
@@ -518,11 +570,20 @@ Return strict JSON with shape:
         // silently degrades the ENTIRE response to "Analysis unavailable" fallback text for every
         // field — confirmed live for GOOGL at 2200. Bound worst-case runaway generation without
         // risking that.
-        body: JSON.stringify({ model, messages, response_format: { type: "json_object" }, max_tokens: maxTokens }),
+        body: JSON.stringify({
+          model,
+          messages,
+          response_format: { type: "json_object" },
+          max_tokens: maxTokens,
+          // Reasoning tokens count toward max_tokens; short reasoning keeps the
+          // JSON from being cut off (which would make the whole response unusable).
+          ...(model.startsWith("openai/gpt-oss") ? { reasoning_effort: "low" } : {}),
+        }),
       });
 
-    // Primary: Groq, then a second Groq model (separate rate-limit bucket),
-    // then Lovable AI gateway as the last resort.
+    // Primary: Groq's larger gpt-oss-120b (noticeably better analysis than the
+    // 20b), then the 20b (separate rate-limit bucket), then Lovable AI gateway
+    // as the last resort.
     // Groq's free tier caps tokens-per-minute (prompt + max_tokens count), so
     // on a short 429 we wait the suggested time and retry once, and on a flaky
     // JSON-validation 400 we retry once, before falling through.
@@ -553,10 +614,10 @@ Return strict JSON with shape:
     const groqUnavailable = (r: Response) =>
       r.status === 429 || r.status === 402 || r.status === 404 || r.status === 400 || r.status >= 500;
 
-    let aiRes = await callGroq("openai/gpt-oss-20b");
+    let aiRes = await callGroq("openai/gpt-oss-120b");
     if (groqUnavailable(aiRes)) {
       console.warn("groq primary unavailable", aiRes.status, (await aiRes.clone().text()).slice(0, 500));
-      aiRes = await callGroq("openai/gpt-oss-120b");
+      aiRes = await callGroq("openai/gpt-oss-20b");
     }
 
     if (groqUnavailable(aiRes) && LOVABLE_API_KEY) {

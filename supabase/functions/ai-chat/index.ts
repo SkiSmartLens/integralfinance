@@ -11,7 +11,12 @@ const SYSTEM = `You are Integral, the live AI guide for Integral Stocks.
 
 You can BOTH talk to the user AND take actions in the app for them. You can answer ANY question about ANY publicly traded stock, ETF, index, crypto, or FX pair. The user's request will be enriched below with LIVE market data (quotes, key stats, recent news) for any tickers/companies they mentioned — USE THAT DATA in your answer. Quote whatever numbers, dates, and headlines are relevant.
 
-If the user asks something that requires data you do not have (e.g. detailed multi-year financial statements), give your best informed estimate using the data provided plus general knowledge about the company, and clearly note any assumption. Never refuse — always give a thoughtful answer.
+Most users are beginners and students. Explain any jargon in a few plain words the first time you use it, and lead with the answer before the detail.
+
+Where facts come from:
+- Anything current (prices, today's move, recent results, news, upcoming earnings) must come from the LIVE MARKET DATA and RECENT ARTICLES blocks below. The "SEC filings" lines there are the company's own reported results, so prefer them for revenue, profit, margins, cash and debt.
+- General knowledge is fine for background that doesn't go stale: what a company does, its history, how an investing concept works.
+- Never state a current figure (a price, a margin, an analyst target, a growth rate) that isn't in the data below. If the user needs one you don't have, say so in one short sentence and answer with what you do have. Don't refuse a reasonable question.
 
 Take action by appending a JSON block at the very end of your message:
 
@@ -93,19 +98,6 @@ async function quoteFor(symbol: string): Promise<any | null> {
   return j?.quoteResponse?.result?.[0] ?? null;
 }
 
-async function summaryFor(symbol: string): Promise<any | null> {
-  const modules = "summaryProfile,financialData,defaultKeyStatistics,earnings,recommendationTrend,price";
-  const j = await yfetch(`https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(symbol)}?modules=${modules}`);
-  return j?.quoteSummary?.result?.[0] ?? null;
-}
-
-async function newsFor(symbol: string): Promise<string[]> {
-  const j = (await pfetch(`kind=search&q=${encodeURIComponent(symbol)}&quotesCount=0&newsCount=8`))
-    ?? (await yfetch(`https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(symbol)}&quotesCount=0&newsCount=8`));
-  const items = j?.news ?? [];
-  return items.slice(0, 6).map((n: any) => n?.title).filter(Boolean);
-}
-
 function fmt(n: any, d = 2): string {
   if (n == null || typeof n !== "number" || !isFinite(n)) return "—";
   if (Math.abs(n) >= 1e12) return (n / 1e12).toFixed(2) + "T";
@@ -114,44 +106,36 @@ function fmt(n: any, d = 2): string {
   return n.toFixed(d);
 }
 
-function pickVal(v: any): any { return v && typeof v === "object" && "raw" in v ? v.raw : v; }
+/** Revenue, margins, debt and cash from the company's SEC filings (via yahoo-proxy). Empty for funds, crypto, non-US. */
+async function fundamentalsFor(symbol: string): Promise<string[]> {
+  const j = await pfetch(`kind=fundamentals&symbol=${encodeURIComponent(symbol)}`);
+  return Array.isArray(j?.lines) ? j.lines : [];
+}
 
-async function gatherStockContext(symbol: string): Promise<string | null> {
+async function gatherStockContext(symbol: string): Promise<{ name: string; block: string } | null> {
   const sym = symbol.toUpperCase();
-  const [q, s, news] = await Promise.all([quoteFor(sym), summaryFor(sym), newsFor(sym)]);
-  if (!q && !s) return null;
-  const name = q?.longName || q?.shortName || s?.price?.longName || sym;
-  const profile = s?.summaryProfile ?? {};
-  const fin = s?.financialData ?? {};
-  const ks = s?.defaultKeyStatistics ?? {};
-  const earn = s?.earnings ?? {};
-  const rec = s?.recommendationTrend?.trend?.[0] ?? {};
+  const [q, filings] = await Promise.all([quoteFor(sym), fundamentalsFor(sym)]);
+  if (!q && !filings.length) return null;
+  const name = q?.longName || q?.shortName || sym;
 
-  const lines: string[] = [];
-  lines.push(`### ${name} (${sym})`);
-  if (profile.sector || profile.industry) lines.push(`Sector: ${profile.sector ?? "—"} · Industry: ${profile.industry ?? "—"}`);
+  // Only figures we actually have, so the model has nothing to fill in.
+  const lines: string[] = [`### ${name} (${sym})`];
   if (q?.regularMarketPrice != null) {
-    lines.push(`Price: ${fmt(q.regularMarketPrice)} ${q.currency ?? ""} · Change: ${fmt(q.regularMarketChange)} (${fmt(q.regularMarketChangePercent)}%) · Day range: ${fmt(q.regularMarketDayLow)}–${fmt(q.regularMarketDayHigh)} · 52w: ${fmt(q.fiftyTwoWeekLow)}–${fmt(q.fiftyTwoWeekHigh)}`);
+    lines.push(`Price: ${fmt(q.regularMarketPrice)} ${q.currency ?? ""} · Change today: ${fmt(q.regularMarketChange)} (${fmt(q.regularMarketChangePercent)}%) · Day range: ${fmt(q.regularMarketDayLow)}–${fmt(q.regularMarketDayHigh)} · 52-week range: ${fmt(q.fiftyTwoWeekLow)}–${fmt(q.fiftyTwoWeekHigh)}`);
   }
-  lines.push(`Market cap: ${fmt(q?.marketCap)} · Shares out: ${fmt(q?.sharesOutstanding)} · Avg vol: ${fmt(q?.averageDailyVolume3Month)}`);
-  lines.push(`Valuation: P/E (TTM) ${fmt(q?.trailingPE)} · Fwd P/E ${fmt(q?.forwardPE)} · PEG ${fmt(pickVal(ks?.pegRatio))} · P/S ${fmt(pickVal(ks?.priceToSalesTrailing12Months))} · P/B ${fmt(pickVal(ks?.priceToBook))}`);
-  lines.push(`Profitability: Gross margin ${fmt(pickVal(fin?.grossMargins) * 100)}% · Op margin ${fmt(pickVal(fin?.operatingMargins) * 100)}% · Profit margin ${fmt(pickVal(fin?.profitMargins) * 100)}% · ROE ${fmt(pickVal(fin?.returnOnEquity) * 100)}%`);
-  lines.push(`Growth: Revenue ${fmt(pickVal(fin?.totalRevenue))} · Revenue growth ${fmt(pickVal(fin?.revenueGrowth) * 100)}% YoY · Earnings growth ${fmt(pickVal(fin?.earningsGrowth) * 100)}% YoY · EPS (TTM) ${fmt(q?.epsTrailingTwelveMonths)}`);
-  lines.push(`Balance sheet: Cash ${fmt(pickVal(fin?.totalCash))} · Debt ${fmt(pickVal(fin?.totalDebt))} · Debt/Equity ${fmt(pickVal(fin?.debtToEquity))} · Current ratio ${fmt(pickVal(fin?.currentRatio))} · Free cash flow ${fmt(pickVal(fin?.freeCashflow))}`);
-  if (fin?.targetMeanPrice || rec?.strongBuy != null) {
-    lines.push(`Analyst: target ${fmt(pickVal(fin?.targetMeanPrice))} (low ${fmt(pickVal(fin?.targetLowPrice))} / high ${fmt(pickVal(fin?.targetHighPrice))}) · ratings strongBuy ${rec?.strongBuy ?? "—"} / buy ${rec?.buy ?? "—"} / hold ${rec?.hold ?? "—"} / sell ${rec?.sell ?? "—"} / strongSell ${rec?.strongSell ?? "—"}`);
-  }
-  if (q?.earningsTimestampStart || q?.earningsTimestamp) {
-    const ts = (q.earningsTimestampStart ?? q.earningsTimestamp) * 1000;
-    lines.push(`Next earnings: ${new Date(ts).toUTCString()}`);
-  }
-  if (profile.longBusinessSummary) {
-    lines.push(`Business: ${String(profile.longBusinessSummary).slice(0, 600)}`);
-  }
-  if (news.length) {
-    lines.push(`Recent headlines:\n${news.map((t) => `- ${t}`).join("\n")}`);
-  }
-  return lines.join("\n");
+  const valuation = [
+    q?.marketCap && `Market cap: ${fmt(q.marketCap)}`,
+    q?.trailingPE && `P/E (trailing): ${fmt(q.trailingPE)}`,
+    q?.forwardPE && `P/E (forward): ${fmt(q.forwardPE)}`,
+    q?.epsTrailingTwelveMonths && `EPS (trailing 12 months): ${fmt(q.epsTrailingTwelveMonths)}`,
+    q?.dividendYield && `Dividend yield: ${fmt(q.dividendYield)}%`,
+  ].filter(Boolean);
+  if (valuation.length) lines.push(valuation.join(" · "));
+  const ts = q?.earningsTimestampStart ?? q?.earningsTimestamp;
+  // Yahoo keeps the last report's date until the next one is scheduled.
+  if (ts) lines.push(`${ts * 1000 > Date.now() ? "Next" : "Last"} earnings report: ${new Date(ts * 1000).toDateString()}`);
+  if (filings.length) lines.push(`From its SEC filings:\n${filings.map((l) => `- ${l}`).join("\n")}`);
+  return { name, block: lines.join("\n") };
 }
 
 
@@ -197,11 +181,24 @@ async function firecrawlArticles(symbol: string, name: string): Promise<Article[
   } catch { return []; }
 }
 
+/** Stories from the site's news feeds (CNBC, Fox Business, IBD, ...), with article text where the feed has it. */
+async function feedArticles(symbol: string, name: string): Promise<Article[]> {
+  const j = await pfetch(`kind=news&limit=6&q=${encodeURIComponent(symbol)}&name=${encodeURIComponent(name)}`);
+  return ((j?.stories ?? []) as { title: string; publisher: string; url: string; published: number; summary: string; text: string }[]).map((st) => ({
+    title: st.title,
+    publisher: st.publisher,
+    url: st.url,
+    text: st.text || st.summary,
+    date: st.published ? new Date(st.published * 1000).toISOString().slice(0, 10) : undefined,
+  }));
+}
+
 async function gatherArticles(symbol: string, name: string): Promise<Article[]> {
-  const [yh, fc] = await Promise.all([yahooArticles(symbol), firecrawlArticles(symbol, name)]);
+  const [feeds, yh, fc] = await Promise.all([feedArticles(symbol, name), yahooArticles(symbol), firecrawlArticles(symbol, name)]);
   const out: Article[] = [];
   const seen = new Set<string>();
-  for (const a of [...fc, ...yh]) {
+  // Stories with text first: the model can only summarize what it can read.
+  for (const a of [...feeds, ...fc, ...yh]) {
     if (seen.has(a.url)) continue;
     seen.add(a.url);
     out.push(a);
@@ -212,7 +209,6 @@ async function gatherArticles(symbol: string, name: string): Promise<Article[]> 
 
 async function resolveCandidates(text: string, contextSymbol?: string): Promise<string[]> {
   const found = new Set<string>();
-  if (contextSymbol) found.add(contextSymbol.toUpperCase());
 
   // 1) Explicit uppercase tickers (1–5 letters), plus $TICKER, plus ^INDEX, plus crypto like BTC-USD
   for (const m of text.matchAll(/\$([A-Za-z]{1,5})\b/g)) found.add(m[1].toUpperCase());
@@ -238,6 +234,9 @@ async function resolveCandidates(text: string, contextSymbol?: string): Promise<
   const lookups = Array.from(phrases).slice(0, 6).map((p) => searchSymbol(p));
   const resolved = await Promise.all(lookups);
   for (const s of resolved) if (s) found.add(s.toUpperCase());
+  // The stock on the page the user is looking at comes after anything they
+  // named, so "should I sell Tesla?" asked from Apple's page is about Tesla.
+  if (contextSymbol) found.add(contextSymbol.toUpperCase());
 
   return Array.from(found).slice(0, 4);
 }
@@ -254,11 +253,13 @@ Deno.serve(async (req) => {
     // Use the last user turn to extract relevant tickers
     const lastUser = [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
     const candidates = lastUser ? await resolveCandidates(lastUser, context?.symbol) : (context?.symbol ? [context.symbol.toUpperCase()] : []);
-    const stockBlocks = (await Promise.all(candidates.map((s) => gatherStockContext(s)))).filter(Boolean) as string[];
+    const stocks = await Promise.all(candidates.map((s) => gatherStockContext(s)));
+    const stockBlocks = stocks.filter(Boolean).map((x) => x!.block);
 
     // Read what recent articles actually say about the ticker(s) in question.
-    const articleLists = await Promise.all(candidates.slice(0, 2).map((s) => gatherArticles(s, "")));
-    const allArticles = articleLists.flat().slice(0, 10);
+    const articleLists = await Promise.all(candidates.slice(0, 2).map((s, i) => gatherArticles(s, stocks[i]?.name ?? "")));
+    // Most of the room goes to the first company (the one asked about).
+    const allArticles = [...(articleLists[0] ?? []).slice(0, 7), ...(articleLists[1] ?? []).slice(0, 3)];
     const researchBlock = allArticles.length
       ? `\n\n=== RECENT ARTICLES (read these, summarize what they say, cite as [1], [2]...) ===\n` +
         allArticles.map((a, i) => `[${i + 1}] ${a.title} — ${a.publisher}${a.date ? ` (${a.date})` : ""}\n${a.url}\n${a.text ? a.text.slice(0, 1200) : "(headline only)"}`).join("\n\n") +
@@ -272,7 +273,11 @@ Deno.serve(async (req) => {
       ? `\n\n=== LIVE MARKET DATA (use these numbers) ===\n${stockBlocks.join("\n\n")}\n=== END LIVE DATA ===`
       : "";
 
-    const system: Msg = { role: "system", content: SYSTEM + (ctxLine ? `\n\n${ctxLine}` : "") + liveBlock + researchBlock };
+    const today = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "America/New_York" });
+    const system: Msg = {
+      role: "system",
+      content: SYSTEM + `\n\nToday is ${today} (US Eastern time).` + (ctxLine ? `\n\n${ctxLine}` : "") + liveBlock + researchBlock,
+    };
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
@@ -280,16 +285,26 @@ Deno.serve(async (req) => {
       fetch(url, {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model, messages: [system, ...messages], stream: true }),
+        body: JSON.stringify({
+          model,
+          messages: [system, ...messages],
+          stream: true,
+          // gpt-oss thinks before answering (streamed separately, so users only
+          // see the answer); medium is a good trade between depth and wait.
+          ...(model.startsWith("openai/gpt-oss") ? { reasoning_effort: "medium" } : {}),
+        }),
       });
-
-    let aiRes = await callProvider("https://api.groq.com/openai/v1/chat/completions", GROQ_API_KEY, "llama-3.1-8b-instant");
 
     const groqUnavailable = (r: Response) => r.status === 429 || r.status === 402 || r.status === 404 || r.status === 400 || r.status >= 500;
 
-    if (groqUnavailable(aiRes)) {
-      console.warn("groq primary unavailable", aiRes.status, (await aiRes.clone().text()).slice(0, 500));
-      aiRes = await callProvider("https://api.groq.com/openai/v1/chat/completions", GROQ_API_KEY, "openai/gpt-oss-120b");
+    // Strongest first; each Groq model has its own rate limit, so a busy one
+    // falls through to the next instead of failing.
+    const GROQ = "https://api.groq.com/openai/v1/chat/completions";
+    let aiRes = await callProvider(GROQ, GROQ_API_KEY, "openai/gpt-oss-120b");
+    for (const model of ["openai/gpt-oss-20b", "llama-3.1-8b-instant"]) {
+      if (!groqUnavailable(aiRes)) break;
+      console.warn("groq model unavailable", aiRes.status, (await aiRes.clone().text()).slice(0, 300), "— trying", model);
+      aiRes = await callProvider(GROQ, GROQ_API_KEY, model);
     }
 
     if (groqUnavailable(aiRes) && LOVABLE_API_KEY) {
