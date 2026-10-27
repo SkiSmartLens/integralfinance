@@ -6,7 +6,7 @@ const corsHeaders = {
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 // Bump when the prompt or response schema changes: invalidates both cache levels.
-const CACHE_VERSION = "v7";
+const CACHE_VERSION = "v8";
 
 // Level 1: per-instance memory. Level 2: public.stock_summary_cache, shared across
 // instances (edge instances are short-lived, so level 1 alone was mostly cold).
@@ -343,7 +343,12 @@ HARD RULES for positives and negatives (violating these is a failure):
 - Order bullets by materiality, most decision-relevant first — the single biggest driver of the bull or bear case leads each list, not the easiest fact to find.
 - Do not restate the same underlying fact in both positives and negatives, and do not pad with a near-duplicate of another bullet in the same list — each bullet must add a distinct piece of the picture (a different metric, catalyst, or article).
 - Where the research or data gives you a genuine counterpoint (e.g. strong revenue growth but deteriorating margins, or a bullish headline but stretched valuation), prefer that nuanced framing over a one-sided claim — real theses usually have tension, not just a clean list of good or bad things.
-- 4-6 bullets each, 1-2 sentences, concrete numbers over adjectives.`;
+- 4-6 bullets each, 1-2 sentences, concrete numbers over adjectives.
+HARD RULES for stanceScore and stanceReason (where this stock sits between its bear case and its bull case):
+- stanceScore is an integer from -100 (the bear case clearly dominates) to 100 (the bull case clearly dominates); 0 means the two cases are evenly matched.
+- Score it from YOUR positives and negatives, weighed by materiality, for someone holding the stock for the next 12 months: growth vs valuation, profitability, balance sheet, analyst target vs the current price, and the 52-week trend. Today's move alone must NOT decide it.
+- Most stocks belong between -50 and 50. Go beyond 60 either way only when one side clearly outweighs the other on several of those factors.
+- stanceReason: ONE plain-English sentence for a beginner that names the single strongest bull point and the single strongest bear point and says which one outweighs the other. No citations, no jargon.`;
 
     // "priority" — the fields the UI renders first: whyMoved, positives, negatives,
     // whatItDoes, outlook. Kept together because they're cheap to generate and
@@ -364,7 +369,9 @@ Return strict JSON with shape:
   "whatItDoes": string,            // 1-2 sentences on the company's business — what they actually sell/do and where their revenue comes from. Required.
   "positives": [string],           // 4-6 detailed bullets, grounded + cited per the HARD RULES above
   "negatives": [string],           // 4-6 detailed bullets, grounded + cited per the HARD RULES above
-  "outlook": string                // 2 sentence neutral synthesis
+  "outlook": string,               // 2 sentence neutral synthesis
+  "stanceScore": number,           // integer -100..100, per the HARD RULES above
+  "stanceReason": string           // one sentence, per the HARD RULES above
 }`;
 
     // "extended" — the deep-dive fields rendered further down in collapsed rows.
@@ -417,7 +424,9 @@ Return strict JSON with shape:
   "moat": string,                  // 2-3 sentences on competitive edge: brand, scale, network effects, switching costs, IP
   "earnings": string,              // 2-3 sentences on most recent + upcoming earnings event
   "forecast": string,              // 3-4 sentences: 12-month price/business outlook, analyst consensus, key catalysts to watch
-  "outlook": string                // 2 sentence neutral synthesis
+  "outlook": string,               // 2 sentence neutral synthesis
+  "stanceScore": number,           // integer -100..100, per the HARD RULES above
+  "stanceReason": string           // one sentence, per the HARD RULES above
 }`;
 
     const beginnerSchema = {
@@ -437,8 +446,10 @@ Return strict JSON with shape:
         positives: { type: "array", items: { type: "string" } },
         negatives: { type: "array", items: { type: "string" } },
         outlook: { type: "string" },
+        stanceScore: { type: "integer", minimum: -100, maximum: 100 },
+        stanceReason: { type: "string" },
       },
-      required: ["whyMoved", "whatItDoes", "positives", "negatives", "outlook"],
+      required: ["whyMoved", "whatItDoes", "positives", "negatives", "outlook", "stanceScore", "stanceReason"],
     };
     const extendedSchema = {
       type: "object",
@@ -470,8 +481,10 @@ Return strict JSON with shape:
         earnings: { type: "string" },
         forecast: { type: "string" },
         outlook: { type: "string" },
+        stanceScore: { type: "integer", minimum: -100, maximum: 100 },
+        stanceReason: { type: "string" },
       },
-      required: ["whyMoved", "whatItDoes", "positives", "negatives", "predictedRevenue", "revenueGrowth", "earningsGrowth", "margins", "balanceSheet", "moat", "earnings", "forecast", "outlook"],
+      required: ["whyMoved", "whatItDoes", "positives", "negatives", "predictedRevenue", "revenueGrowth", "earningsGrowth", "margins", "balanceSheet", "moat", "earnings", "forecast", "outlook", "stanceScore", "stanceReason"],
     };
 
 
@@ -621,6 +634,14 @@ Return strict JSON with shape:
         if (!Array.isArray(parsed.negatives) || !parsed.negatives.length) {
           parsed.negatives = ["Analysis unavailable right now."];
           degraded = true;
+        }
+        // The bull-vs-bear spectrum is optional: a missing or malformed score is
+        // dropped (the page then just doesn't draw the spectrum), never guessed.
+        const score = typeof parsed.stanceScore === "number" ? parsed.stanceScore : parseFloat(parsed.stanceScore);
+        if (Number.isFinite(score)) parsed.stanceScore = Math.max(-100, Math.min(100, Math.round(score)));
+        else delete parsed.stanceScore;
+        if (typeof parsed.stanceReason !== "string" || !parsed.stanceReason.trim() || parsed.stanceScore === undefined) {
+          delete parsed.stanceReason;
         }
       }
     }

@@ -15,8 +15,26 @@ export interface StockSummaryData {
   earnings?: string;
   forecast?: string;
   outlook?: string;
+  /** Where the AI puts the stock between its bear case (-100) and bull case (100). */
+  stanceScore?: number;
+  /** One sentence on why the score lands where it does. */
+  stanceReason?: string;
   sources?: SummarySource[];
 }
+
+/** "Leaning bullish" etc. for a stanceScore; the bands are even on both sides of 0. */
+export function stanceLabel(score: number): string {
+  const a = Math.abs(score);
+  if (a <= 10) return "Balanced";
+  const side = score > 0 ? "bullish" : "bearish";
+  if (a < 30) return `Leaning ${side}`;
+  if (a < 60) return side[0].toUpperCase() + side.slice(1);
+  return `Strongly ${side}`;
+}
+
+/** Green, red or neutral for a stanceScore, matching stanceLabel's "Balanced" band. */
+export const stanceTone = (score: number): "up" | "down" | "neutral" =>
+  score > 10 ? "up" : score < -10 ? "down" : "neutral";
 
 const TTL = 1000 * 60 * 30;
 const mem = new Map<string, StockSummaryData>();

@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { CitedText } from "@/components/CitedText";
 import { useLiveNews } from "@/hooks/useLiveNews";
 import { timeAgo } from "@/lib/marketBrief";
+import { BullBearSpectrum } from "@/components/BullBearSpectrum";
 
 import { Sparkles, TrendingUp, TrendingDown, Calendar, Eye, BarChart3, DollarSign, Percent, Landmark, Shield, LineChart, ChevronDown, Zap, Newspaper, ExternalLink } from "lucide-react";
 
@@ -139,17 +140,7 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
             </CollapsibleRow>
           )}
 
-          <CollapsibleRow icon={<TrendingUp className="w-4 h-4 text-up" />} title="Positives">
-            <ul className="text-sm space-y-1.5 list-disc pl-5">
-              {data.positives?.map((p, i) => <li key={i}><CitedText text={p} sources={data.sources} /></li>)}
-            </ul>
-          </CollapsibleRow>
-
-          <CollapsibleRow icon={<TrendingDown className="w-4 h-4 text-down" />} title="Risks">
-            <ul className="text-sm space-y-1.5 list-disc pl-5">
-              {data.negatives?.map((p, i) => <li key={i}><CitedText text={p} sources={data.sources} /></li>)}
-            </ul>
-          </CollapsibleRow>
+          <BullBear data={data} />
           {data.predictedRevenue && (
             <CollapsibleRow icon={<DollarSign className="w-4 h-4 text-primary" />} title="Predicted revenue (estimate)">
               <p className="text-2xl font-extrabold text-primary">{data.predictedRevenue}</p>
@@ -225,6 +216,56 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
         </div>
       )}
     </section>
+  );
+};
+
+// Points shown per side before "Show all".
+const TOP_POINTS = 3;
+
+/**
+ * Where the stock sits between its bear case and bull case, then both cases
+ * side by side, strongest points first. Points past the first few are hidden
+ * until "Show all", but stay in the DOM so search engines index them.
+ */
+const BullBear = ({ data }: { data: Summary }) => {
+  const [showAll, setShowAll] = useState(false);
+  const positives = data.positives ?? [];
+  const negatives = data.negatives ?? [];
+  const extra = Math.max(0, positives.length - TOP_POINTS) + Math.max(0, negatives.length - TOP_POINTS);
+  const side = (title: string, subtitle: string, icon: React.ReactNode, points: string[]) => (
+    <div>
+      <h4 className="flex items-center gap-2 font-semibold">
+        {icon} {title}
+      </h4>
+      <p className="text-xs text-muted-foreground mb-2">{subtitle}</p>
+      <ul className="text-sm space-y-1.5 list-disc pl-5">
+        {points.map((p, i) => (
+          <li key={i} hidden={!showAll && i >= TOP_POINTS}>
+            <CitedText text={p} sources={data.sources} />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+  return (
+    <div className="bg-muted/40 rounded-md p-3 md:p-4 space-y-4">
+      {typeof data.stanceScore === "number" && (
+        <BullBearSpectrum score={data.stanceScore} reason={data.stanceReason} />
+      )}
+      <div className="grid md:grid-cols-2 gap-4 md:gap-6">
+        {side("Bull case", "Why investors buy it", <TrendingUp className="w-4 h-4 text-up" />, positives)}
+        {side("Bear case", "What could go wrong", <TrendingDown className="w-4 h-4 text-down" />, negatives)}
+      </div>
+      {extra > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowAll((v) => !v)}
+          className="text-xs font-semibold text-primary hover:underline"
+        >
+          {showAll ? "Show fewer points" : `Show ${extra} more point${extra === 1 ? "" : "s"}`}
+        </button>
+      )}
+    </div>
   );
 };
 

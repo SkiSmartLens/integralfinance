@@ -63,7 +63,7 @@ export const PostTradeCard = ({
     tone = "good";
     Icon = ShieldCheck;
   } else if (side === "buy") {
-    note = `${symbol} is ${bullishMove ? "up" : "down"} today. Tap "Bullish/Bearish take" below for the AI explanation of why.`;
+    note = `${symbol} is ${bullishMove ? "up" : "down"} today. Open the AI take below to see why.`;
     Icon = TrendingUp;
   } else if (side === "sell") {
     note = `Sold ${shares} share${shares === 1 ? "" : "s"} of ${symbol}. Your cash balance updated — you can redeploy it into other stocks.`;
