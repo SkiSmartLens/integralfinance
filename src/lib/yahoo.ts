@@ -3,7 +3,7 @@
 // by the public home page, and the generated client throws before React mounts when
 // a published build is missing Vite env vars, leaving users on the static loader.
 
-import { fetchCnbcNews, pickStories } from "@/lib/news";
+import { fetchFeedNews, pickStories } from "@/lib/news";
 
 const env = import.meta.env as Record<string, string | undefined>;
 const normalizeUrl = (value?: string) => {
@@ -31,6 +31,14 @@ async function callProxy(params: Record<string, string>): Promise<any> {
   });
   if (!res.ok) throw new Error(`Proxy ${res.status}`);
   return res.json();
+}
+
+/** One of the news feeds the proxy relays (see PROXIED_FEEDS in lib/news.ts), as raw RSS. */
+async function proxyFeed(id: string): Promise<string> {
+  const res = await fetch(`${FN_URL}?kind=rss&feed=${encodeURIComponent(id)}`, {
+    headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
+  });
+  return res.ok ? res.text() : "";
 }
 
 export interface Quote {
@@ -176,6 +184,8 @@ export interface NewsItem {
   title: string;
   /** Short description, when the source gives one. */
   summary?: string;
+  /** The full article as plain text, when the source's feed carries it. */
+  content?: string;
   publisher: string;
   link: string;
   providerPublishTime: number;
@@ -187,13 +197,14 @@ export interface NewsItem {
 /**
  * News for one query, or several merged: market-wide queries ("S&P 500",
  * "^GSPC") get every story, a ticker or company name gets the stories that
- * mention it. Stories come from CNBC (see lib/news.ts), whose articles the
- * AI summarizer can read; Yahoo's search is only used if CNBC can't be reached.
+ * mention it. Stories come from publishers' RSS feeds (see lib/news.ts) whose
+ * articles the AI summarizer can read; Yahoo's search is only used if none of
+ * them can be reached.
  */
 export async function fetchNews(query: string | string[] = "stock market"): Promise<NewsItem[]> {
   const queries = Array.isArray(query) ? query : [query];
-  const cnbc = await fetchCnbcNews().catch(() => []);
-  if (cnbc.length) return pickStories(cnbc, queries);
+  const feeds = await fetchFeedNews(proxyFeed).catch(() => []);
+  if (feeds.length) return pickStories(feeds, queries);
   return fetchYahooNews(queries);
 }
 

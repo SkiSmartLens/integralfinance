@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { SEO } from "@/components/SEO";
 import { Header } from "@/components/Header";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -147,13 +147,26 @@ interface Result {
   sourceUrl?: string;
   /** Only the headline + summary could be read (e.g. the article is paywalled). */
   partial?: boolean;
+  /** Shown above the translation, e.g. when it's from the news feed's copy of the story. */
+  note?: string;
   error?: string;
 }
+
+/** A news card's own copy of its story (see NewsList), passed in router state. */
+interface StoryState {
+  /** The full article, when the publisher's feed carries it. */
+  text?: string;
+  /** Headline and short description. */
+  summary?: string;
+}
+
+// The translator only reads this much of a text.
+const MAX_TEXT = 6000;
 
 // Parses the streamed, delimiter-based response as it grows. While a section's closing marker
 // hasn't arrived yet, its content is still shown live (partial), which is what makes the "in
 // plain English" panel fill in in real time instead of appearing all at once at the end.
-function parseChunk(acc: string): Omit<Result, "sourceUrl" | "partial" | "error"> {
+function parseChunk(acc: string): Omit<Result, "sourceUrl" | "partial" | "note" | "error"> {
   const plain = (acc.match(/===PLAIN===([\s\S]*?)(?:===GLOSSARY===|$)/)?.[1] ?? "").trim();
   const glossaryRaw = (acc.match(/===GLOSSARY===([\s\S]*?)(?:===TAKEAWAYS===|$)/)?.[1] ?? "").trim();
   const takeawaysRaw = (acc.match(/===TAKEAWAYS===([\s\S]*?)(?:===END===|$)/)?.[1] ?? "").trim();
@@ -190,6 +203,8 @@ const isYahooUrl = (u: string) => {
 
 const JargonTranslator = () => {
   const [params] = useSearchParams();
+  const location = useLocation();
+  const story = (location.state as { story?: StoryState } | null)?.story;
   const prefillUrl = params.get("url") ?? "";
   // Yahoo story ID from a news card, so the backend can read the article directly.
   const prefillUuid = params.get("uuid") ?? undefined;
@@ -201,7 +216,14 @@ const JargonTranslator = () => {
   const [result, setResult] = useState<Result | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const run = useCallback(async (body: { text?: string; url?: string; uuid?: string }) => {
+  /**
+   * Translate a text or the article at a URL. Resolves false if it failed. With
+   * `quiet`, a failure isn't shown (the caller has a fallback to try).
+   */
+  const run = useCallback(async (
+    body: { text?: string; url?: string; uuid?: string },
+    opts: { sourceUrl?: string; note?: string; quiet?: boolean } = {},
+  ): Promise<boolean> => {
     setLoading(true);
     setStreaming(false);
     setResult(null);
@@ -218,15 +240,16 @@ const JargonTranslator = () => {
       if (!res.ok || !res.body) {
         let msg = "AI service is temporarily unavailable.";
         try { const j = await res.json(); if (j?.error) msg = j.error; } catch { /* ignore */ }
-        setResult({ plain: "", glossary: [], keyTakeaways: [], error: msg });
-        return;
+        if (!opts.quiet) setResult({ plain: "", glossary: [], keyTakeaways: [], error: msg });
+        return false;
       }
 
       const sourceUrlHeader = res.headers.get("X-Source-Url");
-      const sourceUrl = sourceUrlHeader ? decodeURIComponent(sourceUrlHeader) : undefined;
+      const sourceUrl = sourceUrlHeader ? decodeURIComponent(sourceUrlHeader) : opts.sourceUrl;
       const partial = res.headers.get("X-Source-Partial") === "1";
+      const note = opts.note;
       setStreaming(true);
-      setResult({ plain: "", glossary: [], keyTakeaways: [], sourceUrl, partial });
+      setResult({ plain: "", glossary: [], keyTakeaways: [], sourceUrl, partial, note });
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -249,13 +272,15 @@ const JargonTranslator = () => {
             const delta = j?.choices?.[0]?.delta?.content;
             if (delta) {
               acc += delta;
-              setResult((prev) => ({ ...parseChunk(acc), sourceUrl: prev?.sourceUrl, partial: prev?.partial }));
+              setResult((prev) => ({ ...parseChunk(acc), sourceUrl: prev?.sourceUrl, partial: prev?.partial, note: prev?.note }));
             }
           } catch { /* ignore partial/non-JSON lines */ }
         }
       }
+      return true;
     } catch {
-      setResult({ plain: "", glossary: [], keyTakeaways: [], error: "Network error. Try again." });
+      if (!opts.quiet) setResult({ plain: "", glossary: [], keyTakeaways: [], error: "Network error. Try again." });
+      return false;
     } finally {
       setLoading(false);
       setStreaming(false);
@@ -268,9 +293,34 @@ const JargonTranslator = () => {
       autoRan.current = prefillUrl;
       setMode("url");
       setUrl(prefillUrl);
-      run({ url: prefillUrl, uuid: prefillUuid });
+      // Tried in order until one works; only the last one's failure is shown.
+      // From a news card, the feed's full copy of the article comes first: it
+      // needs no trip to the publisher's site, which may turn automated readers
+      // away. The headline and summary are the last resort.
+      const attempts: ((quiet: boolean) => Promise<boolean>)[] = [];
+      if (story?.text && story.text.length >= 600) {
+        attempts.push((quiet) => run({ text: story.text!.slice(0, MAX_TEXT) }, { sourceUrl: prefillUrl, quiet }));
+      }
+      attempts.push((quiet) => run({ url: prefillUrl, uuid: prefillUuid }, { quiet }));
+      if (story?.summary && story.summary.length >= 40) {
+        attempts.push((quiet) =>
+          run(
+            { text: story.summary!.slice(0, MAX_TEXT) },
+            {
+              sourceUrl: prefillUrl,
+              quiet,
+              note: "The publisher's site didn't let us open the full article, so this is based on the story's headline and summary. Open the source link for the whole story.",
+            },
+          ),
+        );
+      }
+      (async () => {
+        for (let i = 0; i < attempts.length; i++) {
+          if (await attempts[i](i < attempts.length - 1)) return;
+        }
+      })();
     }
-  }, [prefillUrl, prefillUuid, run]);
+  }, [prefillUrl, prefillUuid, run, story]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -366,8 +416,8 @@ const JargonTranslator = () => {
              `Couldn’t translate that: ${result.error}`}
             {mode === "url" && isYahooUrl(url) && (
               <p className="mt-2">
-                Yahoo Finance doesn't let automated readers open its articles. Stories from CNBC, Investor's Business
-                Daily, the BBC, NPR and ABC News work, and every story on our{" "}
+                Yahoo Finance doesn't let automated readers open its articles. Stories from CNBC, Fox Business,
+                Investor's Business Daily, the Guardian, the BBC, CBS, ABC News, NPR and Fortune work, and every story on our{" "}
                 <Link to="/market-brief" className="text-primary font-semibold hover:underline">
                   News page
                 </Link>{" "}
@@ -400,6 +450,9 @@ const JargonTranslator = () => {
                     </button>
                   )}
                 </div>
+                {result.note && !result.partial && (
+                  <p className="text-xs bg-muted/60 border rounded-md p-2.5 mb-3 text-muted-foreground">{result.note}</p>
+                )}
                 {result.partial && (
                   <p className="text-xs bg-muted/60 border rounded-md p-2.5 mb-3 text-muted-foreground">
                     Only the headline and summary were available. The full article is behind the publisher’s paywall, so

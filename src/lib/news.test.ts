@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseCnbcRss, pickStories, shortCompanyName } from "./news";
+import { mixPublishers, parseRss, pickStories, shortCompanyName } from "./news";
 import type { NewsItem } from "./yahoo";
 
 // Trimmed from a real CNBC feed (search.cnbc.com/rs/search/combinedcms/view.xml).
@@ -27,12 +27,12 @@ const FEED = `<?xml version="1.0" encoding="UTF-8"?>
   </item>
 </channel></rss>`;
 
-describe("parseCnbcRss", () => {
+describe("parseRss", () => {
   it("reads title, link, summary and time, and skips items without a link", () => {
-    const items = parseCnbcRss(FEED);
+    const items = parseRss(FEED, "CNBC");
     expect(items).toHaveLength(2);
     expect(items[0]).toMatchObject({
-      uuid: "cnbc-108448303",
+      uuid: "CNBC-108448303",
       title: "Nvidia earnings are coming: here's what Wall Street expects",
       summary: "Chipmaker NVDA reports after the bell on Wednesday.",
       publisher: "CNBC",
@@ -41,7 +41,50 @@ describe("parseCnbcRss", () => {
     });
   });
   it("returns nothing for a broken feed", () => {
-    expect(parseCnbcRss("not xml at all")).toEqual([]);
+    expect(parseRss("not xml at all", "CNBC")).toEqual([]);
+  });
+  it("keeps the full article and the picture when the feed has them", () => {
+    const body = "<p>GM said Tuesday it will move its listing.</p><p>" + "Shares rose. ".repeat(40) + "</p>";
+    const xml = `<rss xmlns:media="http://search.yahoo.com/mrss/" xmlns:content="http://purl.org/rss/1.0/modules/content/" version="2.0"><channel>
+      <item>
+        <link>https://www.foxbusiness.com/markets/gm-nasdaq</link>
+        <title>GM to move listing to Nasdaq</title>
+        <description>GM will move its shares from the NYSE.</description>
+        <content:encoded><![CDATA[${body}]]></content:encoded>
+        <media:content url="https://a57.foxnews.com/gm.jpg" medium="image" />
+        <pubDate>Tue, 27 Oct 2026 09:26:44 -0400</pubDate>
+      </item>
+      <item>
+        <link>https://www.bbc.co.uk/news/articles/x</link>
+        <title>Short one</title>
+        <content:encoded><![CDATA[<p>Too short to use.</p>]]></content:encoded>
+        <media:thumbnail url="https://ichef.bbci.co.uk/x.jpg" width="240" height="135" />
+      </item>
+    </channel></rss>`;
+    const [fox, bbc] = parseRss(xml, "Fox Business");
+    expect(fox.content).toMatch(/^GM said Tuesday it will move its listing\.\n\nShares rose\./);
+    expect(fox.thumbnail?.resolutions[0].url).toBe("https://a57.foxnews.com/gm.jpg");
+    expect(bbc.content).toBeUndefined();
+    expect(bbc.thumbnail?.resolutions[0].url).toBe("https://ichef.bbci.co.uk/x.jpg");
+  });
+});
+
+describe("mixPublishers", () => {
+  const at = (publisher: string, t: number): NewsItem => ({
+    uuid: `${publisher}${t}`, title: `${publisher} ${t}`, publisher, link: `https://x/${publisher}${t}`, providerPublishTime: t, type: "STORY",
+  });
+  it("pushes an outlet's next story back for each one already picked", () => {
+    const items = [at("CNBC", 9), at("CNBC", 8), at("CNBC", 7), at("BBC", 6), at("CNBC", 5), at("NPR", 4)];
+    expect(mixPublishers(items, 3).map((n) => n.title)).toEqual(["CNBC 9", "BBC 6", "CNBC 8", "NPR 4", "CNBC 7", "CNBC 5"]);
+  });
+  it("gets a 3-hour-old story from another outlet into the top three past a minute-by-minute feed", () => {
+    const cnbc = Array.from({ length: 20 }, (_, i) => at("CNBC", 100_000 - 60 * i));
+    const items = [...cnbc, at("Fox Business", 100_000 - 3 * 3600)];
+    expect(mixPublishers(items).findIndex((n) => n.publisher === "Fox Business")).toBe(2);
+  });
+  it("keeps time order within one outlet", () => {
+    const items = [at("CNBC", 8), at("CNBC", 9)];
+    expect(mixPublishers(items).map((n) => n.title)).toEqual(["CNBC 9", "CNBC 8"]);
   });
 });
 

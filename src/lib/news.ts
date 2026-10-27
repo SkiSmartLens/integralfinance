@@ -1,40 +1,132 @@
 import type { NewsItem } from "@/lib/yahoo";
 
-// News comes from CNBC's public RSS feeds, read straight from the browser
-// (they allow any origin). Yahoo Finance's own story pages can't be read by
-// the jargon translator from the server, so its "AI Summarize" failed on
-// them with a 422; CNBC's articles read in a few seconds.
+// News comes from publishers' public RSS feeds. Every publisher here was
+// checked against the jargon translator ("AI Summarize"): it can open their
+// articles from the server. Yahoo Finance, Forbes, Nasdaq.com, the NYT, WSJ
+// and Seeking Alpha can't be opened that way, so they aren't used.
 
-// Finance sections only; CNBC's Top News feed also carries politics and world news.
-const CNBC_FEEDS = [
-  15839069, // Investing
-  20409666, // Market Insider
-  15839135, // Earnings
-  20910258, // Economy
-  10000664, // Finance
-  19854910, // Technology
-  10001147, // Business
-].map((id) => `https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=${id}`);
+interface Feed {
+  publisher: string;
+  url: string;
+}
 
-/** Parse one RSS feed into news items. Items without a link or title are skipped. */
-export function parseCnbcRss(xml: string): NewsItem[] {
+const cnbc = (id: number): Feed => ({
+  publisher: "CNBC",
+  url: `https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=${id}`,
+});
+
+// These allow any origin, so the browser reads them directly. CNBC: finance
+// sections only; its Top News feed also carries politics and world news.
+const DIRECT_FEEDS: Feed[] = [
+  cnbc(15839069), // Investing
+  cnbc(20409666), // Market Insider
+  cnbc(15839135), // Earnings
+  cnbc(20910258), // Economy
+  cnbc(10000664), // Finance
+  cnbc(19854910), // Technology
+  cnbc(10001147), // Business
+  { publisher: "Fox Business", url: "https://moxie.foxbusiness.com/google-publisher/markets.xml" },
+  { publisher: "Fox Business", url: "https://moxie.foxbusiness.com/google-publisher/economy.xml" },
+];
+
+// These don't allow other sites to read them, so they come through our
+// yahoo-proxy function (kind=rss&feed=<id>), which only fetches this fixed
+// list. Until that function is deployed with it, these come back empty.
+const PROXIED_FEEDS: { publisher: string; id: string }[] = [
+  { publisher: "Investor's Business Daily", id: "ibd" },
+  { publisher: "The Guardian", id: "guardian" },
+  { publisher: "BBC News", id: "bbc" },
+  { publisher: "CBS News", id: "cbs" },
+  { publisher: "ABC News", id: "abc" },
+  { publisher: "NPR", id: "npr_business" },
+  { publisher: "NPR", id: "npr_economy" },
+  { publisher: "Fortune", id: "fortune" },
+];
+
+/** An article's HTML as plain paragraphs. */
+function htmlToText(html: string): string {
+  const marked = html.replace(/<\/(p|h[1-6]|li|blockquote)>/gi, "\n\n").replace(/<br\s*\/?>/gi, "\n");
+  const text = new DOMParser().parseFromString(marked, "text/html").body.textContent ?? "";
+  return text
+    .split("\n")
+    .map((l) => l.replace(/\s+/g, " ").trim())
+    .filter((l, i, all) => l || (i > 0 && all[i - 1]))
+    .join("\n")
+    .trim();
+}
+
+/** The first image URL an item offers (media:content, media:thumbnail or an image enclosure). */
+function imageOf(item: Element): string | undefined {
+  for (const tag of ["media:content", "media:thumbnail", "enclosure"]) {
+    for (const el of Array.from(item.getElementsByTagName(tag))) {
+      const url = el.getAttribute("url");
+      const type = el.getAttribute("type") ?? el.getAttribute("medium") ?? "image";
+      if (url && /^https:\/\//.test(url) && /image/i.test(type)) return url;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Parse one RSS feed into news items. Items without a link or title are
+ * skipped. `content` is the full article when the feed carries it
+ * (content:encoded), so "AI Summarize" can work without opening the page.
+ */
+export function parseRss(xml: string, publisher: string): NewsItem[] {
   const doc = new DOMParser().parseFromString(xml, "text/xml");
   const out: NewsItem[] = [];
   for (const item of Array.from(doc.getElementsByTagName("item"))) {
     const text = (tag: string) => item.getElementsByTagName(tag)[0]?.textContent?.trim() ?? "";
     const link = text("link");
-    const title = text("title");
+    const title = htmlToText(text("title"));
     if (!link || !title) continue;
     const published = Date.parse(text("pubDate"));
+    const content = htmlToText(text("content:encoded"));
+    const img = imageOf(item);
     out.push({
-      uuid: `cnbc-${text("guid") || link}`,
+      uuid: `${publisher}-${text("guid") || link}`,
       title,
-      summary: text("description"),
-      publisher: "CNBC",
+      summary: htmlToText(text("description")),
+      ...(content.length >= 400 ? { content } : {}),
+      publisher,
       link,
       providerPublishTime: Number.isFinite(published) ? Math.floor(published / 1000) : 0,
       type: "STORY",
+      ...(img ? { thumbnail: { resolutions: [{ url: img, width: 0, height: 0 }] } } : {}),
     });
+  }
+  return out;
+}
+
+const getText = (url: string) => fetch(url).then((r) => (r.ok ? r.text() : ""));
+
+/**
+ * Newest first, but each story already picked from an outlet counts that
+ * outlet's next one as `penaltySec` older, so one outlet that publishes every
+ * few minutes (CNBC) can't fill the top of the list.
+ */
+export function mixPublishers(items: NewsItem[], penaltySec = 2 * 60 * 60): NewsItem[] {
+  const queues = new Map<string, NewsItem[]>();
+  for (const n of [...items].sort((a, b) => b.providerPublishTime - a.providerPublishTime)) {
+    const q = queues.get(n.publisher) ?? [];
+    q.push(n);
+    queues.set(n.publisher, q);
+  }
+  const taken = new Map<string, number>();
+  const out: NewsItem[] = [];
+  while (out.length < items.length) {
+    let best = "";
+    let bestScore = -Infinity;
+    for (const [publisher, q] of queues) {
+      if (!q.length) continue;
+      const score = q[0].providerPublishTime - (taken.get(publisher) ?? 0) * penaltySec;
+      if (score > bestScore) {
+        bestScore = score;
+        best = publisher;
+      }
+    }
+    out.push(queues.get(best)!.shift()!);
+    taken.set(best, (taken.get(best) ?? 0) + 1);
   }
   return out;
 }
@@ -42,22 +134,28 @@ export function parseCnbcRss(xml: string): NewsItem[] {
 const TTL_MS = 3 * 60 * 1000;
 let cache: { at: number; promise: Promise<NewsItem[]> } | null = null;
 
-/** Every CNBC feed merged, newest first. Cached for a few minutes and shared by every news list. */
-export function fetchCnbcNews(): Promise<NewsItem[]> {
+/**
+ * Every feed merged, newest first with outlets mixed. Cached for a few minutes
+ * and shared by every news list. `proxyFeed` fetches one PROXIED_FEEDS id.
+ */
+export function fetchFeedNews(proxyFeed: (id: string) => Promise<string>): Promise<NewsItem[]> {
   if (cache && Date.now() - cache.at < TTL_MS) return cache.promise;
-  const promise = Promise.all(
-    CNBC_FEEDS.map((u) =>
-      fetch(u)
-        .then((r) => (r.ok ? r.text() : ""))
-        .then(parseCnbcRss)
-        .catch(() => [] as NewsItem[]),
-    ),
-  ).then((feeds) => {
-    const byLink = new Map<string, NewsItem>();
-    for (const item of feeds.flat()) if (!byLink.has(item.link)) byLink.set(item.link, item);
-    const all = [...byLink.values()].sort((a, b) => b.providerPublishTime - a.providerPublishTime);
+  const direct = DIRECT_FEEDS.map((f) => getText(f.url).then((x) => parseRss(x, f.publisher)));
+  const proxied = PROXIED_FEEDS.map((f) => proxyFeed(f.id).then((x) => parseRss(x, f.publisher)));
+  const promise = Promise.all([...direct, ...proxied].map((p) => p.catch(() => [] as NewsItem[]))).then((feeds) => {
+    const seen = new Set<string>();
+    const all = feeds
+      .flat()
+      .filter((n) => {
+        // The same wire story can come from several feeds or outlets.
+        const keys = [n.link.replace(/[?#].*$/, ""), n.title.toLowerCase()];
+        if (keys.some((k) => seen.has(k))) return false;
+        keys.forEach((k) => seen.add(k));
+        return true;
+      })
+      .sort((a, b) => b.providerPublishTime - a.providerPublishTime);
     if (!all.length) cache = null; // don't keep a failed load
-    return all;
+    return mixPublishers(all);
   });
   cache = { at: Date.now(), promise };
   return promise;

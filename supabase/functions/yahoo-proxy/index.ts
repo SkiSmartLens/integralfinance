@@ -232,6 +232,26 @@ Deno.serve(async (req) => {
       return new Response(body, { ...jsonHeaders(), status: r.ok ? 200 : r.status });
     }
 
+    // News feeds the browser can't read itself (they don't allow other sites).
+    // Only this fixed list, so it can't be used to fetch arbitrary URLs. Keep
+    // in sync with PROXIED_FEEDS in src/lib/news.ts.
+    if (kind === "rss") {
+      const id = url.searchParams.get("feed") ?? "";
+      const target = RSS_FEEDS[id];
+      if (!target) return json({ error: "unknown feed" }, 400);
+      const cacheKey = `rss:${id}`;
+      const cached = getCache(cacheKey);
+      if (cached) return new Response(cached, xmlHeaders());
+      const r = await fetch(target, {
+        headers: { "User-Agent": UA, Accept: "application/rss+xml, application/xml;q=0.9, */*;q=0.8" },
+        signal: AbortSignal.timeout(8000),
+      });
+      const body = await r.text();
+      if (!r.ok) return json({ error: `feed returned ${r.status}` }, 502);
+      setCache(cacheKey, body, 3 * 60 * 1000);
+      return new Response(body, xmlHeaders());
+    }
+
     if (kind === "screener") {
       const scrId = url.searchParams.get("scrId") ?? "day_gainers";
       const count = url.searchParams.get("count") ?? "25";
@@ -300,6 +320,20 @@ Deno.serve(async (req) => {
   }
 });
 
+const RSS_FEEDS: Record<string, string> = {
+  ibd: "https://www.investors.com/feed/",
+  guardian: "https://www.theguardian.com/us/business/rss",
+  bbc: "https://feeds.bbci.co.uk/news/business/rss.xml",
+  cbs: "https://www.cbsnews.com/latest/rss/moneywatch",
+  abc: "https://abcnews.com/abcnews/moneyheadlines",
+  npr_business: "https://feeds.npr.org/1006/rss.xml",
+  npr_economy: "https://feeds.npr.org/1017/rss.xml",
+  fortune: "https://fortune.com/feed/fortune-feeds/?id=3230629",
+};
+
+function xmlHeaders() {
+  return { headers: { ...corsHeaders, "Content-Type": "application/xml; charset=utf-8" } };
+}
 function jsonHeaders() {
   return { headers: { ...corsHeaders, "Content-Type": "application/json" } };
 }

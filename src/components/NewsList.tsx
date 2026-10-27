@@ -71,6 +71,9 @@ const NewsCard = ({ n, featured = false }: { n: NewsItem; featured?: boolean }) 
             navigate(
               // Only Yahoo stories carry an ID the translator can use.
               `/translate?url=${encodeURIComponent(n.link)}${n.uuid && n.link.includes("yahoo.com") ? `&uuid=${encodeURIComponent(n.uuid)}` : ""}`,
+              // The feed's own copy of the story, so a summary still comes out
+              // if the publisher's site won't open for our reader.
+              { state: { story: { text: n.content, summary: [n.title, n.summary].filter(Boolean).join(". ") } } },
             )
           }
           className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-primary/40 bg-accent/60 px-3 py-2 text-xs font-extrabold text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
