@@ -18,12 +18,13 @@ import { SimWatchlist } from "@/components/sim/SimWatchlist";
 import { SimCopilot } from "@/components/sim/SimCopilot";
 import { SafetyMeter } from "@/components/sim/SafetyMeter";
 import { Leaderboard } from "@/components/sim/Leaderboard";
-import { ArrowLeft, LogOut, RefreshCw, Trophy, Copy, Check, Share2, LogIn, Users, Lock, Globe, DoorOpen, HelpCircle, Loader2, UserCog, Terminal } from "lucide-react";
+import { ArrowLeft, LogOut, RefreshCw, Trophy, Copy, Check, Share2, LogIn, Users, Lock, Globe, DoorOpen, HelpCircle, Loader2, UserCog, Terminal, Clock } from "lucide-react";
 import { SimWalkthrough, hasSeenSimWalkthrough } from "@/components/sim/SimWalkthrough";
 import { PostTradeCard } from "@/components/sim/PostTradeCard";
 import { PortfolioBar } from "@/components/sim/PortfolioBar";
 import { DevConsole } from "@/components/sim/DevConsole";
 import { isUsMarketOpen, nextOpenLabel } from "@/lib/marketHours";
+import { gameEndLabel } from "@/lib/gameEnd";
 import { ledgerCash, dayPnl, buyLimit, CASH_ADJUSTMENT_SYMBOL, type DayTrade } from "@/lib/simLedger";
 
 /**
@@ -256,6 +257,8 @@ const Sim = () => {
   const states = quotes.map((q) => q.marketState).filter(Boolean) as string[];
   const marketOpen = states.length ? states.includes("REGULAR") : isUsMarketOpen();
   const nextOpen = nextOpenLabel();
+  // Recomputed on every render; live quotes re-render the page every few seconds.
+  const gameEnd = gameEndLabel(game?.ends_at);
 
   // Real financial figures should never be computed against a guessed starting
   // cash — until game/member/positions have all loaded, dataReady stays false
@@ -477,31 +480,54 @@ const Sim = () => {
         </div>
       </header>
 
-      {/* Join code — pinned to the corner so it's always visible, not buried in a menu. */}
-      {game && !game.is_public && (
-        <div className="fixed top-[70px] right-3 z-30 flex items-center gap-1 rounded-xl border-2 bg-card shadow-sm p-1">
-          <button
-            onClick={copyCode}
-            title="Copy join code"
-            className={cn(
-              "h-8 px-2.5 rounded-lg text-xs font-extrabold tracking-widest inline-flex items-center gap-1.5 transition-colors",
-              codeCopied ? "text-emerald-700" : "hover:text-primary",
-            )}
-          >
-            {codeCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-            {game.join_code}
-          </button>
-          <button
-            onClick={shareInvite}
-            title="Share invite link"
-            className="h-8 w-8 rounded-lg text-muted-foreground hover:text-primary hover:bg-muted transition-colors flex items-center justify-center"
-          >
-            <Share2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
-
       <main className="max-w-6xl mx-auto px-4 py-5 space-y-5">
+        {/* Days left and the join code, top right. Sticky, so they stay in view
+            while scrolling; at the top they get their own row instead of
+            covering the chart's buttons. */}
+        {game && (!game.is_public || gameEnd) && (
+          <div className="sticky top-[70px] z-30 flex justify-end pointer-events-none">
+            <div className="pointer-events-auto flex items-center gap-1 rounded-xl border-2 bg-card shadow-sm p-1">
+              {gameEnd && (
+                <div
+                  title={`${gameEnd.over ? "Ended" : "Ends"} ${new Date(game.ends_at!).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`}
+                  className={cn(
+                    "h-8 px-2.5 rounded-lg text-xs font-extrabold inline-flex items-center gap-1.5 whitespace-nowrap",
+                    gameEnd.over
+                      ? "text-muted-foreground"
+                      : gameEnd.days <= 1
+                      ? "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+                      : "text-foreground",
+                  )}
+                >
+                  <Clock className="w-3 h-3" /> {gameEnd.label}
+                </div>
+              )}
+              {gameEnd && !game.is_public && <div className="w-px h-5 bg-border" />}
+              {!game.is_public && (
+                <>
+                  <button
+                    onClick={copyCode}
+                    title="Copy join code"
+                    className={cn(
+                      "h-8 px-2.5 rounded-lg text-xs font-extrabold tracking-widest inline-flex items-center gap-1.5 transition-colors",
+                      codeCopied ? "text-emerald-700" : "hover:text-primary",
+                    )}
+                  >
+                    {codeCopied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                    {game.join_code}
+                  </button>
+                  <button
+                    onClick={shareInvite}
+                    title="Share invite link"
+                    className="h-8 w-8 rounded-lg text-muted-foreground hover:text-primary hover:bg-muted transition-colors flex items-center justify-center"
+                  >
+                    <Share2 className="w-3.5 h-3.5" />
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
         {/* Portfolio header + allocation bar */}
         {!dataReady ? (
           <div className="rounded-3xl border bg-card px-6 py-10 flex items-center justify-center gap-2 text-sm text-muted-foreground shadow-sm">
