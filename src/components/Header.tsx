@@ -207,7 +207,7 @@ export const Header = ({ onSearch }: Props) => {
             }}
             className="relative"
           >
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary pointer-events-none" />
             <input
               value={q}
               onChange={(e) => {
@@ -226,7 +226,7 @@ export const Header = ({ onSearch }: Props) => {
                 } else if (e.key === "Escape") setOpen(false);
               }}
               placeholder="Search symbols or companies (Apple, AAPL, BTC)…"
-              className="w-full pl-9 pr-4 py-2 bg-muted border border-transparent focus:border-primary focus:bg-background rounded-md text-sm outline-none transition-all"
+              className="w-full pl-9 pr-4 py-2 bg-background border-2 border-primary/40 hover:border-primary/70 focus:border-primary focus:ring-4 focus:ring-primary/15 rounded-lg text-sm outline-none transition-all placeholder:text-muted-foreground"
             />
           </form>
           {open && results.length > 0 && (

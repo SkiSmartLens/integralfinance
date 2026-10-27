@@ -304,6 +304,8 @@ const Sim = () => {
   });
   const dayPL = holdings.reduce((s, h) => s + (h.dayPl ?? 0), 0);
   const totalReturnPct = startingCash > 0 ? ((equity - startingCash) / startingCash) * 100 : 0;
+  // Admin cash adjustments don't count as trading.
+  const myTraded = trades.some((t) => t.symbol.toUpperCase() !== CASH_ADJUSTMENT_SYMBOL);
 
   // Net-worth history: no backend cron here, so the "every 12 hours" cadence is
   // enforced at write time instead — each visit checks the latest snapshot and
@@ -528,6 +530,9 @@ const Sim = () => {
             </div>
           </div>
         )}
+        {/* Finding a stock comes first, so nobody has to hunt for it. */}
+        <SimSearch onSelect={setSelected} selected={selected} newPlayer={dataReady && !myTraded} />
+
         {/* Portfolio header + allocation bar */}
         {!dataReady ? (
           <div className="rounded-3xl border bg-card px-6 py-10 flex items-center justify-center gap-2 text-sm text-muted-foreground shadow-sm">
@@ -540,14 +545,6 @@ const Sim = () => {
                 <Loader2 className="w-3.5 h-3.5 animate-spin" /> Couldn't refresh your portfolio — retrying…
               </div>
             )}
-            {member && (
-              <NetWorthChart
-                memberId={member.id}
-                joinedAt={member.joined_at}
-                equity={equity}
-                startingCash={startingCash}
-              />
-            )}
             <PortfolioBar
               equity={equity}
               cash={cash}
@@ -557,18 +554,14 @@ const Sim = () => {
               holdings={holdings}
               onSelect={setSelected}
             />
-            <SafetyMeter holdings={holdings} cash={cash} equity={equity} />
           </>
         )}
 
-
-        {/* Search */}
-        <SimSearch onSelect={setSelected} />
-
         <div className="grid lg:grid-cols-[1fr_360px] gap-5 items-start">
-          {/* Stock info */}
-          <section className="space-y-4 order-2 lg:order-1">
-            <div ref={stockCardRef} className="rounded-3xl border-2 bg-card p-4 sm:p-5 shadow-sm scroll-mt-20">
+          {/* Stock info. On phones the section's boxes join the grid (contents) so
+              the trade box can sit right under the stock it trades. */}
+          <section className="contents lg:block lg:space-y-4 lg:order-1">
+            <div ref={stockCardRef} className="order-1 rounded-3xl border-2 bg-card p-4 sm:p-5 shadow-sm scroll-mt-20">
               <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div className="min-w-0">
                   <div className="flex items-baseline gap-2 flex-wrap">
@@ -611,25 +604,37 @@ const Sim = () => {
               </div>
             </div>
 
-            <WhyItMoved symbol={selected} changePct={selChange} />
+            <div className="order-3 space-y-4">
+              <WhyItMoved symbol={selected} changePct={selChange} />
 
-            <SimWatchlist selected={selected} onSelect={openFromList} />
+              <SimWatchlist selected={selected} onSelect={openFromList} />
 
-            <HoldingsPanel holdings={holdings} onSelect={setSelected} />
-            {member && game && userId && (
-              <Leaderboard
-                gameId={game.id}
-                meUserId={userId}
-                startingCash={startingCash}
-                myCash={dataReady ? cash : undefined}
-                myHoldings={dataReady ? holdings : undefined}
-                myTraded={dataReady && trades.some((t) => t.symbol.toUpperCase() !== CASH_ADJUSTMENT_SYMBOL)}
-              />
-            )}
+              <HoldingsPanel holdings={holdings} onSelect={setSelected} />
+              {dataReady && member && (
+                <NetWorthChart
+                  memberId={member.id}
+                  joinedAt={member.joined_at}
+                  equity={equity}
+                  startingCash={startingCash}
+                />
+              )}
+              {/* Nothing to rate until you own something. */}
+              {dataReady && holdings.length > 0 && <SafetyMeter holdings={holdings} cash={cash} equity={equity} />}
+              {member && game && userId && (
+                <Leaderboard
+                  gameId={game.id}
+                  meUserId={userId}
+                  startingCash={startingCash}
+                  myCash={dataReady ? cash : undefined}
+                  myHoldings={dataReady ? holdings : undefined}
+                  myTraded={dataReady && myTraded}
+                />
+              )}
+            </div>
           </section>
 
           {/* Trade */}
-          <aside className="order-1 lg:order-2 lg:sticky lg:top-20 space-y-3">
+          <aside className="order-2 lg:sticky lg:top-20 space-y-3">
             {member ? (
               <TradeTicket
                 symbol={selected}

@@ -8,7 +8,35 @@ interface Row extends SearchQuote {
   changePct?: number;
 }
 
-export const SimSearch = ({ onSelect }: { onSelect: (symbol: string) => void }) => {
+// One-tap picks for players who don't know a ticker yet.
+const POPULAR = [
+  { symbol: "AAPL", name: "Apple" },
+  { symbol: "NVDA", name: "Nvidia" },
+  { symbol: "TSLA", name: "Tesla" },
+  { symbol: "AMZN", name: "Amazon" },
+  { symbol: "MSFT", name: "Microsoft" },
+  { symbol: "GOOGL", name: "Google" },
+  { symbol: "SPY", name: "S&P 500 fund" },
+];
+
+const STEPS = ["Search for a company", "Choose how many shares", "Press the green Buy button"];
+
+/**
+ * The simulator's stock search: the first thing on the page, in a
+ * highlighted panel, with popular picks. New players also get the three
+ * steps to a first trade.
+ */
+export const SimSearch = ({
+  onSelect,
+  selected,
+  newPlayer = false,
+}: {
+  onSelect: (symbol: string) => void;
+  /** The stock shown below, highlighted among the popular picks. */
+  selected?: string;
+  /** No trades yet: show how to make one. */
+  newPlayer?: boolean;
+}) => {
   const [query, setQuery] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
   const [open, setOpen] = useState(false);
@@ -94,57 +122,93 @@ export const SimSearch = ({ onSelect }: { onSelect: (symbol: string) => void }) 
   };
 
   return (
-    <div ref={boxRef} className="relative">
+    <div ref={boxRef} className="relative rounded-3xl border-2 border-primary/30 bg-primary/5 p-4 sm:p-5">
+      {newPlayer && (
+        <ol className="grid sm:grid-cols-3 gap-2 mb-4">
+          {STEPS.map((step, i) => (
+            <li key={step} className="flex items-center gap-2 rounded-xl bg-card border px-3 py-2 text-xs font-semibold">
+              <span className="shrink-0 w-5 h-5 rounded-full bg-primary text-primary-foreground text-[11px] font-extrabold flex items-center justify-center">
+                {i + 1}
+              </span>
+              {step}
+            </li>
+          ))}
+        </ol>
+      )}
+      <label htmlFor="sim-search" className="flex items-center gap-2 text-base font-extrabold mb-2">
+        Find a stock to trade
+      </label>
       <div className="relative">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary pointer-events-none" />
         <input
+          id="sim-search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => rows.length && setOpen(true)}
           onKeyDown={onKey}
-          placeholder="Search a stock or ticker…"
-          className="w-full h-11 pl-10 pr-10 rounded-xl bg-muted/60 border border-transparent focus:border-primary/40 focus:bg-card outline-none text-sm transition-colors"
+          placeholder="Company name or ticker"
+          autoComplete="off"
+          className="w-full h-14 pl-12 pr-12 rounded-2xl bg-card border-2 border-primary/60 shadow-sm text-base font-semibold placeholder:font-normal placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15 outline-none transition-shadow"
         />
-        {loading && <Loader2 className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin" />}
+        {loading && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary animate-spin" />}
+        {open && rows.length > 0 && (
+          <div className="absolute z-30 left-0 right-0 top-full mt-2 rounded-xl border bg-card shadow-lg overflow-hidden animate-fade-in">
+            <ul className="max-h-80 overflow-y-auto py-1">
+              {rows.map((r, i) => {
+                const up = (r.changePct ?? 0) >= 0;
+                return (
+                  <li key={r.symbol}>
+                    <button
+                      onMouseEnter={() => setActive(i)}
+                      onClick={() => choose(r.symbol)}
+                      className={cn(
+                        "w-full flex items-center gap-3 px-3.5 py-2.5 text-left transition-colors",
+                        i === active ? "bg-accent/60" : "hover:bg-muted/60"
+                      )}
+                    >
+                      <span className="w-16 shrink-0 font-bold text-sm">{r.symbol}</span>
+                      <span className="flex-1 min-w-0 text-xs text-muted-foreground truncate">
+                        {r.shortname || r.longname || r.exchDisp}
+                      </span>
+                      {r.price != null && (
+                        <span className="text-right tabular-nums">
+                          <span className="block text-sm font-semibold">${formatNumber(r.price)}</span>
+                          {r.changePct != null && (
+                            <span className={cn("block text-[11px] font-semibold", up ? "text-up" : "text-down")}>
+                              {up ? "+" : ""}
+                              {formatNumber(r.changePct)}%
+                            </span>
+                          )}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5 mt-3">
+        <span className="text-xs font-bold text-muted-foreground mr-1">Popular:</span>
+        {POPULAR.map((p) => (
+          <button
+            key={p.symbol}
+            type="button"
+            onClick={() => choose(p.symbol)}
+            title={p.symbol}
+            className={cn(
+              "px-2.5 py-1 rounded-full border text-xs font-bold transition-colors",
+              selected === p.symbol
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-card hover:border-primary/60 hover:text-primary",
+            )}
+          >
+            {p.name}
+          </button>
+        ))}
       </div>
 
-      {open && rows.length > 0 && (
-        <div className="absolute z-30 mt-2 w-full rounded-xl border bg-card shadow-lg overflow-hidden animate-fade-in">
-          <ul className="max-h-80 overflow-y-auto py-1">
-            {rows.map((r, i) => {
-              const up = (r.changePct ?? 0) >= 0;
-              return (
-                <li key={r.symbol}>
-                  <button
-                    onMouseEnter={() => setActive(i)}
-                    onClick={() => choose(r.symbol)}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-3.5 py-2.5 text-left transition-colors",
-                      i === active ? "bg-accent/60" : "hover:bg-muted/60"
-                    )}
-                  >
-                    <span className="w-16 shrink-0 font-bold text-sm">{r.symbol}</span>
-                    <span className="flex-1 min-w-0 text-xs text-muted-foreground truncate">
-                      {r.shortname || r.longname || r.exchDisp}
-                    </span>
-                    {r.price != null && (
-                      <span className="text-right tabular-nums">
-                        <span className="block text-sm font-semibold">${formatNumber(r.price)}</span>
-                        {r.changePct != null && (
-                          <span className={cn("block text-[11px] font-semibold", up ? "text-up" : "text-down")}>
-                            {up ? "+" : ""}
-                            {formatNumber(r.changePct)}%
-                          </span>
-                        )}
-                      </span>
-                    )}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
     </div>
   );
 };
