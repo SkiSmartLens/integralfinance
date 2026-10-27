@@ -140,7 +140,9 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
             </CollapsibleRow>
           )}
 
-          <BullBear data={data} />
+          <CollapsibleRow icon={<BarChart3 className="w-4 h-4 text-primary" />} title="Bull & bear case">
+            <BullBear data={data} />
+          </CollapsibleRow>
           {data.predictedRevenue && (
             <CollapsibleRow icon={<DollarSign className="w-4 h-4 text-primary" />} title="Predicted revenue (estimate)">
               <p className="text-2xl font-extrabold text-primary">{data.predictedRevenue}</p>
@@ -248,7 +250,7 @@ const BullBear = ({ data }: { data: Summary }) => {
     </div>
   );
   return (
-    <div className="bg-muted/40 rounded-md p-3 md:p-4 space-y-4">
+    <div className="space-y-4">
       {typeof data.stanceScore === "number" && (
         <BullBearSpectrum score={data.stanceScore} reason={data.stanceReason} />
       )}
