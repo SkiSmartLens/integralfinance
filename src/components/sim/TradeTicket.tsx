@@ -52,9 +52,10 @@ export const TradeTicket = ({
     0,
     side === "short" ? shortPower ?? 0 : side === "cover" ? coverPower ?? spendable ?? cash : spendable ?? cash,
   );
-  // What the slider and % buttons size against. For buys that's your actual
-  // cash, never the leveraged limit — typing a bigger number still borrows.
-  const budget = side === "buy" ? Math.min(Math.max(0, cash), tradingPower) : tradingPower;
+  // What the slider and % buttons size against: everything this order may use.
+  // For buys that's your buying power (leverage × your cash), so 100% with 2×
+  // leverage spends twice your cash, half of it borrowed.
+  const budget = tradingPower;
   const leveraged = leverage > 1;
 
   useEffect(() => {
@@ -82,6 +83,13 @@ export const TradeTicket = ({
 
 
   const estCost = price ? price * qty : 0;
+  // Leveraged buys: the part of the bar past your own cash is borrowed money.
+  const borrowZone = side === "buy" && leveraged && !!price && maxShares > 0;
+  const cashShares = price ? Math.floor(Math.max(0, cash) / price) : 0;
+  const cashMark = borrowZone ? Math.min(100, (cashShares / maxShares) * 100) : 100;
+  const borrowed = side === "buy" ? Math.max(0, estCost - Math.max(0, cash)) : 0;
+  const pctOfMax = maxShares > 0 ? Math.min(100, Math.round((qty / maxShares) * 100)) : 0;
+  const pctOf = side === "sell" ? "your shares" : side === "cover" ? "your short" : side === "buy" && !leveraged ? "your cash" : "buying power";
 
   const insufficient = (side === "buy" || side === "cover") && estCost > tradingPower;
   const overSell = side === "sell" && qty > heldShares;
@@ -196,8 +204,16 @@ export const TradeTicket = ({
         />
       </div>
 
-      {/* Drag slider — 1 → max shares */}
+      {/* Drag slider — 1 → max shares (for leveraged buys, the shaded part is borrowed) */}
       <div className="mb-3">
+        {maxShares >= 1 && (
+          <div className="flex justify-between text-[11px] font-bold tabular-nums mb-1.5">
+            <span className="text-foreground">
+              {pctOfMax}% of {pctOf}
+            </span>
+            {borrowed > 0 && <span className="text-amber-700 dark:text-amber-400">${formatNumber(borrowed)} borrowed</span>}
+          </div>
+        )}
         <input
           type="range"
           min={1}
@@ -206,10 +222,21 @@ export const TradeTicket = ({
           value={Math.min(qty, Math.max(1, maxShares))}
           disabled={maxShares < 1}
           onChange={(e) => setQty(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
+          aria-label="Shares"
+          style={
+            borrowZone
+              ? { background: `linear-gradient(to right, hsl(var(--muted)) ${cashMark}%, rgb(252 211 77 / 0.75) ${cashMark}%)` }
+              : undefined
+          }
           className="w-full h-2 appearance-none rounded-full bg-muted accent-primary cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
         />
-        <div className="flex justify-between text-[10px] font-bold text-muted-foreground mt-1 tabular-nums">
+        <div className="relative flex justify-between text-[10px] font-bold text-muted-foreground mt-1 tabular-nums">
           <span>1</span>
+          {borrowZone && cashMark > 12 && cashMark < 88 && (
+            <span className="absolute -translate-x-1/2 text-amber-700 dark:text-amber-400" style={{ left: `${cashMark}%` }}>
+              ▲ your cash
+            </span>
+          )}
           <span>{maxShares.toLocaleString()} max</span>
         </div>
       </div>
@@ -242,7 +269,9 @@ export const TradeTicket = ({
       </div>
       <p className="text-[11px] text-muted-foreground mb-4">
         {side === "buy"
-          ? `Percent of your cash. 100% invests it all.${leveraged ? ` To borrow with ${leverage}× leverage, type more shares.` : ""}`
+          ? leveraged
+            ? `Percent of your buying power (${leverage}× your cash). 100% uses all of it; the shaded part of the bar is borrowed.`
+            : "Percent of your cash. 100% invests it all."
           : "Percent of your available buying power. 100% invests it all."}
       </p>
 

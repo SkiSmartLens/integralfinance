@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { TradeTicket } from "./TradeTicket";
 
 const ticket = (symbol: string, price: number) => (
@@ -34,5 +34,35 @@ describe("TradeTicket with 2x leverage", () => {
       screen.getByText("1 share of HOOD costs $98.62, but you only have $0.02 of buying power. Sell some stock to free up cash."),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: /Buy 1 share/ }).hasAttribute("disabled")).toBe(true);
+  });
+});
+
+describe("TradeTicket: the bar sizes against buying power", () => {
+  const leveraged = () =>
+    render(<TradeTicket symbol="AAPL" price={100} cash={100000} spendable={200000} leverage={2} heldShares={0} placing={false} marketOpen onExecute={() => {}} />);
+
+  it("with 2x leverage, 100% buys $200k with $100k cash (half of it borrowed)", () => {
+    leveraged();
+    expect(screen.getByText("2,000 max")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "100%" }));
+    expect(screen.getByRole("button", { name: /Buy 2000 shares/ }).hasAttribute("disabled")).toBe(false);
+    expect(screen.getAllByText("$200,000")).toHaveLength(2); // total cost and buying power
+    expect(screen.getByText("$100,000 borrowed")).toBeTruthy();
+    expect(screen.getByText("100% of buying power")).toBeTruthy();
+  });
+
+  it("dragging the bar halfway uses just your own cash", () => {
+    leveraged();
+    fireEvent.change(screen.getByRole("slider", { name: "Shares" }), { target: { value: "1000" } });
+    expect(screen.getByRole("button", { name: /Buy 1000 shares/ })).toBeTruthy();
+    expect(screen.getByText("50% of buying power")).toBeTruthy();
+    expect(screen.queryByText(/borrowed$/)).toBeNull();
+  });
+
+  it("without leverage, 100% is all your cash", () => {
+    render(<TradeTicket symbol="AAPL" price={100} cash={10000} heldShares={0} placing={false} marketOpen onExecute={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "100%" }));
+    expect(screen.getByRole("button", { name: /Buy 100 shares/ })).toBeTruthy();
+    expect(screen.getByText("100% of your cash")).toBeTruthy();
   });
 });
