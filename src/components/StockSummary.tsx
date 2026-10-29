@@ -191,10 +191,10 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
             <p className="text-sm">{data.outlook}</p>
           </CollapsibleRow>
           {(sources.length > 0 || coverage.length > 0) && (
-            <div className="bg-muted/40 rounded-md p-3">
-              <h4 className="flex items-center gap-2 font-semibold mb-3">
-                <Newspaper className="w-4 h-4 text-primary" /> Sources
-              </h4>
+            <CollapsibleRow
+              icon={<Newspaper className="w-4 h-4 text-primary" />}
+              title={`Sources (${sources.length + coverage.length} articles)`}
+            >
               {sources.length > 0 && (
                 <>
                   <SourceList items={sources.map((s) => ({ title: s.title, url: s.url, meta: s.publisher }))} />
@@ -213,7 +213,7 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
                   />
                 </div>
               )}
-            </div>
+            </CollapsibleRow>
           )}
         </div>
       )}
