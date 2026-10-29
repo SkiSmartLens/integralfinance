@@ -8,12 +8,16 @@ interface Props {
   equity: number;
   /** Actual cash: starting cash + realized gains − what's invested. Negative while borrowing. */
   cash: number;
-  dayPL: number;
+  /** Today's gain; left out when it isn't known (another player's portfolio). */
+  dayPL?: number;
   totalReturnPct: number;
   holdings: Holding[];
   /** True while the US market is in its regular session. */
   marketOpen?: boolean;
   onSelect?: (symbol: string) => void;
+  /** Whose portfolio this is, when it isn't yours ("Ana"). */
+  owner?: string;
+  className?: string;
 }
 
 const money = (n: number) => `$${formatNumber(Math.abs(n))}`;
@@ -36,6 +40,8 @@ export const PortfolioBar = ({
   holdings,
   marketOpen = false,
   onSelect,
+  owner,
+  className,
 }: Props) => {
   const [hover, setHover] = useState<string | null>(null);
 
@@ -59,7 +65,7 @@ export const PortfolioBar = ({
   const active = all.find((s) => s.key === hover);
 
   return (
-    <section className="rounded-3xl border bg-card px-6 py-7 sm:px-8 sm:py-8 shadow-sm">
+    <section className={cn("rounded-3xl border bg-card px-6 py-7 sm:px-8 sm:py-8 shadow-sm", className)}>
       <div className="flex flex-wrap items-end gap-x-12 gap-y-6">
         <div>
           <div className="text-[11px] uppercase tracking-widest text-muted-foreground font-bold">Net worth</div>
@@ -67,7 +73,7 @@ export const PortfolioBar = ({
             <AnimatedNumber value={equity} format={money} />
           </div>
         </div>
-        {marketOpen ? (
+        {dayPL == null ? null : marketOpen ? (
           <Metric label="Live session" value={signedMoney(dayPL)} tone={dayPL >= 0 ? "up" : "down"} />
         ) : (
           <Metric label="Market closed" value="—" />
@@ -118,7 +124,7 @@ export const PortfolioBar = ({
               <span className="font-extrabold">{active.label}</span>
               <span className="text-muted-foreground tabular-nums">{money(active.value)}</span>
               <span className="text-muted-foreground">
-                {total > 0 ? `${formatNumber((active.value / total) * 100)}% of your portfolio` : ""}
+                {total > 0 ? `${formatNumber((active.value / total) * 100)}% of ${owner ? `${owner}'s` : "your"} portfolio` : ""}
               </span>
               {active.kind === "position" && (
                 <span className={cn("font-bold tabular-nums", active.pl >= 0 ? "text-up" : "text-down")}>
@@ -129,7 +135,9 @@ export const PortfolioBar = ({
             </div>
           ) : (
             <span className="text-muted-foreground">
-              Hover the bar to see each position and your cash.
+              {owner
+                ? `Hover or tap the bar to see each of ${owner}'s stocks and cash.`
+                : "Hover the bar to see each position and your cash."}
             </span>
           )}
         </div>

@@ -45,15 +45,18 @@ beforeEach(() => {
 });
 vi.mock("@/lib/simAdmin", () => ({ useCashSynced: () => true }));
 
-const rowFor = (name: string) => screen.getByTitle(`See ${name}'s stocks`).closest("li")!;
+const titleFor = (name: string) => (name === "Me" ? "See your portfolio" : `See ${name}'s portfolio`);
+const rowFor = (name: string) => screen.getByTitle(titleFor(name)).closest("li")!;
+// Names top to bottom; every row is a button when the game shows portfolios.
+const names = () => screen.getAllByRole("listitem").map((li) => within(li).getByRole("button").title);
 
 describe("Leaderboard", () => {
   it("players who haven't traded show N/A below everyone ranked", async () => {
     render(<Leaderboard gameId="g" meUserId="u-me" startingCash={100_000} myCash={100_000} myTraded={false} />);
     await screen.findByText("Ana");
 
-    const order = screen.getAllByRole("listitem").map((li) => within(li).getByRole("button").textContent);
-    expect(order).toEqual(["Ana", "Bo", "Cy", "Me(you)"]);
+    expect(names()).toEqual(["Ana", "Bo", "Cy", "Me"].map(titleFor));
+    expect(within(rowFor("Me")).getByText("(you)")).toBeTruthy();
 
     expect(within(rowFor("Ana")).getByText("1")).toBeTruthy();
     expect(within(rowFor("Bo")).getByText("2")).toBeTruthy();
@@ -107,9 +110,8 @@ describe("Leaderboard", () => {
     render(<Leaderboard gameId="g" meUserId="u-me" startingCash={100_000} myCash={99_000} myTraded />);
     await screen.findByText("Ana");
 
-    const order = screen.getAllByRole("listitem").map((li) => within(li).getByRole("button").textContent);
     // Ana $102k, Bo $99k, you $99,800; Cy has no rank.
-    expect(order).toEqual(["Ana", "Me(you)", "Bo", "Cy"]);
+    expect(names()).toEqual(["Ana", "Me", "Bo", "Cy"].map(titleFor));
     expect(within(rowFor("Ana")).getByText("$102,000")).toBeTruthy();
     expect(within(rowFor("Cy")).getByText("N/A")).toBeTruthy();
     expect(screen.getByText("Your rank: #2 of 3")).toBeTruthy();
@@ -124,26 +126,46 @@ describe("Leaderboard", () => {
     expect(within(rowFor("Ana")).getByText("$100,000")).toBeTruthy();
   });
 
-  it("tapping a player shows their stocks", async () => {
-    render(<Leaderboard gameId="g" meUserId="u-me" startingCash={100_000} myCash={100_000} myTraded={false} />);
-    fireEvent.click(await screen.findByTitle("See Ana's stocks"));
-    expect(await screen.findByText("Ana's holdings")).toBeTruthy();
-    expect(screen.getByText("AAPL")).toBeTruthy();
-    expect(screen.getByText("Tap a name to see their stocks.")).toBeTruthy();
+  it("tapping a player shows their portfolio like yours: the bar, their cash and their stocks", async () => {
+    const onSelectStock = vi.fn();
+    render(
+      <Leaderboard gameId="g" meUserId="u-me" startingCash={100_000} myCash={100_000} myTraded={false} onSelectStock={onSelectStock} />,
+    );
+    expect(await screen.findByText("Tap a player to see their portfolio.")).toBeTruthy();
+    // Names that open a portfolio are underlined.
+    expect(within(rowFor("Ana")).getByText("Ana").className).toContain("underline");
+    fireEvent.click(rowFor("Ana").querySelector("button")!);
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Ana's portfolio")).toBeTruthy();
+    expect(within(dialog).getByText("Ana's holdings")).toBeTruthy();
+    // $90k cash + 100 AAPL at $120.
+    expect(within(dialog).getByText("$90,000")).toBeTruthy();
+    expect(within(dialog).getAllByText("$12,000").length).toBeGreaterThan(0);
+    fireEvent.focus(within(dialog).getByLabelText("AAPL $12,000"));
+    expect(within(dialog).getByText("11.76% of Ana's portfolio")).toBeTruthy();
+    fireEvent.focus(within(dialog).getByLabelText("Cash $90,000"));
+    expect(within(dialog).getByText("88.24% of Ana's portfolio")).toBeTruthy();
+
+    // A stock in their portfolio opens in your trade view.
+    fireEvent.click(within(dialog).getByText("AAPL"));
+    expect(onSelectStock).toHaveBeenCalledWith("AAPL");
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("a game that hides stocks only lets you open your own", async () => {
     render(<Leaderboard gameId="g" meUserId="u-me" startingCash={100_000} myCash={100_000} myTraded={false} othersHoldings="hidden" />);
     await screen.findByText("Ana");
-    expect(screen.queryByTitle("See Ana's stocks")).toBeNull();
-    expect(screen.getByTitle("See Me's stocks")).toBeTruthy();
-    expect(screen.getByText("This game keeps each player's stocks private.")).toBeTruthy();
+    expect(screen.queryByTitle("See Ana's portfolio")).toBeNull();
+    expect(screen.getByText("Ana").className).not.toContain("underline");
+    expect(screen.getByTitle("See your portfolio")).toBeTruthy();
+    expect(screen.getByText("This game keeps each player's portfolio private.")).toBeTruthy();
   });
 
   it("the game's creator can still open everyone's when stocks are hidden", async () => {
     render(<Leaderboard gameId="g" meUserId="u-me" startingCash={100_000} myCash={100_000} myTraded={false} othersHoldings="creator" />);
-    fireEvent.click(await screen.findByTitle("See Bo's stocks"));
-    expect(await screen.findByText("Bo's holdings")).toBeTruthy();
-    expect(screen.getByText(/You made it, so tap a name/)).toBeTruthy();
+    fireEvent.click(await screen.findByTitle("See Bo's portfolio"));
+    expect(await screen.findByText("Bo's portfolio")).toBeTruthy();
+    expect(screen.getByText(/You made it, so tap a player/)).toBeTruthy();
   });
 });

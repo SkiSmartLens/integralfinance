@@ -565,7 +565,7 @@ const Sim = () => {
           </>
         )}
 
-        <div className="grid lg:grid-cols-[1fr_360px] gap-5 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5 items-start">
           {/* Stock info. On phones the section's boxes join the grid (contents) so
               the trade box can sit right under the stock it trades. */}
           <section className="contents lg:block lg:space-y-4 lg:order-1">
@@ -636,6 +636,7 @@ const Sim = () => {
                   myTraded={dataReady && myTraded}
                   // The game's creator and admins always see everyone's stocks.
                   othersHoldings={game.show_holdings === false ? (game.created_by === userId || isAdmin ? "creator" : "hidden") : "shown"}
+                  onSelectStock={openFromList}
                 />
               )}
             </div>

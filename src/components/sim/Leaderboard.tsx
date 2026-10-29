@@ -4,9 +4,11 @@ import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { formatNumber } from "@/lib/yahoo";
 import { estimatedNetWorth, hasTraded } from "@/lib/simLedger";
 import { useCashSynced } from "@/lib/simAdmin";
-import { Trophy, Loader2, Briefcase } from "lucide-react";
+import { Trophy, Loader2, Briefcase, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { PortfolioBar } from "./PortfolioBar";
+import { HoldingsPanel, type Holding } from "./HoldingsPanel";
 
 interface Row {
   member_id: string;
@@ -108,6 +110,7 @@ export const Leaderboard = ({
   myHoldings,
   myTraded,
   othersHoldings = "shown",
+  onSelectStock,
 }: {
   gameId: string;
   meUserId: string;
@@ -127,6 +130,8 @@ export const Leaderboard = ({
    * the game (or are an admin), so you still can.
    */
   othersHoldings?: "shown" | "hidden" | "creator";
+  /** Opens a stock from someone's portfolio in the trade view. */
+  onSelectStock?: (symbol: string) => void;
 }) => {
   const [rows, setRows] = useState<Row[] | null>(null);
 
@@ -207,6 +212,9 @@ export const Leaderboard = ({
   const [viewing, setViewing] = useState<(typeof ranked)[number] | null>(null);
   // Keep the open dialog's prices live instead of freezing them at click time.
   const liveViewing = viewing ? ranked.find((r) => r.member_id === viewing.member_id) ?? viewing : null;
+  // Their portfolio in the same shape as yours, so it shows the same bar and table.
+  const viewingHoldings: Holding[] = (liveViewing?.priced ?? []).map((p) => ({ ...p, id: p.symbol, prevClose: p.last }));
+  const viewingInvested = viewingHoldings.reduce((s, h) => s + h.last * h.shares, 0);
 
   return (
     <div className="rounded-3xl border-2 bg-card p-5 shadow-sm">
@@ -223,6 +231,16 @@ export const Leaderboard = ({
           </span>
         )}
       </div>
+      {ranked.length > 1 && (
+        <p className="-mt-1 mb-3 text-xs text-muted-foreground flex items-center gap-1.5">
+          <Briefcase className="w-3.5 h-3.5 shrink-0 text-primary" />
+          {othersHoldings === "shown"
+            ? "Tap a player to see their portfolio."
+            : othersHoldings === "creator"
+              ? "Players can't see each other's portfolios in this game. You made it, so tap a player to see theirs."
+              : "This game keeps each player's portfolio private."}
+        </p>
+      )}
       {!rows ? (
         <div className="text-sm text-muted-foreground inline-flex items-center gap-2">
           <Loader2 className="w-4 h-4 animate-spin" /> Loading…
@@ -234,14 +252,12 @@ export const Leaderboard = ({
           {ranked.map((r, i) => {
             const me = r.me;
             const canView = me || othersHoldings !== "hidden";
-            return (
-              <li
-                key={r.member_id}
-                className={cn(
-                  "flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm",
-                  me ? "bg-primary/10 border border-primary/40 font-extrabold" : "bg-muted/40",
-                )}
-              >
+            const rowClass = cn(
+              "flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm text-left",
+              me ? "bg-primary/10 border border-primary/40 font-extrabold" : "bg-muted/40",
+            );
+            const content = (
+              <>
                 <div className="flex items-center gap-2 min-w-0">
                   <span
                     className={cn(
@@ -252,33 +268,55 @@ export const Leaderboard = ({
                   >
                     {r.traded ? i + 1 : "N/A"}
                   </span>
-                  {canView ? (
-                    <button
-                      type="button"
-                      onClick={() => setViewing(r)}
-                      className="truncate hover:underline hover:text-primary transition-colors text-left"
-                      title={`See ${r.display_name}'s stocks`}
-                    >
-                      {r.display_name}
-                      {me && <span className="ml-1 text-xs text-primary">(you)</span>}
-                    </button>
-                  ) : (
-                    <span className="truncate">{r.display_name}</span>
-                  )}
+                  <span
+                    className={cn(
+                      "truncate",
+                      canView &&
+                        "underline decoration-2 underline-offset-4 decoration-primary/60 group-hover:text-primary group-hover:decoration-primary",
+                    )}
+                  >
+                    {r.display_name}
+                  </span>
+                  {me && <span className="shrink-0 text-xs text-primary">(you)</span>}
                 </div>
-                <div className="text-right shrink-0 tabular-nums">
-                  <div className={cn("font-extrabold", !r.traded && "text-muted-foreground")}>
-                    ${formatNumber(r.equity)}
-                  </div>
-                  {r.traded ? (
-                    <div className={cn("text-[11px] font-bold", r.returnPct >= 0 ? "text-emerald-600" : "text-rose-600")}>
-                      {r.returnPct >= 0 ? "+" : ""}
-                      {formatNumber(r.returnPct)}%
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="text-right tabular-nums">
+                    <div className={cn("font-extrabold", !r.traded && "text-muted-foreground")}>
+                      ${formatNumber(r.equity)}
                     </div>
-                  ) : (
-                    <div className="text-[11px] font-bold text-muted-foreground">No trades yet</div>
+                    {r.traded ? (
+                      <div className={cn("text-[11px] font-bold", r.returnPct >= 0 ? "text-emerald-600" : "text-rose-600")}>
+                        {r.returnPct >= 0 ? "+" : ""}
+                        {formatNumber(r.returnPct)}%
+                      </div>
+                    ) : (
+                      <div className="text-[11px] font-bold text-muted-foreground">No trades yet</div>
+                    )}
+                  </div>
+                  {canView && (
+                    <ChevronRight className="w-4 h-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
                   )}
                 </div>
+              </>
+            );
+            return (
+              <li key={r.member_id}>
+                {canView ? (
+                  // The whole row opens their portfolio, not just the name.
+                  <button
+                    type="button"
+                    onClick={() => setViewing(r)}
+                    className={cn(
+                      rowClass,
+                      "group transition-colors hover:border-primary/40 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                    )}
+                    title={me ? "See your portfolio" : `See ${r.display_name}'s portfolio`}
+                  >
+                    {content}
+                  </button>
+                ) : (
+                  <div className={rowClass}>{content}</div>
+                )}
               </li>
             );
           })}
@@ -289,62 +327,46 @@ export const Leaderboard = ({
           Players show N/A until they make their first trade.
         </p>
       )}
-      {ranked.length > 1 && (
-        <p className="mt-2 text-[11px] text-muted-foreground flex items-center gap-1.5">
-          <Briefcase className="w-3 h-3 shrink-0" />
-          {othersHoldings === "shown"
-            ? "Tap a name to see their stocks."
-            : othersHoldings === "creator"
-              ? "Players can't see each other's stocks in this game. You made it, so tap a name to see theirs."
-              : "This game keeps each player's stocks private."}
-        </p>
-      )}
 
       <Dialog open={!!liveViewing} onOpenChange={(open) => !open && setViewing(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent
+          className="max-w-2xl max-h-[90vh] overflow-y-auto grid-cols-1 p-4 sm:p-6"
+          aria-describedby={undefined}
+          // Focus the dialog, not the bar's first slice, which would open with
+          // that slice picked and the rest dimmed.
+          onOpenAutoFocus={(e) => {
+            e.preventDefault();
+            (e.currentTarget as HTMLElement).focus();
+          }}
+        >
           {liveViewing && (
             <>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
-                  <Briefcase className="w-4 h-4 text-primary" /> {liveViewing.display_name}'s holdings
+                  <Briefcase className="w-4 h-4 text-primary" />
+                  {liveViewing.me ? "Your portfolio" : `${liveViewing.display_name}'s portfolio`}
                 </DialogTitle>
               </DialogHeader>
-              <div className="flex items-center justify-between text-sm bg-muted/40 rounded-xl px-3 py-2 -mt-1">
-                <span className="text-muted-foreground">Net worth</span>
-                <div className="text-right tabular-nums">
-                  <div className="font-extrabold">${formatNumber(liveViewing.equity)}</div>
-                  <div className={cn("text-[11px] font-bold", liveViewing.returnPct >= 0 ? "text-emerald-600" : "text-rose-600")}>
-                    {liveViewing.returnPct >= 0 ? "+" : ""}
-                    {formatNumber(liveViewing.returnPct)}%
-                  </div>
-                </div>
-              </div>
-              {liveViewing.priced.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-6">No positions yet.</p>
-              ) : (
-                <div className="overflow-x-auto -mx-1">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-[11px] uppercase tracking-wider text-muted-foreground border-b">
-                        <th className="text-left font-semibold px-2 py-2">Symbol</th>
-                        <th className="text-right font-semibold px-2">Shares</th>
-                        <th className="text-right font-semibold px-2">Value</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {liveViewing.priced.map((p) => (
-                        <tr key={p.symbol} className="border-b last:border-0">
-                          <td className="px-2 py-2 font-bold">{p.symbol}</td>
-                          <td className="px-2 text-right tabular-nums">{p.shares}</td>
-                          <td className="px-2 text-right tabular-nums font-semibold">
-                            ${formatNumber(p.last * p.shares)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              <PortfolioBar
+                owner={liveViewing.me ? undefined : liveViewing.display_name}
+                equity={liveViewing.equity}
+                // Whatever of their net worth isn't in stocks; negative while borrowing.
+                cash={liveViewing.equity - viewingInvested}
+                totalReturnPct={liveViewing.returnPct}
+                holdings={viewingHoldings}
+                className="rounded-2xl px-4 py-5 sm:px-6 sm:py-6 shadow-none"
+              />
+              <HoldingsPanel
+                holdings={viewingHoldings}
+                title={liveViewing.me ? "Your holdings" : `${liveViewing.display_name}'s holdings`}
+                empty={liveViewing.me ? "You don't own any stocks yet." : `${liveViewing.display_name} doesn't own any stocks yet.`}
+                showDayPl={false}
+                onSelect={(symbol) => {
+                  if (!onSelectStock) return;
+                  setViewing(null);
+                  onSelectStock(symbol);
+                }}
+              />
             </>
           )}
         </DialogContent>
