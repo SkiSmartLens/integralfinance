@@ -306,6 +306,15 @@ Deno.serve(async (req) => {
       console.warn("groq model unavailable", aiRes.status, (await aiRes.clone().text()).slice(0, 300), "— trying", model);
       aiRes = await callProvider(GROQ, GROQ_API_KEY, model);
     }
+    // Backup Groq key: used only when the main key is exhausted/unavailable.
+    const GROQ_KEY_2 = Deno.env.get("Groq_API_Key_2");
+    if (GROQ_KEY_2) {
+      for (const model of ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "llama-3.1-8b-instant"]) {
+        if (!groqUnavailable(aiRes)) break;
+        console.warn("groq key 1 unavailable", aiRes.status, "— trying Groq key 2 with", model);
+        aiRes = await callProvider(GROQ, GROQ_KEY_2, model);
+      }
+    }
 
     if (groqUnavailable(aiRes) && LOVABLE_API_KEY) {
       console.warn("groq unavailable", aiRes.status, "— falling back to Lovable AI");

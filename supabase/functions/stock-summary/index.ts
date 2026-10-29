@@ -589,8 +589,8 @@ Return strict JSON with shape:
     // JSON-validation 400 we retry once, before falling through.
     const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-    const callGroq = async (model: string) => {
-      let r = await callProvider(GROQ_URL, GROQ_API_KEY, model);
+    const callGroq = async (model: string, key: string = GROQ_API_KEY) => {
+      let r = await callProvider(GROQ_URL, key, model);
       if (r.status === 429 || r.status === 400) {
         const body = await r.clone().text();
         let waitMs = 0;
@@ -604,7 +604,7 @@ Return strict JSON with shape:
         if (waitMs) {
           console.warn("groq retry", model, r.status, body.slice(0, 200));
           await sleep(waitMs);
-          r = await callProvider(GROQ_URL, GROQ_API_KEY, model);
+          r = await callProvider(GROQ_URL, key, model);
         }
       }
       return r;
@@ -618,6 +618,13 @@ Return strict JSON with shape:
     if (groqUnavailable(aiRes)) {
       console.warn("groq primary unavailable", aiRes.status, (await aiRes.clone().text()).slice(0, 500));
       aiRes = await callGroq("openai/gpt-oss-20b");
+    }
+    // Backup Groq key: used only when the main key is exhausted/unavailable.
+    const GROQ_KEY_2 = Deno.env.get("Groq_API_Key_2");
+    if (groqUnavailable(aiRes) && GROQ_KEY_2) {
+      console.warn("groq key 1 unavailable", aiRes.status, "— trying Groq key 2");
+      aiRes = await callGroq("openai/gpt-oss-120b", GROQ_KEY_2);
+      if (groqUnavailable(aiRes)) aiRes = await callGroq("openai/gpt-oss-20b", GROQ_KEY_2);
     }
 
     if (groqUnavailable(aiRes) && LOVABLE_API_KEY) {

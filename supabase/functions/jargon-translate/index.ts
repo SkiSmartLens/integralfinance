@@ -583,12 +583,15 @@ Deno.serve(async (req) => {
 
     let res: Response | null = null;
     const GROQ = "https://api.groq.com/openai/v1/chat/completions";
-    if (GROQ_API_KEY) {
+    const GROQ_KEY_2 = Deno.env.get("Groq_API_Key_2");
+    // Main key first; backup key 2 only if every model on key 1 fails.
+    for (const key of [GROQ_API_KEY, GROQ_KEY_2]) {
+      if (!key || res) continue;
       // Strongest first: the 120b keeps facts and numbers straight far better
       // than 8b-instant, and with low reasoning effort it still starts quickly.
       // Each model has its own rate limit, so a busy one falls through.
       for (const model of ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "llama-3.1-8b-instant"]) {
-        res = await tryModel(GROQ, GROQ_API_KEY, model);
+        res = await tryModel(GROQ, key, model);
         if (res) break;
       }
     }
