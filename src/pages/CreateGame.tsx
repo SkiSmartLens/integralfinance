@@ -6,7 +6,7 @@ import { Header } from "@/components/Header";
 import { SEO } from "@/components/SEO";
 import { SiteFooter } from "@/components/SiteFooter";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Loader2, Globe, Lock, TrendingDown, Zap, Clock, Wallet, ShieldAlert, PieChart } from "lucide-react";
+import { ArrowLeft, Loader2, Globe, Lock, TrendingDown, Zap, Clock, Wallet, ShieldAlert, PieChart, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const DURATIONS = [
@@ -41,6 +41,7 @@ const CreateGame = () => {
   const [startingCash, setStartingCash] = useState(100_000);
   const [customCash, setCustomCash] = useState(false);
   const [allowShort, setAllowShort] = useState(false);
+  const [showHoldings, setShowHoldings] = useState(true);
   const [leverage, setLeverage] = useState(1);
   const [customLeverage, setCustomLeverage] = useState(false);
   const [durationDays, setDurationDays] = useState<number | null>(isFriends ? 30 : null);
@@ -63,26 +64,33 @@ const CreateGame = () => {
     const endsAt = durationDays
       ? new Date(Date.now() + durationDays * 86400_000).toISOString()
       : null;
-    const { data: g, error } = await supabase
-      .from("games")
-      .insert({
-        name: name.trim() || "My Game",
-        starting_cash: startingCash,
-        commission,
-        allow_short: allowShort,
-        leverage,
-        duration_days: durationDays,
-        ends_at: endsAt,
-        is_public: isFriends ? isPublic : false,
-        min_price: minPrice,
-        max_position_pct: maxPositionPct,
-        created_by: uid,
-      } as any)
-      .select()
-      .single();
+    const row = {
+      name: name.trim() || "My Game",
+      starting_cash: startingCash,
+      commission,
+      allow_short: allowShort,
+      leverage,
+      duration_days: durationDays,
+      ends_at: endsAt,
+      is_public: isFriends ? isPublic : false,
+      min_price: minPrice,
+      max_position_pct: maxPositionPct,
+      created_by: uid,
+    };
+    const insert = (values: typeof row & { show_holdings?: boolean }) =>
+      supabase.from("games").insert(values as any).select().single();
+    let { data: g, error } = await insert({ ...row, show_holdings: showHoldings });
+    // Until the database has the show_holdings column, every game shows
+    // players' stocks, so that choice still works without it.
+    const noColumn = !!error && /show_holdings/.test(error.message);
+    if (noColumn && showHoldings) ({ data: g, error } = await insert(row));
     if (error || !g) {
       setSaving(false);
-      return toast({ title: "Couldn't create game", description: error?.message, variant: "destructive" });
+      return toast({
+        title: "Couldn't create game",
+        description: noColumn ? "Hiding players' stocks isn't available yet. Turn that option back on to create the game." : error?.message,
+        variant: "destructive",
+      });
     }
     await supabase
       .from("game_members")
@@ -358,6 +366,23 @@ const CreateGame = () => {
                 <div className="font-extrabold">Realistic commissions ($1/trade)</div>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Simulates the fees some brokers charge per order.
+                </p>
+              </div>
+            </label>
+
+            <label className="flex items-start gap-3 p-4 rounded-2xl border-2 bg-card cursor-pointer hover:border-primary/40 transition-colors mt-2">
+              <input
+                type="checkbox"
+                checked={showHoldings}
+                onChange={(e) => setShowHoldings(e.target.checked)}
+                className="mt-1 w-5 h-5 rounded accent-primary"
+              />
+              <div>
+                <div className="font-extrabold flex items-center gap-2">
+                  <Eye className="w-4 h-4" /> Players can see each other's stocks
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Tap a name on the leaderboard to see which stocks they own. Turn off so players can't copy each other; you, as the game's creator, can still see everyone's.
                 </p>
               </div>
             </label>

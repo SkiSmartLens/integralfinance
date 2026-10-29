@@ -28,6 +28,8 @@ interface GameRow {
   max_position_pct: number | null;
   ends_at: string | null;
   join_code: string;
+  /** Missing until the database has the column; every game showed stocks before it. */
+  show_holdings?: boolean;
 }
 
 interface PlayerRow {
@@ -448,6 +450,7 @@ const GameSettings = ({
     leverage: String(game.leverage),
     allow_short: game.allow_short,
     is_public: game.is_public,
+    show_holdings: game.show_holdings !== false,
     min_price: game.min_price == null ? "" : String(game.min_price),
     max_position_pct: game.max_position_pct == null ? "" : String(game.max_position_pct),
     ends_at: game.ends_at ? game.ends_at.slice(0, 10) : "",
@@ -495,6 +498,9 @@ const GameSettings = ({
         </label>
         <label className="flex items-center gap-2 text-sm font-semibold">
           <Switch checked={form.is_public} onCheckedChange={(v) => set("is_public", v)} /> Public game
+        </label>
+        <label className="flex items-center gap-2 text-sm font-semibold">
+          <Switch checked={form.show_holdings} onCheckedChange={(v) => set("show_holdings", v)} /> Players see each other's stocks
         </label>
       </div>
       <div className="flex items-center gap-2 pt-2">

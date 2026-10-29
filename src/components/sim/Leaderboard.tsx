@@ -107,6 +107,7 @@ export const Leaderboard = ({
   myCash,
   myHoldings,
   myTraded,
+  othersHoldings = "shown",
 }: {
   gameId: string;
   meUserId: string;
@@ -120,6 +121,12 @@ export const Leaderboard = ({
   myHoldings?: { symbol: string; shares: number; avgCost: number; last: number }[];
   /** Whether your own trade history has any stock trades in it. */
   myTraded?: boolean;
+  /**
+   * Whether tapping another player shows their stocks: "shown" when the game
+   * allows it, "hidden" when it doesn't, "creator" when it doesn't but you made
+   * the game (or are an admin), so you still can.
+   */
+  othersHoldings?: "shown" | "hidden" | "creator";
 }) => {
   const [rows, setRows] = useState<Row[] | null>(null);
 
@@ -226,6 +233,7 @@ export const Leaderboard = ({
         <ol className="space-y-1.5">
           {ranked.map((r, i) => {
             const me = r.me;
+            const canView = me || othersHoldings !== "hidden";
             return (
               <li
                 key={r.member_id}
@@ -244,15 +252,19 @@ export const Leaderboard = ({
                   >
                     {r.traded ? i + 1 : "N/A"}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => setViewing(r)}
-                    className="truncate hover:underline hover:text-primary transition-colors text-left"
-                    title={`See ${r.display_name}'s holdings`}
-                  >
-                    {r.display_name}
-                    {me && <span className="ml-1 text-xs text-primary">(you)</span>}
-                  </button>
+                  {canView ? (
+                    <button
+                      type="button"
+                      onClick={() => setViewing(r)}
+                      className="truncate hover:underline hover:text-primary transition-colors text-left"
+                      title={`See ${r.display_name}'s stocks`}
+                    >
+                      {r.display_name}
+                      {me && <span className="ml-1 text-xs text-primary">(you)</span>}
+                    </button>
+                  ) : (
+                    <span className="truncate">{r.display_name}</span>
+                  )}
                 </div>
                 <div className="text-right shrink-0 tabular-nums">
                   <div className={cn("font-extrabold", !r.traded && "text-muted-foreground")}>
@@ -275,6 +287,16 @@ export const Leaderboard = ({
       {rankedCount < ranked.length && (
         <p className="mt-2 text-[11px] text-muted-foreground">
           Players show N/A until they make their first trade.
+        </p>
+      )}
+      {ranked.length > 1 && (
+        <p className="mt-2 text-[11px] text-muted-foreground flex items-center gap-1.5">
+          <Briefcase className="w-3 h-3 shrink-0" />
+          {othersHoldings === "shown"
+            ? "Tap a name to see their stocks."
+            : othersHoldings === "creator"
+              ? "Players can't see each other's stocks in this game. You made it, so tap a name to see theirs."
+              : "This game keeps each player's stocks private."}
         </p>
       )}
 

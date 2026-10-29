@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { Leaderboard } from "./Leaderboard";
 
 // Four players in a $100k game: Ana is up, Bo is down, Cy and you haven't traded.
@@ -45,7 +45,7 @@ beforeEach(() => {
 });
 vi.mock("@/lib/simAdmin", () => ({ useCashSynced: () => true }));
 
-const rowFor = (name: string) => screen.getByTitle(`See ${name}'s holdings`).closest("li")!;
+const rowFor = (name: string) => screen.getByTitle(`See ${name}'s stocks`).closest("li")!;
 
 describe("Leaderboard", () => {
   it("players who haven't traded show N/A below everyone ranked", async () => {
@@ -122,5 +122,28 @@ describe("Leaderboard", () => {
 
     // Ana: $90k cash + 100 AAPL at their $100 average cost.
     expect(within(rowFor("Ana")).getByText("$100,000")).toBeTruthy();
+  });
+
+  it("tapping a player shows their stocks", async () => {
+    render(<Leaderboard gameId="g" meUserId="u-me" startingCash={100_000} myCash={100_000} myTraded={false} />);
+    fireEvent.click(await screen.findByTitle("See Ana's stocks"));
+    expect(await screen.findByText("Ana's holdings")).toBeTruthy();
+    expect(screen.getByText("AAPL")).toBeTruthy();
+    expect(screen.getByText("Tap a name to see their stocks.")).toBeTruthy();
+  });
+
+  it("a game that hides stocks only lets you open your own", async () => {
+    render(<Leaderboard gameId="g" meUserId="u-me" startingCash={100_000} myCash={100_000} myTraded={false} othersHoldings="hidden" />);
+    await screen.findByText("Ana");
+    expect(screen.queryByTitle("See Ana's stocks")).toBeNull();
+    expect(screen.getByTitle("See Me's stocks")).toBeTruthy();
+    expect(screen.getByText("This game keeps each player's stocks private.")).toBeTruthy();
+  });
+
+  it("the game's creator can still open everyone's when stocks are hidden", async () => {
+    render(<Leaderboard gameId="g" meUserId="u-me" startingCash={100_000} myCash={100_000} myTraded={false} othersHoldings="creator" />);
+    fireEvent.click(await screen.findByTitle("See Bo's stocks"));
+    expect(await screen.findByText("Bo's holdings")).toBeTruthy();
+    expect(screen.getByText(/You made it, so tap a name/)).toBeTruthy();
   });
 });

@@ -41,6 +41,7 @@ interface Game {
   ends_at: string | null;
   min_price: number | null;
   max_position_pct: number | null;
+  show_holdings?: boolean;
 }
 interface Member {
   id: string;
@@ -620,6 +621,7 @@ const GameLobby = () => {
                     {g.duration_days && <span>· {g.duration_days}-day</span>}
                     {g.min_price != null && <span>· Min ${Number(g.min_price)}/share</span>}
                     {g.max_position_pct != null && <span>· Max {Number(g.max_position_pct)}% per stock</span>}
+                    {g.show_holdings === false && <span>· Players' stocks hidden</span>}
                   </div>
                   <button
                     onClick={() => joinPublic(g)}

@@ -66,6 +66,8 @@ interface Game {
   duration_days: number | null;
   ends_at: string | null;
   created_by: string;
+  /** Whether players see each other's stocks. Missing until the database has the column. */
+  show_holdings?: boolean;
 }
 
 const usePriceFlash = (value?: number) => {
@@ -632,6 +634,8 @@ const Sim = () => {
                   myCash={dataReady ? cash : undefined}
                   myHoldings={dataReady ? holdings : undefined}
                   myTraded={dataReady && myTraded}
+                  // The game's creator and admins always see everyone's stocks.
+                  othersHoldings={game.show_holdings === false ? (game.created_by === userId || isAdmin ? "creator" : "hidden") : "shown"}
                 />
               )}
             </div>
