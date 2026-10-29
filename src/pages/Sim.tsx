@@ -278,8 +278,6 @@ const Sim = () => {
   const cash = dataReady ? ledgerCash(startingCash, trades, positions) : Number(member?.cash ?? 0);
   const leverage = Math.max(1, Number(game?.leverage ?? 1) || 1);
   const buyingPower = startingCash * leverage;
-  // Leverage multiplies the cash you have, not your starting cash.
-  const spendable = buyLimit(cash, leverage);
   // Covering a short can still borrow down to startingCash × (leverage − 1),
   // so a short can always be closed.
   const coverPower = cash + startingCash * (leverage - 1);
@@ -302,6 +300,8 @@ const Sim = () => {
 
   const holdingsValue = holdings.reduce((s, h) => s + h.last * h.shares, 0);
   const equity = cash + holdingsValue;
+  // With leverage you may own up to leverage × your net worth in stocks.
+  const spendable = buyLimit(cash, leverage, equity);
   // Trades since today's US session date (ET) count from their fill price.
   const todayET = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
   const isToday = (iso?: string) =>

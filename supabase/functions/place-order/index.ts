@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
     const marginFloor = -Math.max(0, startingCash * (leverage - 1));
     const minPrice = (game as any)?.min_price != null ? Number((game as any).min_price) : null;
     const maxPositionPct = (game as any)?.max_position_pct != null ? Number((game as any).max_position_pct) : null;
-    const rules = { marginFloor, minPrice, maxPositionPct, startingCash };
+    const rules = { marginFloor, minPrice, maxPositionPct, startingCash, leverage };
 
     // ---- Bring the stored cash balance back in line with the trade history ----
     if (body.action === "reconcile") {
@@ -176,6 +176,26 @@ async function getQuote(symbol: string) {
   };
 }
 
+/** Live prices for several symbols in one request; symbols without one are left out. */
+async function getPrices(symbols: string[]): Promise<Map<string, number>> {
+  const prices = new Map<string, number>();
+  if (!symbols.length) return prices;
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/functions/v1/yahoo-proxy?kind=quote&symbols=${encodeURIComponent(symbols.join(","))}`,
+      { headers: { apikey: ANON } },
+    );
+    const json = await res.json();
+    for (const q of json?.quoteResponse?.result ?? []) {
+      const price = Number(q?.regularMarketPrice ?? q?.postMarketPrice ?? 0);
+      if (q?.symbol && price > 0) prices.set(String(q.symbol).toUpperCase(), price);
+    }
+  } catch (e) {
+    console.error("getPrices failed", e);
+  }
+  return prices;
+}
+
 function isMarketOpen(marketState?: string) {
   if (marketState === "REGULAR") return true;
 
@@ -203,6 +223,40 @@ interface FillRules {
   /** Max % of starting capital a single symbol's notional may reach when opening/adding exposure. */
   maxPositionPct?: number | null;
   startingCash?: number;
+  /** The game's leverage (1 = no borrowing). */
+  leverage?: number;
+}
+
+/**
+ * The lowest a buy may take cash (per the trade history): in a game with
+ * leverage L you may own stocks worth up to L × your net worth, so cash may go
+ * down to −(L − 1) × net worth. Net worth is cash plus every holding at its live
+ * price (the order's own stock at the fill price; average cost when there's no
+ * quote). Same rule as buyLimit in src/lib/simLedger.ts.
+ */
+async function buyFloor(
+  svc: any,
+  member_id: string,
+  ledgerCash: number,
+  leverage: number,
+  symbol: string,
+  fillPrice: number,
+): Promise<number | null> {
+  if (!(leverage > 1)) return 0;
+  const { data: held, error } = await svc.from("positions").select("symbol, shares, avg_cost").eq("member_id", member_id);
+  if (error) {
+    console.error("buyFloor: positions read failed", error);
+    return null;
+  }
+  const others = (held ?? []).map((p: any) => String(p.symbol).toUpperCase()).filter((s: string) => s !== symbol);
+  const prices = await getPrices(others);
+  prices.set(symbol, fillPrice);
+  const holdings = (held ?? []).reduce((sum: number, p: any) => {
+    const sym = String(p.symbol).toUpperCase();
+    return sum + Number(p.shares) * (prices.get(sym) ?? Number(p.avg_cost));
+  }, 0);
+  const netWorth = ledgerCash + holdings;
+  return -(leverage - 1) * Math.max(0, netWorth);
 }
 
 /**
@@ -266,7 +320,7 @@ async function fillOrder(
   const before = await reconcileCash(svc, member_id, rules.startingCash ?? 0);
   const drift = before ? before.stored - before.derived : 0;
 
-  const { data, error } = await svc.rpc("apply_order_fill", {
+  const args: Record<string, unknown> = {
     _member_id: member_id,
     _order_id: ord.id,
     _symbol: symbol,
@@ -274,7 +328,21 @@ async function fillOrder(
     _shares: shares,
     _price: fillPrice,
     _margin_floor: (rules.marginFloor ?? 0) + drift,
-  });
+  };
+  // Buys may borrow against net worth (see buyFloor). Without a trade-history
+  // cash to work from, apply_order_fill's own leverage × cash rule applies.
+  if (side === "buy" && before) {
+    const floor = await buyFloor(svc, member_id, before.derived, rules.leverage ?? 1, symbol, fillPrice);
+    if (floor != null) args._buy_floor = floor + drift;
+  }
+  let { data, error } = await svc.rpc("apply_order_fill", args);
+  // Until the database has the version that takes _buy_floor
+  // (supabase/migrations/20261029160000_sim_leverage_borrows_against_net_worth.sql),
+  // fill with the previous rule rather than failing the order.
+  if (error && "_buy_floor" in args && (error.code === "PGRST202" || /could not find the function/i.test(error.message ?? ""))) {
+    delete args._buy_floor;
+    ({ data, error } = await svc.rpc("apply_order_fill", args));
+  }
   if (error) {
     console.error("apply_order_fill rpc failed", error);
     return await fail("Something went wrong filling your order. Please try again.");

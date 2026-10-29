@@ -70,16 +70,26 @@ describe("hasTraded", () => {
 });
 
 describe("buyLimit", () => {
-  it("2x leverage doubles the cash you have, not the starting cash", () => {
-    expect(buyLimit(0.01, 2)).toBeCloseTo(0.02);
-    expect(buyLimit(100_000, 2)).toBe(200_000);
+  it("2x leverage lets you own up to twice your net worth", () => {
+    // All in cash: $200k of stock.
+    expect(buyLimit(100_000, 2, 100_000)).toBe(200_000);
+    // $100k already in stocks with 1 cent left: another $100k.
+    expect(buyLimit(0.01, 2, 100_000.01)).toBeCloseTo(100_000.02);
+    // Already borrowed $50k ($150k in stocks): $50k more.
+    expect(buyLimit(-50_000, 2, 100_000)).toBe(50_000);
+    // At the limit: nothing more.
+    expect(buyLimit(-100_000, 2, 100_000)).toBe(0);
   });
-  it("no cash, or cash already borrowed, leaves nothing to borrow against", () => {
-    expect(buyLimit(0, 2)).toBe(0);
-    expect(buyLimit(-50_000, 2)).toBe(0);
+  it("3x on a $50k net worth allows $150k of stock in all", () => {
+    expect(buyLimit(50_000, 3, 50_000)).toBe(150_000);
+  });
+  it("nothing to borrow against once net worth is gone", () => {
+    expect(buyLimit(0, 2, 0)).toBe(0);
+    expect(buyLimit(-80_000, 2, -5_000)).toBe(0);
   });
   it("1x (or no leverage set) is just your cash", () => {
-    expect(buyLimit(1_000, 1)).toBe(1_000);
-    expect(buyLimit(1_000, 0)).toBe(1_000);
+    expect(buyLimit(1_000, 1, 50_000)).toBe(1_000);
+    expect(buyLimit(1_000, 0, 50_000)).toBe(1_000);
+    expect(buyLimit(-10, 1, 50_000)).toBe(0);
   });
 });

@@ -104,13 +104,17 @@ export function hasTraded(startingCash: number, cash: number, positionCount: num
 }
 
 /**
- * The most a buy may cost: leverage × the cash you have. With 2× and $10k in
- * cash that's $20k; with no cash left, or cash already borrowed below zero,
- * it's $0. Same rule as apply_order_fill in
- * supabase/migrations/20261020190000_sim_leverage_multiplies_cash.sql.
+ * The most a buy may cost. With leverage you may own stocks worth up to
+ * leverage × your net worth, like a margin account: cash may go as low as
+ * −(leverage − 1) × net worth. So 2× with $100k all in cash buys $200k, and
+ * with $100k already all in stocks it still buys another $100k. Without
+ * leverage it's your cash. Same rule as place-order and apply_order_fill
+ * (supabase/migrations/20261029160000_sim_leverage_borrows_against_net_worth.sql).
  */
-export function buyLimit(cash: number, leverage: number): number {
-  return Math.max(1, leverage) * Math.max(0, cash);
+export function buyLimit(cash: number, leverage: number, netWorth: number): number {
+  const lev = Math.max(1, leverage);
+  if (lev === 1) return Math.max(0, cash);
+  return Math.max(0, cash + (lev - 1) * Math.max(0, netWorth));
 }
 
 export interface DayTrade extends LedgerTrade {

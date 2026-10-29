@@ -8,7 +8,7 @@ interface Props {
   price?: number;
   /** Actual cash: starting cash + realized gains − what's invested. Negative while borrowing. */
   cash: number;
-  /** Leverage × your cash (never below 0). Caps buys. Defaults to cash. */
+  /** The most a buy may cost (with leverage, up to leverage × net worth in stocks). Defaults to cash. */
   spendable?: number;
   /** Caps covers. Defaults to spendable. */
   coverPower?: number;
@@ -58,8 +58,8 @@ export const TradeTicket = ({
     side === "short" ? shortPower ?? 0 : side === "cover" ? coverPower ?? spendable ?? cash : spendable ?? cash,
   );
   // What the slider and % buttons size against: everything this order may use.
-  // For buys that's your buying power (leverage × your cash), so 100% with 2×
-  // leverage spends twice your cash, half of it borrowed.
+  // For buys that's your buying power, so 100% with 2× leverage and $100k in
+  // cash spends $200k, half of it borrowed.
   const budget = tradingPower;
   const leveraged = leverage > 1;
 
@@ -280,7 +280,7 @@ export const TradeTicket = ({
       <p className="text-[11px] text-muted-foreground mb-4">
         {side === "buy"
           ? leveraged
-            ? `Percent of your buying power (${leverage}× your cash). 100% uses all of it; the shaded part of the bar is borrowed.`
+            ? `Percent of your buying power. With ${leverage}× leverage you can own stocks worth up to ${leverage}× your net worth; the shaded part of the bar is borrowed.`
             : "Percent of your cash. 100% invests it all."
           : "Percent of your available buying power. 100% invests it all."}
       </p>
@@ -296,7 +296,7 @@ export const TradeTicket = ({
           bold
         />
         {leveraged && side === "buy" && (
-          <Row label={`Buying power (${leverage}× your cash)`} value={`$${formatNumber(tradingPower)}`} />
+          <Row label={`Buying power (${leverage}× leverage)`} value={`$${formatNumber(tradingPower)}`} />
         )}
         {leveraged && side === "buy" && !!price && estCost > Math.max(0, cash) && (
           <Row
