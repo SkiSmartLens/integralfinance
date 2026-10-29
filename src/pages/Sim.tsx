@@ -9,6 +9,7 @@ import { formatNumber, formatLargeNumber } from "@/lib/yahoo";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { AnimatedNumber } from "@/components/sim/AnimatedNumber";
 import { MiniChart } from "@/components/sim/MiniChart";
+import { PriceChange, daySpan, type PriceMove } from "@/components/PriceChange";
 import { NetWorthChart } from "@/components/sim/NetWorthChart";
 import { SimSearch } from "@/components/sim/SimSearch";
 import { TradeTicket } from "@/components/sim/TradeTicket";
@@ -250,6 +251,11 @@ const Sim = () => {
   const selQuote = quoteMap.get(selected);
   const selPrice = selQuote?.regularMarketPrice;
   const selChange = selQuote?.regularMarketChangePercent ?? 0;
+  // The stock card shows the move over the chart's range; for one day, the quote's own day change.
+  const [chartMove, setChartMove] = useState<PriceMove | null>(null);
+  const shownMove = chartMove && !chartMove.isDay
+    ? chartMove
+    : { change: selQuote?.regularMarketChange ?? null, pct: selQuote?.regularMarketChangePercent ?? null, span: daySpan(selQuote?.marketState) };
   const flash = usePriceFlash(selPrice);
   // Regular-session check — gains and order entry are only live during trading hours.
   // Yahoo's marketState wins when we have it; the ET clock is the fallback so an
@@ -568,7 +574,7 @@ const Sim = () => {
                     <h2 className="text-xl font-extrabold tracking-tight">{selected}</h2>
                     <span className="text-sm text-muted-foreground truncate">{selQuote?.shortName || selQuote?.longName || ""}</span>
                   </div>
-                  <div className="flex items-baseline gap-2 mt-1">
+                  <div className="flex items-baseline gap-x-2 flex-wrap mt-1">
                     <span
                       className={cn(
                         "text-3xl font-bold tabular-nums rounded px-1 -mx-1 transition-colors",
@@ -578,15 +584,13 @@ const Sim = () => {
                     >
                       {selPrice != null ? <AnimatedNumber value={selPrice} format={(n) => `$${formatNumber(n)}`} /> : "—"}
                     </span>
-                    <span className={cn("text-sm font-semibold tabular-nums", selChange >= 0 ? "text-emerald-600" : "text-rose-600")}>
-                      {selChange >= 0 ? "+" : ""}{formatNumber(selChange)}%
-                    </span>
+                    <PriceChange change={shownMove.change} pct={shownMove.pct} span={shownMove.span} className="text-sm" />
                   </div>
                 </div>
               </div>
 
               <div className="mt-3">
-                <MiniChart symbol={selected} />
+                <MiniChart symbol={selected} onMove={setChartMove} />
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">

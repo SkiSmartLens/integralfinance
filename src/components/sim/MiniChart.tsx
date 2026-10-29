@@ -1,21 +1,23 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useLiveChart } from "@/hooks/useLiveChart";
 import { formatNumber } from "@/lib/yahoo";
 import { fiveEvenTicks } from "@/lib/chartTicks";
 import { cn } from "@/lib/utils";
+import type { PriceMove } from "@/components/PriceChange";
 
 const RANGES = [
-  { label: "1D", range: "1d", interval: "1m" },
-  { label: "1W", range: "5d", interval: "5m" },
-  { label: "1M", range: "1mo", interval: "1d" },
-  { label: "3M", range: "3mo", interval: "1d" },
-  { label: "1Y", range: "1y", interval: "1d" },
-  { label: "5Y", range: "5y", interval: "1wk" },
-  { label: "All", range: "max", interval: "1mo" },
+  { label: "1D", range: "1d", interval: "1m", span: "today" },
+  { label: "1W", range: "5d", interval: "5m", span: "past week" },
+  { label: "1M", range: "1mo", interval: "1d", span: "past month" },
+  { label: "3M", range: "3mo", interval: "1d", span: "past 3 months" },
+  { label: "1Y", range: "1y", interval: "1d", span: "past year" },
+  { label: "5Y", range: "5y", interval: "1wk", span: "past 5 years" },
+  { label: "All", range: "max", interval: "1mo", span: "all time" },
 ] as const;
 
-export const MiniChart = ({ symbol }: { symbol: string }) => {
+/** `onMove` is told the price move over the range on screen, so the card can show it. */
+export const MiniChart = ({ symbol, onMove }: { symbol: string; onMove?: (move: PriceMove) => void }) => {
   const [idx, setIdx] = useState(0);
   const r = RANGES[idx];
   const { data, loading } = useLiveChart(symbol, r.range, r.interval, 5000);
@@ -28,6 +30,15 @@ export const MiniChart = ({ symbol }: { symbol: string }) => {
   const first = points[0]?.price;
   const last = points.at(-1)?.price;
   const up = first != null && last != null ? last >= first : true;
+  // One day counts from the previous close, like every quote; longer ranges
+  // from the first point on the chart.
+  const base = r.range === "1d" ? data?.previousClose ?? first : first;
+  const change = base != null && last != null ? last - base : null;
+  const pct = change != null && base ? (change / base) * 100 : null;
+  useEffect(() => {
+    onMove?.({ change, pct, span: r.span, isDay: r.range === "1d" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [change, pct, r.span, r.range]);
   const color = up ? "hsl(var(--chart-up))" : "hsl(var(--chart-down))";
   const gradId = `mini-${up ? "up" : "down"}`;
 

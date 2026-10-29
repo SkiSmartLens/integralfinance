@@ -16,14 +16,15 @@ import { formatNumber, formatLargeNumber, ChartPoint } from "@/lib/yahoo";
 import { formatEtTime } from "@/lib/marketHours";
 import { fiveEvenTicks } from "@/lib/chartTicks";
 import { cn } from "@/lib/utils";
+import { PriceChange, type PriceMove } from "@/components/PriceChange";
 
-const RANGES: { label: string; range: string; interval: string }[] = [
-  { label: "Today", range: "1d", interval: "1m" },
-  { label: "5D", range: "5d", interval: "5m" },
-  { label: "1M", range: "1mo", interval: "1d" },
-  { label: "1Y", range: "1y", interval: "1d" },
-  { label: "5Y", range: "5y", interval: "1wk" },
-  { label: "All", range: "max", interval: "1mo" },
+const RANGES: { label: string; range: string; interval: string; span: string }[] = [
+  { label: "Today", range: "1d", interval: "1m", span: "today" },
+  { label: "5D", range: "5d", interval: "5m", span: "past 5 days" },
+  { label: "1M", range: "1mo", interval: "1d", span: "past month" },
+  { label: "1Y", range: "1y", interval: "1d", span: "past year" },
+  { label: "5Y", range: "5y", interval: "1wk", span: "past 5 years" },
+  { label: "All", range: "max", interval: "1mo", span: "all time" },
 ];
 
 
@@ -39,6 +40,8 @@ type ChartType = "mountain" | "candle";
 
 interface Props {
   symbol: string;
+  /** Told the price move over the range on screen whenever it changes, for the page header. */
+  onMove?: (move: PriceMove) => void;
 }
 
 // Custom candle renderer using Customized — has access to xAxisMap & yAxisMap
@@ -140,7 +143,7 @@ const useMarketStatus = () => {
   return status;
 };
 
-export const StockChart = ({ symbol }: Props) => {
+export const StockChart = ({ symbol, onMove }: Props) => {
   const [rangeIdx, setRangeIdx] = useState(0);
   const [chartType, setChartType] = useState<ChartType>("mountain");
   const [intradayIdx, setIntradayIdx] = useState(0);
@@ -180,6 +183,11 @@ export const StockChart = ({ symbol }: Props) => {
     ? (displayChange / prevClose) * 100
     : null;
   const isUp = (displayChange ?? 0) >= 0;
+  const span = showPrevSession ? "last session" : RANGES[rangeIdx].span;
+  useEffect(() => {
+    onMove?.({ change: displayChange, pct: displayChangePct, span, isDay: is1D });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayChange, displayChangePct, span, is1D]);
   const priceFlash = usePriceFlash(typeof lastPrice === "number" ? lastPrice : null);
 
   const chartData = useMemo(() => {
@@ -358,23 +366,7 @@ export const StockChart = ({ symbol }: Props) => {
             >
               {formatNumber(lastPrice)}
             </span>
-            {displayChange != null && (
-              <span
-                className={cn(
-                  "text-lg font-semibold tabular-nums",
-                  isUp ? "text-up" : "text-down"
-                )}
-              >
-                {isUp ? "+" : ""}
-                {formatNumber(displayChange)}
-                {displayChangePct != null && (
-                  <> ({isUp ? "+" : ""}{formatNumber(displayChangePct)}%)</>
-                )}
-                <span className="ml-1 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  over {r.label.toLowerCase()}
-                </span>
-              </span>
-            )}
+            <PriceChange change={displayChange} pct={displayChangePct} span={span} className="text-lg" />
             {(() => {
               const pillMap = {
                 open: { dot: "bg-success animate-pulse", text: "Live · market open" },

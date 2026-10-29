@@ -11,6 +11,7 @@ import { ALL_TICKERS, isIndexableTicker, tickerPageLabel } from "@/lib/categorie
 import { cn } from "@/lib/utils";
 import { ArrowLeft, LineChart, Newspaper, SlidersHorizontal } from "lucide-react";
 import { AcademyPrompt } from "@/components/AcademyPrompt";
+import { PriceChange, daySpan, type PriceMove } from "@/components/PriceChange";
 
 const StockSummary = lazy(() =>
   import("@/components/StockSummary").then((m) => ({ default: m.StockSummary }))
@@ -40,6 +41,11 @@ const StockTicker = () => {
   const last = q?.regularMarketPrice;
   const ch = Number(q?.regularMarketChangePercent ?? 0);
   const [tab, setTab] = useState<TabId>("overview");
+  // The header shows the move over whichever range the chart is on. Until the
+  // chart has it (or with the chart's tab closed), the quote's own day change.
+  const [chartMove, setChartMove] = useState<PriceMove | null>(null);
+  const dayMove = { change: q?.regularMarketChange ?? null, pct: q?.regularMarketChangePercent ?? null, span: daySpan(q?.marketState) };
+  const move = tab === "overview" && chartMove && (chartMove.change != null || !chartMove.isDay) ? chartMove : dayMove;
   // The proxy answers an unknown symbol with a 404 stub instead of a quote —
   // keep that soft-404 out of the index. Known tickers and other fetch errors
   // never count, so a flaky data source can't deindex real pages.
@@ -106,9 +112,7 @@ const StockTicker = () => {
             {last != null && (
               <>
                 <div className="text-2xl font-bold tabular-nums">${formatNumber(last)}</div>
-                <div className={cn("text-sm font-semibold tabular-nums", ch >= 0 ? "text-up" : "text-down")}>
-                  {ch >= 0 ? "+" : ""}{formatNumber(ch)}%
-                </div>
+                <PriceChange change={move.change} pct={move.pct} span={move.span} className="text-sm" />
               </>
             )}
           </div>
@@ -144,7 +148,7 @@ const StockTicker = () => {
       <main className="px-4 sm:px-6 py-6 space-y-6 max-w-5xl mx-auto">
         {tab === "overview" && (
           <>
-            <div id="chart"><StockChart symbol={symbol} /></div>
+            <div id="chart"><StockChart symbol={symbol} onMove={setChartMove} /></div>
             <AcademyPrompt moduleId={2} hint="Learn: how to read a stock chart" />
             <StockExplainer symbol={symbol} eager />
             <Suspense fallback={<div className="h-32" />}>
