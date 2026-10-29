@@ -43,7 +43,12 @@ export const TradeTicket = ({
   onExecute,
 }: Props) => {
   const [side, setSide] = useState<"buy" | "sell" | "short" | "cover">("buy");
-  const [qty, setQty] = useState(1);
+  // The box's text as typed, so it can be cleared to type a new number; the
+  // slider and % buttons write whole numbers into it.
+  const [qtyText, setQtyText] = useState("1");
+  const setQty = (n: number) => setQtyText(String(n));
+  const emptyQty = qtyText.trim() === "";
+  const qty = emptyQty ? 0 : Number(qtyText);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   // The most this order may cost: buys can go past your cash up to leverage ×
@@ -94,7 +99,7 @@ export const TradeTicket = ({
   const insufficient = (side === "buy" || side === "cover") && estCost > tradingPower;
   const overSell = side === "sell" && qty > heldShares;
   const overCover = side === "cover" && qty > Math.abs(Math.min(heldShares, 0));
-  const invalidQty = !Number.isFinite(qty) || qty < 1;
+  const invalidQty = !Number.isInteger(qty) || qty < 1;
   const disabled =
     placing ||
     invalidQty ||
@@ -107,7 +112,9 @@ export const TradeTicket = ({
     (side === "short" && heldShares > 0);
 
   const validationMsg = invalidQty
-    ? "Enter a whole number of shares."
+    ? emptyQty
+      ? null
+      : "Enter a whole number of shares."
     : insufficient
     ? `${qty === 1 ? "1 share" : `${qty.toLocaleString()} shares`} of ${symbol} ${qty === 1 ? "costs" : "cost"} $${formatNumber(estCost)}, but you only have $${formatNumber(tradingPower)} ${leveraged ? "of buying power" : "in cash"}.${maxShares >= 1 ? " Try fewer shares." : " Sell some stock to free up cash."}`
     : overSell
@@ -194,9 +201,12 @@ export const TradeTicket = ({
       <div className="flex items-center gap-2 mb-2">
         <input
           type="number"
+          inputMode="numeric"
           min={1}
-          value={qty}
-          onChange={(e) => setQty(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
+          step={1}
+          value={qtyText}
+          onChange={(e) => setQtyText(e.target.value)}
+          aria-label="Number of shares"
           className={cn(
             "flex-1 h-12 px-4 rounded-2xl bg-muted/60 border-2 outline-none text-base font-bold tabular-nums transition-colors focus:bg-card",
             validationMsg ? "border-rose-400 focus:border-rose-500" : "border-transparent focus:border-primary/50",
@@ -219,7 +229,7 @@ export const TradeTicket = ({
           min={1}
           max={Math.max(1, maxShares)}
           step={1}
-          value={Math.min(qty, Math.max(1, maxShares))}
+          value={Math.min(Math.max(1, qty || 1), Math.max(1, maxShares))}
           disabled={maxShares < 1}
           onChange={(e) => setQty(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
           aria-label="Shares"
@@ -279,7 +289,7 @@ export const TradeTicket = ({
       {/* Estimate */}
       <div className="rounded-2xl bg-muted/40 border p-3.5 space-y-2 text-sm mb-4">
         <Row label="Price per share" value={price ? `$${formatNumber(price)}` : "—"} />
-        <Row label="Shares" value={qty.toLocaleString()} />
+        <Row label="Shares" value={invalidQty ? "—" : qty.toLocaleString()} />
         <Row
           label={side === "buy" ? "Total cost" : "You'll receive"}
           value={price ? `$${formatNumber(estCost)}` : "—"}
@@ -324,8 +334,10 @@ export const TradeTicket = ({
         {placing ? <Loader2 className="w-5 h-5 animate-spin" /> : s.icon}
         {placing
           ? "Placing…"
+          : invalidQty
+          ? `${s.label}`
           : marketOpen
-          ? `${s.label} ${qty} ${qty === 1 ? "share" : "shares"}`
+          ? `${s.label} ${qty.toLocaleString()} ${qty === 1 ? "share" : "shares"}`
           : `${s.label} at open`}
       </button>
 

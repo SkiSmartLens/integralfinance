@@ -45,7 +45,7 @@ describe("TradeTicket: the bar sizes against buying power", () => {
     leveraged();
     expect(screen.getByText("2,000 max")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "100%" }));
-    expect(screen.getByRole("button", { name: /Buy 2000 shares/ }).hasAttribute("disabled")).toBe(false);
+    expect(screen.getByRole("button", { name: /Buy 2,000 shares/ }).hasAttribute("disabled")).toBe(false);
     expect(screen.getAllByText("$200,000")).toHaveLength(2); // total cost and buying power
     expect(screen.getByText("$100,000 borrowed")).toBeTruthy();
     expect(screen.getByText("100% of buying power")).toBeTruthy();
@@ -54,7 +54,7 @@ describe("TradeTicket: the bar sizes against buying power", () => {
   it("dragging the bar halfway uses just your own cash", () => {
     leveraged();
     fireEvent.change(screen.getByRole("slider", { name: "Shares" }), { target: { value: "1000" } });
-    expect(screen.getByRole("button", { name: /Buy 1000 shares/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Buy 1,000 shares/ })).toBeTruthy();
     expect(screen.getByText("50% of buying power")).toBeTruthy();
     expect(screen.queryByText(/borrowed$/)).toBeNull();
   });
@@ -64,5 +64,28 @@ describe("TradeTicket: the bar sizes against buying power", () => {
     fireEvent.click(screen.getByRole("button", { name: "100%" }));
     expect(screen.getByRole("button", { name: /Buy 100 shares/ })).toBeTruthy();
     expect(screen.getByText("100% of your cash")).toBeTruthy();
+  });
+});
+
+describe("TradeTicket: typing a share count", () => {
+  it("the 1 can be deleted and replaced", () => {
+    render(ticket("HOOD", 98.62));
+    const box = screen.getByRole("spinbutton", { name: "Number of shares" }) as HTMLInputElement;
+    fireEvent.change(box, { target: { value: "" } });
+    expect(box.value).toBe("");
+    // Nothing to buy yet, but no error for an empty box either.
+    const [, order] = screen.getAllByRole("button", { name: "Buy" }); // the side toggle, then the order button
+    expect(order.hasAttribute("disabled")).toBe(true);
+    expect(screen.queryByText("Enter a whole number of shares.")).toBeNull();
+    fireEvent.change(box, { target: { value: "5" } });
+    expect(box.value).toBe("5");
+    expect((screen.getByRole("slider", { name: "Shares" }) as HTMLInputElement).value).toBe("1"); // $150 cash buys 1
+    expect(screen.getByText("5 shares of HOOD cost $493.1, but you only have $150 in cash. Try fewer shares.")).toBeTruthy();
+  });
+
+  it("flags part shares", () => {
+    render(ticket("HOOD", 98.62));
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Number of shares" }), { target: { value: "1.5" } });
+    expect(screen.getByText("Enter a whole number of shares.")).toBeTruthy();
   });
 });
