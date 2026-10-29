@@ -6,6 +6,7 @@ import { CitedText } from "@/components/CitedText";
 import { useLiveNews } from "@/hooks/useLiveNews";
 import { timeAgo } from "@/lib/marketBrief";
 import { BullBearSpectrum } from "@/components/BullBearSpectrum";
+import { AiProgress } from "@/components/AiProgress";
 
 import { Sparkles, TrendingUp, TrendingDown, Calendar, Eye, BarChart3, DollarSign, Percent, Landmark, Shield, LineChart, ChevronDown, Zap, Newspaper, ExternalLink } from "lucide-react";
 
@@ -117,9 +118,7 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
           <Sparkles className="w-3.5 h-3.5" /> Ask Integral AI
         </button>
       </div>
-      {loading && !data && (
-        <div className="text-sm text-muted-foreground py-2">Generating AI insights…</div>
-      )}
+      {loading && !data && <AiProgress className="bg-muted/40 rounded-md p-3" />}
       {err && !data && (
         <div className="text-sm bg-muted/40 rounded-md p-3 text-muted-foreground">
           {/credit/i.test(err)

@@ -3,8 +3,9 @@ import { fetchStockSummary, getCachedSummary, stanceLabel, stanceTone, type Stoc
 import { cn } from "@/lib/utils";
 import { CitedText } from "@/components/CitedText";
 import { BullBearSpectrum } from "@/components/BullBearSpectrum";
+import { AiProgress } from "@/components/AiProgress";
 
-import { Sparkles, ChevronDown, Loader2, TrendingUp, TrendingDown, Scale } from "lucide-react";
+import { Sparkles, ChevronDown, TrendingUp, TrendingDown, Scale } from "lucide-react";
 
 type Summary = StockSummaryData;
 
@@ -107,9 +108,7 @@ export const WhyItMoved = ({
       {open && (
         <div className="px-4 pb-4 animate-fade-in">
           {loading ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-              <Loader2 className="w-4 h-4 animate-spin" /> Thinking…
-            </div>
+            <AiProgress compact />
           ) : err ? (
             <p className="text-sm text-muted-foreground">{err}</p>
           ) : (
