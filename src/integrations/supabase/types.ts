@@ -428,7 +428,6 @@ export type Database = {
       }
       apply_order_fill: {
         Args: {
-          _buy_floor?: number
           _margin_floor?: number
           _member_id: string
           _order_id: string
