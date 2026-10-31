@@ -50,6 +50,20 @@
       "when": 1792520102106,
       "tag": "0006_sim_leaderboard_and_current_cash_leverage",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793407736063,
+      "tag": "0007_games_show_holdings",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793407754021,
+      "tag": "0008_sim_leverage_borrows_against_net_worth",
+      "breakpoints": true
     }
   ]
 }
