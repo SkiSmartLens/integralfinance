@@ -1,5 +1,14 @@
 import { useEffect, useState } from "react";
-import { fetchStockSummary, getCachedSummary, stanceLabel, stanceTone, type StockSummaryData } from "@/lib/stockSummary";
+import {
+  fetchBullBear,
+  fetchStockSummary,
+  getCachedBullBear,
+  getCachedSummary,
+  stanceLabel,
+  stanceTone,
+  type BullBearCase,
+  type StockSummaryData,
+} from "@/lib/stockSummary";
 import { cn } from "@/lib/utils";
 import { CitedText } from "@/components/CitedText";
 import { BullBearSpectrum } from "@/components/BullBearSpectrum";
@@ -69,7 +78,25 @@ export const WhyItMoved = ({
     return () => { alive = false; };
   }, [symbol]);
 
-  const score = typeof data?.stanceScore === "number" ? data.stanceScore : null;
+  // The researched bull and bear case (its own function) gives the same read as
+  // the stock page; until it's in, or if it can't load, the summary's score stands in.
+  const [bullBear, setBullBear] = useState<BullBearCase | null>(() => getCachedBullBear(symbol));
+  useEffect(() => {
+    let alive = true;
+    const cached = getCachedBullBear(symbol);
+    setBullBear(cached);
+    if (cached) return;
+    const first = getCachedSummary(symbol, "priority") ? Promise.resolve() : fetchStockSummary(symbol, "priority").then(() => {}, () => {});
+    first
+      .then(() => fetchBullBear(symbol))
+      .then((c) => { if (alive) setBullBear(c); })
+      .catch(() => { /* keep the summary's score */ });
+    return () => { alive = false; };
+  }, [symbol]);
+
+  const caseScore = typeof bullBear?.stanceScore === "number" ? bullBear.stanceScore : null;
+  const score = caseScore ?? (typeof data?.stanceScore === "number" ? data.stanceScore : null);
+  const reason = caseScore != null ? bullBear?.stanceReason : data?.stanceReason;
   const upToday = (changePct ?? 0) >= 0;
   const tone = TONES[score != null ? stanceTone(score) : upToday ? "up" : "down"];
 
@@ -114,7 +141,7 @@ export const WhyItMoved = ({
           ) : (
             <div className="space-y-3 text-sm leading-relaxed text-foreground/90">
               {score != null && (
-                <BullBearSpectrum score={score} reason={data?.stanceReason} className="rounded-xl bg-background/70 border p-3" />
+                <BullBearSpectrum score={score} reason={reason} className="rounded-xl bg-background/70 border p-3" />
               )}
               {data?.whyMoved && (
                 <div>

@@ -14,6 +14,21 @@ export const AI_STEPS: { label: string; startMs: number }[] = [
   { label: "Checking facts and adding citations", startMs: 5000 },
 ];
 
+/**
+ * The same for the bull-bear-case function, which reads the company's annual
+ * report and latest results release before the AI writes both sides (an
+ * uncached request takes about 5–8 seconds).
+ */
+export const BULL_BEAR_STEPS: { label: string; startMs: number }[] = [
+  { label: "Reading the company's annual report and the risks it lists", startMs: 0 },
+  { label: "Reading its latest quarterly results", startMs: 700 },
+  { label: "Checking analyst calls and recent news", startMs: 1400 },
+  { label: "Comparing 1, 3 and 5-year returns with the S&P 500", startMs: 2000 },
+  { label: "Writing the bull case", startMs: 2600 },
+  { label: "Writing the bear case", startMs: 4600 },
+  { label: "Weighing both sides and adding citations", startMs: 6400 },
+];
+
 /** After this long, say it's slower than usual (the AI provider is busy and retrying). */
 export const SLOW_MS = 12_000;
 
@@ -21,9 +36,9 @@ export const SLOW_MS = 12_000;
  * The bar's fill and current step `ms` after the request started. The fill
  * eases toward 95% and never reaches 100%, since the real finish time isn't known.
  */
-export function aiProgressAt(ms: number): { percent: number; step: number; slow: boolean } {
+export function aiProgressAt(ms: number, steps = AI_STEPS): { percent: number; step: number; slow: boolean } {
   const t = Math.max(0, ms);
   const percent = 95 * (1 - Math.exp(-t / 3000));
-  const step = AI_STEPS.reduce((cur, s, i) => (t >= s.startMs ? i : cur), 0);
+  const step = steps.reduce((cur, s, i) => (t >= s.startMs ? i : cur), 0);
   return { percent, step, slow: t >= SLOW_MS };
 }

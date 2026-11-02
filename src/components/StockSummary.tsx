@@ -1,5 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { fetchStockSummary, getCachedSummary, type StockSummaryData } from "@/lib/stockSummary";
+import {
+  citedSources,
+  fetchBullBear,
+  fetchStockSummary,
+  getCachedBullBear,
+  getCachedSummary,
+  researchedFrom,
+  type BullBearCase,
+  type StockSummaryData,
+} from "@/lib/stockSummary";
+import { BULL_BEAR_STEPS } from "@/lib/aiProgress";
 import { fetchQuotes } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
 import { CitedText } from "@/components/CitedText";
@@ -27,6 +37,8 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
   const [err, setErr] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState<string>(nameCache.get(symbol) ?? "");
   const [nextEarnings, setNextEarnings] = useState<string>("");
+  const [bullBear, setBullBear] = useState<BullBearCase | null>(() => getCachedBullBear(symbol));
+  const [bullBearFailed, setBullBearFailed] = useState(false);
   const ref = useRef<HTMLElement | null>(null);
 
 
@@ -90,6 +102,23 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
   }, [symbol]);
 
 
+  // The researched bull and bear case comes from its own function. It starts once
+  // the summary's first call has settled, so the two don't compete for the AI's
+  // per-minute budget on a stock nobody has looked at recently.
+  useEffect(() => {
+    let alive = true;
+    const cached = getCachedBullBear(symbol);
+    setBullBear(cached);
+    setBullBearFailed(false);
+    if (cached) return;
+    const first = getCachedSummary(symbol, "priority") ? Promise.resolve() : fetchStockSummary(symbol, "priority").then(() => {}, () => {});
+    first
+      .then(() => fetchBullBear(symbol))
+      .then((c) => { if (alive) setBullBear(c); })
+      .catch(() => { if (alive) setBullBearFailed(true); });
+    return () => { alive = false; };
+  }, [symbol]);
+
   // The articles the AI was given, then recent stories about the company that it
   // wasn't (the same ones as the stock's News tab), as further reading.
   const sources = (data?.sources ?? []).filter((s) => s.url);
@@ -140,7 +169,7 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
           )}
 
           <CollapsibleRow icon={<BarChart3 className="w-4 h-4 text-primary" />} title="Bull & bear case">
-            <BullBear data={data} />
+            <BullBear data={data} bullBear={bullBear} failed={bullBearFailed} company={companyName || symbol} />
           </CollapsibleRow>
           {data.predictedRevenue && (
             <CollapsibleRow icon={<DollarSign className="w-4 h-4 text-primary" />} title="Predicted revenue (estimate)">
@@ -224,11 +253,113 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
 const TOP_POINTS = 3;
 
 /**
- * Where the stock sits between its bear case and bull case, then both cases
- * side by side, strongest points first. Points past the first few are hidden
- * until "Show all", but stay in the DOM so search engines index them.
+ * The bull and bear case, laid out like Morningstar's "Bulls Say / Bears Say":
+ * where the AI comes down between the two, then each side's titled points,
+ * strongest first, with links to what they're based on. Points past the first
+ * few are hidden until "Show all", but stay in the DOM so search engines index
+ * them. While the researched case loads this shows its progress; if it can't
+ * load, the summary's shorter positives and negatives stand in.
  */
-const BullBear = ({ data }: { data: Summary }) => {
+const BullBear = ({
+  data,
+  bullBear,
+  failed,
+  company,
+}: {
+  data: Summary;
+  bullBear: BullBearCase | null;
+  failed: boolean;
+  company: string;
+}) => {
+  const [showAll, setShowAll] = useState(false);
+  if (!bullBear) {
+    if (!failed) return <AiProgress steps={BULL_BEAR_STEPS} className="py-2" />;
+    return <SummaryBullBear data={data} />;
+  }
+
+  const hasScore = typeof bullBear.stanceScore === "number";
+  const score = hasScore ? bullBear.stanceScore : data.stanceScore;
+  const reason = hasScore ? bullBear.stanceReason : data.stanceReason;
+  const extra = Math.max(0, bullBear.bull.length - TOP_POINTS) + Math.max(0, bullBear.bear.length - TOP_POINTS);
+  const cited = citedSources(bullBear);
+  const basis = researchedFrom(bullBear, company);
+  const asOf = bullBear.asOf ? Date.parse(bullBear.asOf) / 1000 : NaN;
+
+  const side = (bull: boolean) => {
+    const points = bull ? bullBear.bull : bullBear.bear;
+    return (
+      <div>
+        <h4 className={cn("flex items-center gap-2 font-bold", bull ? "text-up" : "text-down")}>
+          {bull ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+          {bull ? "Bulls say" : "Bears say"}
+        </h4>
+        <p className="text-xs text-muted-foreground mb-2">{bull ? "Why investors own it" : "What could go wrong"}</p>
+        <ol className="space-y-2">
+          {points.map((p, i) => (
+            <li
+              key={i}
+              hidden={!showAll && i >= TOP_POINTS}
+              className={cn(
+                "rounded-md border border-l-4 bg-background/70 p-3",
+                bull ? "border-l-[hsl(var(--chart-up))]" : "border-l-[hsl(var(--chart-down))]",
+              )}
+            >
+              <p className="text-sm font-semibold leading-snug">{p.title}</p>
+              <p className="text-sm leading-relaxed text-foreground/85 mt-1">
+                <CitedText text={p.detail} sources={bullBear.sources} />
+              </p>
+            </li>
+          ))}
+        </ol>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      {typeof score === "number" && <BullBearSpectrum score={score} reason={reason} />}
+      <div className="grid md:grid-cols-2 gap-4 md:gap-6">
+        {side(true)}
+        {side(false)}
+      </div>
+      {extra > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowAll((v) => !v)}
+          className="text-xs font-semibold text-primary hover:underline"
+        >
+          {showAll ? "Show fewer points" : `Show ${extra} more point${extra === 1 ? "" : "s"}`}
+        </button>
+      )}
+      {(basis || cited.length > 0) && (
+        <div className="border-t pt-3 text-[11px] text-muted-foreground space-y-1.5">
+          {basis && (
+            <p>
+              {basis}
+              {Number.isFinite(asOf) && ` Updated ${timeAgo(asOf)}.`}
+            </p>
+          )}
+          {cited.length > 0 && (
+            <ol className="space-y-0.5">
+              {cited.map(({ n, source }) => (
+                <li key={n} className="break-words">
+                  [{n}]{" "}
+                  <a href={source.url} target="_blank" rel="noopener noreferrer nofollow" className="hover:underline text-foreground/80">
+                    {source.title}
+                  </a>{" "}
+                  · {source.publisher}
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/** The summary's own positives and negatives, for when the researched case can't load. */
+const SummaryBullBear = ({ data }: { data: Summary }) => {
   const [showAll, setShowAll] = useState(false);
   const positives = data.positives ?? [];
   const negatives = data.negatives ?? [];
@@ -242,7 +373,8 @@ const BullBear = ({ data }: { data: Summary }) => {
       <ul className="text-sm space-y-1.5 list-disc pl-5">
         {points.map((p, i) => (
           <li key={i} hidden={!showAll && i >= TOP_POINTS}>
-            <CitedText text={p} sources={data.sources} />
+            {/* Older summaries tag points with made-up sources like "[SEC]" or "[Data]". */}
+            <CitedText text={p.replace(/\s*\[(?!\d+\])[^\]]{1,30}\]/g, "")} sources={data.sources} />
           </li>
         ))}
       </ul>

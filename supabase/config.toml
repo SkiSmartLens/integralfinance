@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.jargon-translate]
 verify_jwt = false
+
+[functions.bull-bear-case]
+verify_jwt = false

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { AI_STEPS, SLOW_MS, aiProgressAt } from "./aiProgress";
+import { AI_STEPS, BULL_BEAR_STEPS, SLOW_MS, aiProgressAt } from "./aiProgress";
 
 describe("aiProgressAt", () => {
   it("starts empty on the first step", () => {
@@ -23,5 +23,15 @@ describe("aiProgressAt", () => {
   it("says it's slow only after a long wait", () => {
     expect(aiProgressAt(SLOW_MS - 1).slow).toBe(false);
     expect(aiProgressAt(SLOW_MS).slow).toBe(true);
+  });
+});
+
+describe("bull-bear progress steps", () => {
+  it("walks through its own steps in order", () => {
+    expect(aiProgressAt(0, BULL_BEAR_STEPS).step).toBe(0);
+    expect(aiProgressAt(3000, BULL_BEAR_STEPS).step).toBe(4);
+    expect(aiProgressAt(60_000, BULL_BEAR_STEPS).step).toBe(BULL_BEAR_STEPS.length - 1);
+    const starts = BULL_BEAR_STEPS.map((s) => s.startMs);
+    expect([...starts].sort((a, b) => a - b)).toEqual(starts);
   });
 });
