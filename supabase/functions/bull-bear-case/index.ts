@@ -338,8 +338,9 @@ const hostOf = (url: string) => {
 };
 
 // Headlines about trading rather than the business: no use to a one-to-three-year thesis.
+// That includes auto-generated stories about some fund buying or selling a few shares.
 const TRADING_NOISE =
-  /options? traders|expect\b.*\bto move|implied move|stocks? (that )?explain|premarket|pre-market|movers|stock market today|what'?s moving|live (updates|coverage)|futures|technical analysis|chart of the day|unusual (options )?activity|short interest|\b(rises|falls|climbs|slips|jumps|drops|gains|sinks)\b \d+(\.\d+)?%/i;
+  /\b(sells?|buys?|adds?|trims?|boosts?|cuts?|reduces?|raises?|lowers?|increases?|decreases?|acquires?|initiates?|exits?)\b.{0,40}\b(stake|position|holdings?)\b|\bETFs?\b.{0,30}\b(reduc|cut|trim|sell|sold|add|buy|bought)|\b13F\b|options? traders|expect\b.*\bto move|implied move|stocks? (that )?explain|premarket|pre-market|movers|stock market today|what'?s moving|live (updates|coverage)|futures|technical analysis|chart of the day|unusual (options )?activity|short interest|\b(rises|falls|climbs|slips|jumps|drops|gains|sinks)\b \d+(\.\d+)?%/i;
 
 const ageLabel = (sec: number) => {
   const d = (Date.now() / 1000 - sec) / 86400;

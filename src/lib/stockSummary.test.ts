@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { citedSources, researchedFrom, stanceLabel, stanceTone, type BullBearCase } from "./stockSummary";
+import { citedSources, hasInsight, researchedFrom, stanceLabel, stanceTone, type BullBearCase } from "./stockSummary";
 
 describe("stanceLabel", () => {
   it("names each band the same way on both sides of balanced", () => {
@@ -56,5 +56,37 @@ describe("bull and bear case helpers", () => {
       "Researched from Acme's latest quarterly results (Oct 29, 2026).",
     );
     expect(researchedFrom({ ...c, basis: undefined }, "Acme")).toBe("");
+  });
+});
+
+describe("hasInsight", () => {
+  it("hides empty fields and ones that only say the data is missing", () => {
+    for (const t of [
+      undefined,
+      "",
+      "  ",
+      "Not enough reported data to estimate",
+      "No specific data available for SPY. This may apply more to individual operating companies than to indices, ETFs, or funds.",
+      "Margin numbers are not provided in the available data, so we cannot quantify gross, operating, or net margins or compare them to peers.",
+      "Balance‑sheet specifics such as cash, debt, or leverage are not disclosed, therefore no concrete balance‑sheet assessment can be made.",
+      "Without a disclosed revenue figure or YoY growth rate, we cannot compute a precise growth trajectory.",
+      "The provided data does not include any historical revenue figures or YoY growth rates, so a quantitative revenue growth trajectory cannot be stated.",
+      "Margin details (gross, operating, net) are not included in the data set, so a direct comparison to peers cannot be made.",
+      "Margin metrics such as gross, operating or net margin are not reported for an index‑tracking ETF, and thus cannot be compared to peers.",
+      "Balance‑sheet specifics like cash balances or debt levels are not supplied for this ETF, so a leverage assessment is not possible.",
+      "No explicit EPS trend is provided, so forward EPS growth cannot be precisely stated.",
+    ]) {
+      expect(hasInsight(t), String(t)).toBe(false);
+    }
+  });
+  it("keeps real analysis, even when it mentions something missing", () => {
+    for (const t of [
+      "~$480B, from $466.8B over the last 12 months growing about 3% a year.",
+      "Gross margin improved to 50.1% in the latest quarter versus 46.9% for FY2025.",
+      "Apple holds $39.5B in cash against $82.3B of long-term debt.",
+      "No dividend is paid, so all cash goes to buybacks and R&D.",
+    ]) {
+      expect(hasInsight(t), t).toBe(true);
+    }
   });
 });

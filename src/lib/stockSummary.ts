@@ -44,6 +44,30 @@ export interface BullBearCase {
   asOf?: string;
 }
 
+/**
+ * Whether an AI Insights field says something, rather than being empty or
+ * explaining that it couldn't (older answers, written while the company's
+ * figures were unavailable, said "Not enough reported data to estimate").
+ * Rows that don't are hidden.
+ */
+export function hasInsight(text: string | undefined): text is string {
+  if (!text?.trim()) return false;
+  const missing = "(available|provided|disclosed|listed|included|reported|supplied|given)";
+  return !new RegExp(
+    [
+      "not enough (reported )?data",
+      "no specific data available",
+      `(is|are)( not|n[’']t) ${missing}`,
+      `not ${missing} (in|for) the (available|supplied|provided) data`,
+      "can ?not (be )?(\\w+ly )?(quantif|comput|assess|determin|stat|compar|calculat)",
+      "(is|are) not possible",
+      "no concrete .{0,30}assessment",
+      "unable to (estimate|assess|determine)",
+    ].join("|"),
+    "i",
+  ).test(text);
+}
+
 /** "Leaning bullish" etc. for a stanceScore; the bands are even on both sides of 0. */
 export function stanceLabel(score: number): string {
   const a = Math.abs(score);

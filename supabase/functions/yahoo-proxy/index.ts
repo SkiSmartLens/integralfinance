@@ -1,3 +1,5 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -172,6 +174,8 @@ async function chartMetaQuote(symbol: string): Promise<any | null> {
       longName: m.longName,
       exchange: m.exchangeName ?? m.fullExchangeName,
       currency: m.currency,
+      // EQUITY, ETF, MUTUALFUND, CRYPTOCURRENCY, INDEX, CURRENCY, FUTURE.
+      quoteType: m.instrumentType,
       regularMarketPrice: price,
       regularMarketPreviousClose: prev,
       regularMarketChange: change,
@@ -519,7 +523,8 @@ async function secCompany(symbol: string): Promise<{ cik: number; title: string 
       headers: { "User-Agent": SEC_UA },
       signal: AbortSignal.timeout(8000),
     });
-    if (!r.ok) return null;
+    // Not "unknown company": the SEC turned us away, which callers treat differently.
+    if (!r.ok) throw new Error(`SEC company list ${r.status}`);
     const j = (await r.json()) as Record<string, { cik_str: number; ticker: string; title: string }>;
     const map = new Map<string, { cik: number; title: string }>();
     for (const v of Object.values(j)) map.set(String(v.ticker).toUpperCase(), { cik: Number(v.cik_str), title: String(v.title) });
@@ -539,22 +544,53 @@ interface Fact {
 const spanDays = (f: Fact) => (f.start ? (Date.parse(f.end) - Date.parse(f.start)) / DAY_MS : 0);
 const isQuarter = (f: Fact) => spanDays(f) >= 80 && spanDays(f) <= 100;
 const isYear = (f: Fact) => spanDays(f) >= 350 && spanDays(f) <= 380;
+// Twelve months from an annual report (some 10-Qs also give trailing twelve-month cash flows).
+const ANNUAL_FORMS = /^(10-K|20-F|40-F)/;
+const isAnnual = (f: Fact) => isYear(f) && ANNUAL_FORMS.test(f.form);
+const isNineMonths = (f: Fact) => spanDays(f) >= 260 && spanDays(f) <= 285;
 const isInstant = (f: Fact) => !f.start;
 const near = (a: string, b: string, days: number) => Math.abs(Date.parse(a) - Date.parse(b)) <= days * DAY_MS;
+const yearsBefore = (iso: string, years: number) => new Date(Date.parse(iso) - years * 365.25 * DAY_MS).toISOString().slice(0, 10);
+
+// Annual and quarterly reports (US companies file 10-K/10-Q, foreign ones 20-F/40-F).
+const REPORT_FORMS = /^(10-K|10-Q|20-F|40-F)/;
+
+/** Which taxonomy's tag to use for each line item: US GAAP, or IFRS for many foreign companies. */
+const TAGS = {
+  revenue: {
+    "us-gaap": ["Revenues", "RevenueFromContractWithCustomerExcludingAssessedTax", "RevenuesNetOfInterestExpense", "SalesRevenueNet", "RevenueFromContractWithCustomerIncludingAssessedTax"],
+    "ifrs-full": ["Revenue", "RevenueFromContractsWithCustomers"],
+  },
+  gross: { "us-gaap": ["GrossProfit"], "ifrs-full": ["GrossProfit"] },
+  operating: { "us-gaap": ["OperatingIncomeLoss"], "ifrs-full": ["ProfitLossFromOperatingActivities"] },
+  net: { "us-gaap": ["NetIncomeLoss", "ProfitLoss"], "ifrs-full": ["ProfitLossAttributableToOwnersOfParent", "ProfitLoss"] },
+  eps: { "us-gaap": ["EarningsPerShareDiluted", "EarningsPerShareBasic"], "ifrs-full": ["DilutedEarningsLossPerShare", "BasicEarningsLossPerShare"] },
+  cash: { "us-gaap": ["CashAndCashEquivalentsAtCarryingValue", "CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents", "CashAndDueFromBanks"], "ifrs-full": ["CashAndCashEquivalents"] },
+  investments: { "us-gaap": ["MarketableSecuritiesCurrent", "ShortTermInvestments", "AvailableForSaleSecuritiesDebtSecuritiesCurrent"], "ifrs-full": ["CurrentInvestments", "OtherCurrentFinancialAssets"] },
+  debt: { "us-gaap": ["LongTermDebtNoncurrent", "LongTermDebt", "LongTermDebtAndCapitalLeaseObligations"], "ifrs-full": ["NoncurrentPortionOfNoncurrentBorrowings", "LongtermBorrowings", "Borrowings"] },
+  debtCurrent: { "us-gaap": ["LongTermDebtCurrent", "DebtCurrent"], "ifrs-full": ["CurrentPortionOfNoncurrentBorrowings", "ShorttermBorrowings"] },
+  equity: { "us-gaap": ["StockholdersEquity", "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"], "ifrs-full": ["EquityAttributableToOwnersOfParent", "Equity"] },
+  opCash: { "us-gaap": ["NetCashProvidedByUsedInOperatingActivities"], "ifrs-full": ["CashFlowsFromUsedInOperatingActivities"] },
+  capex: { "us-gaap": ["PaymentsToAcquirePropertyPlantAndEquipment", "PaymentsToAcquireProductiveAssets"], "ifrs-full": ["PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities"] },
+  dividends: { "us-gaap": ["PaymentsOfDividendsCommonStock", "PaymentsOfDividends"], "ifrs-full": ["DividendsPaidClassifiedAsFinancingActivities"] },
+  buybacks: { "us-gaap": ["PaymentsForRepurchaseOfCommonStock"], "ifrs-full": ["PaymentsToAcquireOrRedeemEntitysShares"] },
+  rnd: { "us-gaap": ["ResearchAndDevelopmentExpense", "ResearchAndDevelopmentExpenseExcludingAcquiredInProcessCost"], "ifrs-full": ["ResearchAndDevelopmentExpense"] },
+  shares: { "us-gaap": ["WeightedAverageNumberOfDilutedSharesOutstanding"], "ifrs-full": ["AdjustedWeightedAverageShares", "WeightedAverageShares"] },
+} as const;
+type Taxonomy = "us-gaap" | "ifrs-full";
 
 /**
- * One line item from 10-Q/10-K filings, using whichever of `tags` the company
- * reported most recently (they switch, e.g. Revenues vs.
- * RevenueFromContractWithCustomer...). One value per period; a later filing's
- * restatement wins. Oldest first.
+ * One line item, using whichever of `tags` the company reported most recently
+ * (they switch, e.g. Revenues vs. RevenueFromContractWithCustomer...). One value
+ * per period; a later filing's restatement wins. Oldest first.
  */
 // deno-lint-ignore no-explicit-any
-function lineItem(gaap: any, tags: string[], unit = "USD"): Fact[] {
+function lineItem(tax: any, tags: readonly string[], unit: string): Fact[] {
   let best: Fact[] = [];
   let bestEnd = "";
   for (const tag of tags) {
-    const vals = ((gaap?.[tag]?.units?.[unit] ?? []) as Fact[]).filter(
-      (f) => /^10-[QK]/.test(f.form) && typeof f.val === "number" && !!f.end,
+    const vals = ((tax?.[tag]?.units?.[unit] ?? []) as Fact[]).filter(
+      (f) => REPORT_FORMS.test(f.form) && typeof f.val === "number" && !!f.end,
     );
     if (!vals.length) continue;
     const end = vals.reduce((m, f) => (f.end > m ? f.end : m), "");
@@ -576,31 +612,104 @@ const latestOf = (list: Fact[], pred: (f: Fact) => boolean) => [...list].reverse
 const samePeriod = (list: Fact[], f?: Fact) =>
   f ? list.find((x) => (f.start ? !!x.start && near(x.start, f.start, 5) : !x.start) && near(x.end, f.end, 5)) : undefined;
 const yearEarlier = (list: Fact[], f: Fact | undefined, pred: (f: Fact) => boolean) =>
-  f ? list.find((x) => pred(x) && near(x.end, new Date(Date.parse(f.end) - 365 * DAY_MS).toISOString(), 20)) : undefined;
+  f ? list.find((x) => pred(x) && near(x.end, yearsBefore(f.end, 1), 20)) : undefined;
 
-function money(n: number): string {
-  const a = Math.abs(n);
-  const s = a >= 1e12 ? `${(a / 1e12).toFixed(2)}T` : a >= 1e9 ? `${(a / 1e9).toFixed(1)}B` : a >= 1e6 ? `${(a / 1e6).toFixed(0)}M` : a.toFixed(0);
-  return `${n < 0 ? "-" : ""}$${s}`;
+/** Fiscal-year values from annual reports, one per year, newest last (up to `n`). */
+function fiscalYears(list: Fact[], n: number): Fact[] {
+  const years = list.filter(isAnnual);
+  const out: Fact[] = [];
+  for (const f of [...years].reverse()) {
+    if (out.some((o) => near(o.end, f.end, 300))) continue;
+    out.unshift(f);
+    if (out.length >= n) break;
+  }
+  return out;
+}
+
+/**
+ * Quarters, including fourth quarters worked out as the fiscal year minus its
+ * first nine months (annual reports don't state the fourth quarter on its own).
+ */
+function quarters(list: Fact[]): Fact[] {
+  const out = list.filter(isQuarter);
+  for (const y of list.filter(isAnnual)) {
+    if (out.some((q) => near(q.end, y.end, 5))) continue;
+    const nine = list.find((x) => isNineMonths(x) && x.start && near(x.start, y.start!, 5));
+    if (nine) out.push({ start: nine.end, end: y.end, val: y.val - nine.val, form: y.form, filed: y.filed });
+  }
+  return out.sort((a, b) => a.end.localeCompare(b.end));
+}
+
+/** The last four quarters back to back, ending with the latest one, or null. */
+function lastFourQuarters(qs: Fact[]): Fact[] | null {
+  const latest = qs[qs.length - 1];
+  if (!latest) return null;
+  const four = [latest];
+  for (let i = 1; i < 4; i++) {
+    const prev = qs.find((q) => near(q.end, four[0].start ?? yearsBefore(four[0].end, 0.25), 12) && q !== four[0]);
+    if (!prev) return null;
+    four.unshift(prev);
+  }
+  return four;
+}
+
+function makeMoney(currency: string) {
+  return (n: number): string => {
+    const a = Math.abs(n);
+    const s = a >= 1e12 ? `${(a / 1e12).toFixed(2)}T` : a >= 1e9 ? `${(a / 1e9).toFixed(1)}B` : a >= 1e6 ? `${(a / 1e6).toFixed(0)}M` : a.toFixed(0);
+    return `${n < 0 ? "-" : ""}${currency === "USD" ? "$" : `${currency} `}${s}`;
+  };
 }
 const pct = (n: number) => `${(n * 100).toFixed(1)}%`;
-const change = (now: number, before?: number) =>
-  before && before > 0 ? ` (${now >= before ? "up" : "down"} ${pct(Math.abs(now / before - 1))} from ${money(before)} a year earlier)` : "";
+const growth = (now: number, before?: number) =>
+  before && before > 0 ? `${now >= before ? "+" : "-"}${(Math.abs(now / before - 1) * 100).toFixed(1)}%` : null;
+const fy = (f: Fact) => `FY${f.end.slice(0, 4)}`;
 
-/** Plain-English lines about a company's latest results, for an AI prompt. */
+/**
+ * Picks US GAAP or IFRS, whichever the company reports its results in more
+ * recently, and the currency it reports in (the one with the most revenue
+ * and profit figures; some foreign filers add a US-dollar translation for the
+ * latest year only).
+ */
 // deno-lint-ignore no-explicit-any
-function describeFinancials(gaap: any): string[] {
-  const revenue = lineItem(gaap, ["Revenues", "RevenueFromContractWithCustomerExcludingAssessedTax", "SalesRevenueNet", "RevenueFromContractWithCustomerIncludingAssessedTax"]);
-  const gross = lineItem(gaap, ["GrossProfit"]);
-  const operating = lineItem(gaap, ["OperatingIncomeLoss"]);
-  const net = lineItem(gaap, ["NetIncomeLoss", "ProfitLoss"]);
-  const eps = lineItem(gaap, ["EarningsPerShareDiluted", "EarningsPerShareBasic"], "USD/shares");
-  const cash = lineItem(gaap, ["CashAndCashEquivalentsAtCarryingValue", "CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents"]);
-  const debt = lineItem(gaap, ["LongTermDebt", "LongTermDebtNoncurrent", "LongTermDebtAndCapitalLeaseObligations"]);
-  const equity = lineItem(gaap, ["StockholdersEquity", "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"]);
-  const opCash = lineItem(gaap, ["NetCashProvidedByUsedInOperatingActivities"]);
-  const capex = lineItem(gaap, ["PaymentsToAcquirePropertyPlantAndEquipment", "PaymentsToAcquireProductiveAssets"]);
+function pickBasis(facts: any): { taxonomy: Taxonomy; currency: string } | null {
+  let best: { taxonomy: Taxonomy; currency: string; end: string } | null = null;
+  for (const taxonomy of ["us-gaap", "ifrs-full"] as const) {
+    const tax = facts?.[taxonomy];
+    if (!tax) continue;
+    const counts = new Map<string, number>();
+    let end = "";
+    for (const tag of [...TAGS.revenue[taxonomy], ...TAGS.net[taxonomy]]) {
+      for (const [unit, vals] of Object.entries(tax[tag]?.units ?? {})) {
+        if (!/^[A-Z]{3}$/.test(unit)) continue;
+        const list = (vals as Fact[]).filter((f) => REPORT_FORMS.test(f.form));
+        counts.set(unit, (counts.get(unit) ?? 0) + list.length);
+        for (const f of list) if (f.end > end) end = f.end;
+      }
+    }
+    const currency = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+    if (currency && (!best || end > best.end)) best = { taxonomy, currency, end };
+  }
+  return best && { taxonomy: best.taxonomy, currency: best.currency };
+}
+
+/** Plain-English lines about a company's results and history, for an AI prompt. */
+// deno-lint-ignore no-explicit-any
+function describeFinancials(facts: any): string[] {
+  const basis = pickBasis(facts);
+  if (!basis) return [];
+  const { taxonomy, currency } = basis;
+  const tax = facts[taxonomy];
+  const get = (key: keyof typeof TAGS, unit = currency) => lineItem(tax, TAGS[key][taxonomy], unit);
+  const money = makeMoney(currency);
+
+  const revenue = get("revenue");
+  const gross = get("gross");
+  const operating = get("operating");
+  const net = get("net");
+  const eps = get("eps", `${currency}/shares`);
   const lines: string[] = [];
+  if (currency !== "USD") lines.push(`Figures are in ${currency}, the currency the company reports in.`);
 
   // A company can stop using a line item for one kind of period (a bank's
   // quarterly revenue ending in 2014), so the latest period has to be recent.
@@ -610,49 +719,177 @@ function describeFinancials(gaap: any): string[] {
     const r = latestOf(revenue, fresh);
     const n = r ? samePeriod(net, r) : latestOf(net, fresh);
     const period = r ?? n;
-    if (!period) return;
+    if (!period) return false;
     const parts: string[] = [];
-    if (r) parts.push(`revenue ${money(r.val)}${change(r.val, yearEarlier(revenue, r, pred)?.val)}`);
-    const g = samePeriod(gross, period);
-    const o = samePeriod(operating, period);
-    if (r && g && r.val > 0) parts.push(`gross margin ${pct(g.val / r.val)}`);
-    if (r && o && r.val > 0) parts.push(`operating margin ${pct(o.val / r.val)}`);
-    if (n) parts.push(`net income ${money(n.val)}${r && r.val > 0 ? ` (net margin ${pct(n.val / r.val)})` : ""}${r ? "" : change(n.val, yearEarlier(net, n, pred)?.val)}`);
+    if (r) {
+      const g = growth(r.val, yearEarlier(revenue, r, pred)?.val);
+      parts.push(`revenue ${money(r.val)}${g ? ` (${g} from a year earlier)` : ""}`);
+    }
+    const gp = samePeriod(gross, period);
+    const op = samePeriod(operating, period);
+    if (r && gp && r.val > 0) parts.push(`gross margin ${pct(gp.val / r.val)}`);
+    if (r && op && r.val > 0) parts.push(`operating margin ${pct(op.val / r.val)}`);
+    if (n) {
+      const g = growth(n.val, yearEarlier(net, n, pred)?.val);
+      parts.push(`net income ${money(n.val)}${r && r.val > 0 ? ` (net margin ${pct(n.val / r.val)})` : ""}${g ? `, ${g} from a year earlier` : ""}`);
+    }
     const e = samePeriod(eps, period);
-    if (e) parts.push(`diluted EPS $${e.val.toFixed(2)}`);
+    if (e) {
+      const g = growth(e.val, yearEarlier(eps, e, pred)?.val);
+      parts.push(`diluted EPS ${e.val.toFixed(2)}${g ? ` (${g})` : ""}`);
+    }
     lines.push(`${label} (${period.start} to ${period.end}, from the ${period.form} filed ${period.filed}): ${parts.join("; ")}.`);
+    return true;
   };
   results("Latest quarter", isQuarter, 220);
-  results("Latest fiscal year", isYear, 500);
+  // Companies that report only once a year (many foreign ones) can be ~20 months behind.
+  if (!results("Latest fiscal year", isAnnual, 500)) results("Latest fiscal year", isAnnual, 820);
 
-  const recentInstant = (f: Fact) => isInstant(f) && within(400)(f);
-  const c = latestOf(cash, recentInstant);
-  const d = latestOf(debt, recentInstant);
-  const q = latestOf(equity, recentInstant);
+  // The last twelve months, from the last four quarters.
+  const revQ = quarters(revenue);
+  const netQ = quarters(net);
+  const four = lastFourQuarters(revQ);
+  if (four && within(220)(four[3]) && isYear({ ...four[3], start: four[0].start })) {
+    const ttm = four.reduce((s, q) => s + q.val, 0);
+    const netFour = four.map((q) => samePeriod(netQ, q));
+    const netTtm = netFour.every(Boolean) ? netFour.reduce((s, q) => s + q!.val, 0) : null;
+    lines.push(
+      `Last 12 months (${four[0].start} to ${four[3].end}): revenue ${money(ttm)}${netTtm != null ? `, net income ${money(netTtm)}` : ""}.`,
+    );
+  }
+
+  // Recent quarters' growth, oldest first.
+  const recentQ = revQ.filter(within(500)).slice(-5);
+  const qGrowth = recentQ
+    .map((q) => {
+      const g = growth(q.val, revQ.find((x) => near(x.end, yearsBefore(q.end, 1), 20))?.val);
+      return g ? `${q.end.slice(0, 7)} ${money(q.val)} (${g})` : null;
+    })
+    .filter(Boolean);
+  if (qGrowth.length >= 3) lines.push(`Quarterly revenue and growth from a year earlier, by quarter end: ${qGrowth.join("; ")}.`);
+
+  // Five-year history.
+  const revYears = fiscalYears(revenue, 5);
+  if (revYears.length >= 3) {
+    const first = revYears[0];
+    const last = revYears[revYears.length - 1];
+    const span = (Date.parse(last.end) - Date.parse(first.end)) / (365.25 * DAY_MS);
+    const cagr = first.val > 0 && last.val > 0 && span >= 1.5 ? (Math.pow(last.val / first.val, 1 / span) - 1) * 100 : null;
+    lines.push(
+      `Revenue by fiscal year: ${revYears.map((f) => `${fy(f)} ${money(f.val)}`).join(", ")}${cagr != null ? ` (about ${cagr >= 0 ? "+" : ""}${cagr.toFixed(1)}% a year)` : ""}.`,
+    );
+  }
+  // Per-share figures change with stock splits, and only the latest annual report
+  // restates earlier years for the latest split, so the history comes from it alone.
+  const latestEps = latestOf(eps, isAnnual);
+  const epsYears = fiscalYears(eps.filter((f) => f.filed === latestEps?.filed), 5);
+  if (epsYears.length >= 2) lines.push(`Diluted EPS by fiscal year: ${epsYears.map((f) => `${fy(f)} ${f.val.toFixed(2)}`).join(", ")}.`);
+  const netYears = fiscalYears(net, 5);
+  if (netYears.length >= 3) lines.push(`Net income by fiscal year: ${netYears.map((f) => `${fy(f)} ${money(f.val)}`).join(", ")}.`);
+  const marginYears = revYears
+    .map((r) => {
+      const o = samePeriod(operating, r);
+      return o && r.val > 0 ? `${fy(r)} ${pct(o.val / r.val)}` : null;
+    })
+    .filter(Boolean);
+  if (marginYears.length >= 3) lines.push(`Operating margin by fiscal year: ${marginYears.join(", ")}.`);
+
+  // Balance sheet.
+  // Annual-only filers' latest balance sheet can be ~20 months old.
+  const recentInstant = (f: Fact) => isInstant(f) && within(820)(f);
+  const c = latestOf(get("cash"), recentInstant);
+  const inv = c ? samePeriod(get("investments"), c) : undefined;
+  const d = latestOf(get("debt"), recentInstant);
+  const dc = d ? samePeriod(get("debtCurrent"), d) : undefined;
+  const q = latestOf(get("equity"), recentInstant);
   const balance: string[] = [];
-  if (c) balance.push(`cash ${money(c.val)}`);
-  if (d) balance.push(`long-term debt ${money(d.val)}`);
-  if (q) balance.push(`shareholders' equity ${money(q.val)}${d && q.val > 0 ? ` (debt-to-equity ${(d.val / q.val).toFixed(2)})` : ""}`);
+  if (c) balance.push(`cash ${money(c.val)}${inv ? ` plus ${money(inv.val)} of short-term investments` : ""}`);
+  if (d) balance.push(`long-term debt ${money(d.val)}${dc ? ` plus ${money(dc.val)} due within a year` : ""}`);
+  if (q) balance.push(`shareholders' equity ${money(q.val)}${d && q.val > 0 ? ` (debt-to-equity ${((d.val + (dc?.val ?? 0)) / q.val).toFixed(2)})` : ""}`);
   const asOf = [c, d, q].filter(Boolean).map((f) => f!.end).sort().pop();
   if (balance.length) lines.push(`Balance sheet (as of ${asOf}): ${balance.join("; ")}.`);
 
-  const ocf = latestOf(opCash, (f) => isYear(f) && within(500)(f));
-  const cap = samePeriod(capex, ocf);
+  // Cash flow and what was returned to shareholders, latest fiscal year.
+  const ocf = latestOf(get("opCash"), (f) => isYear(f) && within(820)(f));
   if (ocf) {
+    const period = isAnnual(ocf) ? `fiscal year to ${ocf.end}` : `12 months to ${ocf.end}`;
+    const cap = samePeriod(get("capex"), ocf);
+    const rev = samePeriod(revenue, ocf);
+    const fcf = cap ? ocf.val - cap.val : null;
     lines.push(
-      `Cash flow, fiscal year to ${ocf.end}: operating cash flow ${money(ocf.val)}` +
-        (cap ? `, capital spending ${money(cap.val)}, free cash flow ${money(ocf.val - cap.val)}.` : "."),
+      `Cash flow, ${period}: operating cash flow ${money(ocf.val)}` +
+        (cap && fcf != null ? `, capital spending ${money(cap.val)}, free cash flow ${money(fcf)}${rev && rev.val > 0 ? ` (${pct(fcf / rev.val)} of revenue)` : ""}` : "") +
+        ".",
+    );
+    const div = samePeriod(get("dividends"), ocf);
+    const buy = samePeriod(get("buybacks"), ocf);
+    if (div || buy) {
+      lines.push(
+        `Returned to shareholders in those 12 months: ${[div && `${money(div.val)} in dividends`, buy && `${money(buy.val)} in share buybacks`].filter(Boolean).join(" and ")}.`,
+      );
+    }
+  }
+
+  // Share count across the latest annual report's years (buybacks shrink it, new
+  // stock grows it); one report's figures share the same split adjustment.
+  const shares = lineItem(tax, TAGS.shares[taxonomy], "shares").filter(isAnnual);
+  const sNow = latestOf(shares, within(820));
+  const sThen = sNow ? shares.find((f) => f.filed === sNow.filed && f.end < sNow.end) : undefined;
+  if (sNow && sThen && sThen.val > 0) {
+    const ch = sNow.val / sThen.val - 1;
+    const span = `from ${fy(sThen)} to ${fy(sNow)}`;
+    lines.push(
+      Math.abs(ch) < 0.005
+        ? `Diluted share count was about flat ${span}.`
+        : `Diluted share count ${ch < 0 ? "fell" : "rose"} ${pct(Math.abs(ch))} ${span} (${ch < 0 ? "buybacks" : "new shares issued"}).`,
     );
   }
+
+  // Research spending.
+  const rnd = latestOf(get("rnd"), (f) => isAnnual(f) && within(820)(f));
+  const rndRev = rnd ? samePeriod(revenue, rnd) : undefined;
+  if (rnd && rndRev && rndRev.val > 0) lines.push(`Research and development, fiscal year to ${rnd.end}: ${money(rnd.val)} (${pct(rnd.val / rndRev.val)} of revenue).`);
+
   return lines;
 }
 
-/** A company's latest results from its SEC filings, cached for hours (filings come quarterly). */
-async function fundamentals(symbol: string): Promise<{ symbol: string; name?: string; lines: string[] }> {
+const FUNDAMENTALS_MODE = "fundamentals";
+// Bump when the lines change shape: older saved copies are then ignored.
+const FUNDAMENTALS_VERSION = "f2";
+
+type Fundamentals = {
+  symbol: string;
+  name?: string;
+  lines: string[];
+  /**
+   * "ok": lines from the SEC. "none": the SEC has nothing to describe (a fund, a
+   * coin, a company that doesn't file there). "unavailable": the SEC couldn't be
+   * reached and there's no saved copy, so callers shouldn't keep an answer built
+   * without these figures for long.
+   */
+  status: "ok" | "none" | "unavailable";
+  /** Set when the SEC couldn't be reached and these are the last saved figures. */
+  savedAt?: string;
+};
+
+/**
+ * A company's results from its SEC filings. Kept in memory for hours and in the
+ * database for a day (filings come quarterly). The SEC sometimes turns away
+ * requests from shared cloud servers for a while; then the last saved copy (up
+ * to a year old, and dated) is used instead of nothing.
+ */
+async function fundamentals(symbol: string): Promise<Fundamentals> {
   const key = `fund:${symbol}`;
   const hit = getCache(key);
   if (hit) return JSON.parse(hit);
-  let out: { symbol: string; name?: string; lines: string[] } = { symbol, lines: [] };
+
+  const saved = await readSaved(symbol);
+  if (saved && saved.exp > Date.now()) {
+    setCache(key, JSON.stringify(saved.body), 6 * 60 * 60 * 1000);
+    return saved.body;
+  }
+
+  let out: Fundamentals = { symbol, lines: [], status: "none" };
   try {
     const co = await secCompany(symbol);
     if (co) {
@@ -662,14 +899,69 @@ async function fundamentals(symbol: string): Promise<{ symbol: string; name?: st
       });
       if (r.ok) {
         const j = await r.json();
-        out = { symbol, name: co.title, lines: describeFinancials(j?.facts?.["us-gaap"]) };
+        const lines = describeFinancials(j?.facts);
+        out = { symbol, name: co.title, lines, status: lines.length ? "ok" : "none" };
+      } else if (r.status !== 404) {
+        console.warn("SEC companyfacts", symbol, r.status);
+        out.status = "unavailable";
       }
     }
   } catch (e) {
     console.warn("fundamentals failed", symbol, e instanceof Error ? e.message : e);
+    out.status = "unavailable";
   }
-  setCache(key, JSON.stringify(out), out.lines.length ? 6 * 60 * 60 * 1000 : 10 * 60 * 1000);
+
+  if (out.status === "ok") {
+    setCache(key, JSON.stringify(out), 6 * 60 * 60 * 1000);
+    await save(symbol, out, Date.now() + DAY_MS);
+    return out;
+  }
+  if (out.status === "unavailable" && saved) {
+    const body: Fundamentals = { ...saved.body, savedAt: saved.updatedAt };
+    setCache(key, JSON.stringify(body), 10 * 60 * 1000);
+    return body;
+  }
+  setCache(key, JSON.stringify(out), 10 * 60 * 1000);
   return out;
+}
+
+// Saved copies live in public.stock_summary_cache (service role only). Any failure is just a miss.
+const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const db = SERVICE_ROLE ? createClient(Deno.env.get("SUPABASE_URL")!, SERVICE_ROLE, { auth: { persistSession: false } }) : null;
+
+async function readSaved(symbol: string): Promise<{ body: Fundamentals; exp: number; updatedAt: string } | null> {
+  if (!db) return null;
+  try {
+    const { data, error } = await db
+      .from("stock_summary_cache")
+      .select("body, expires_at, updated_at")
+      .eq("symbol", symbol)
+      .eq("mode", FUNDAMENTALS_MODE)
+      .eq("version", FUNDAMENTALS_VERSION)
+      .gt("expires_at", new Date(Date.now() - 365 * DAY_MS).toISOString())
+      .abortSignal(AbortSignal.timeout(1500))
+      .maybeSingle();
+    if (error || !data) return null;
+    return { body: data.body as Fundamentals, exp: Date.parse(data.expires_at), updatedAt: data.updated_at };
+  } catch {
+    return null;
+  }
+}
+
+async function save(symbol: string, body: Fundamentals, exp: number) {
+  if (!db) return;
+  try {
+    const { error } = await db
+      .from("stock_summary_cache")
+      .upsert(
+        { symbol, mode: FUNDAMENTALS_MODE, version: FUNDAMENTALS_VERSION, body, expires_at: new Date(exp).toISOString(), updated_at: new Date().toISOString() },
+        { onConflict: "symbol,mode" },
+      )
+      .abortSignal(AbortSignal.timeout(2000));
+    if (error) console.warn("fundamentals save failed", error.message);
+  } catch (e) {
+    console.warn("fundamentals save threw", e instanceof Error ? e.message : e);
+  }
 }
 
 function xmlHeaders() {

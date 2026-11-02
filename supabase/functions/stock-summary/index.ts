@@ -6,7 +6,7 @@ const corsHeaders = {
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 // Bump when the prompt or response schema changes: invalidates both cache levels.
-const CACHE_VERSION = "v9";
+const CACHE_VERSION = "v10";
 
 // Level 1: per-instance memory. Level 2: public.stock_summary_cache, shared across
 // instances (edge instances are short-lived, so level 1 alone was mostly cold).
@@ -172,17 +172,19 @@ Deno.serve(async (req) => {
       { headers: { apikey: anon } },
     ).then((r) => r.json()).catch(() => ({}));
 
-    // Revenue, margins, debt and cash from the company's SEC filings; nothing
-    // for funds, crypto and non-US stocks.
-    const fundamentalsPromise: Promise<string[]> = isBeginner
-      ? Promise.resolve([])
+    // Revenue, margins, debt, cash and five-year history from the company's SEC
+    // filings; nothing for funds and crypto. `status` is "unavailable" when the
+    // SEC couldn't be reached (an answer written without these figures is then
+    // only kept briefly).
+    const fundamentalsPromise: Promise<{ lines: string[]; status?: string }> = isBeginner
+      ? Promise.resolve({ lines: [] })
       : fetch(`${SUPABASE_URL}/functions/v1/yahoo-proxy?kind=fundamentals&symbol=${encodeURIComponent(sym)}`, {
           headers: { apikey: anon },
           signal: AbortSignal.timeout(12000),
         })
           .then((r) => (r.ok ? r.json() : null))
-          .then((j) => (Array.isArray(j?.lines) ? j.lines : []))
-          .catch(() => []);
+          .then((j) => ({ lines: Array.isArray(j?.lines) ? (j.lines as string[]) : [], status: typeof j?.status === "string" ? j.status : undefined }))
+          .catch(() => ({ lines: [], status: "unavailable" }));
 
     // Firecrawl web search — real, recent articles about why the stock moved,
     // plus a second pass for bull/bear/analyst-outlook material so the
@@ -231,6 +233,11 @@ Deno.serve(async (req) => {
       .map((w) => w.trim())
       .filter((w) => w.length >= 4 && !/^(inc|corp|corporation|company|the|and|group|holdings|ltd|plc|index|fund|etf|trust)$/i.test(w));
     const needles = [sym.toLowerCase(), ...nameWords.map((w) => w.toLowerCase())];
+    // Auto-generated stories about some fund buying or selling a few shares
+    // ("8 ETFs reduce TSM holdings", "SPY sells NVIDIA") aren't news about the
+    // company, and the AI kept presenting them as why the stock moved.
+    const HOLDINGS_NOISE =
+      /\b(sells?|buys?|adds?|trims?|boosts?|cuts?|reduces?|raises?|lowers?|increases?|decreases?|acquires?|initiates?|exits?)\b.{0,40}\b(stake|position|holdings?)\b|\bETFs?\b.{0,30}\b(reduc|cut|trim|sell|sold|add|buy|bought)|\b13F\b/i;
     // Social platforms and forums aren't journalism — never cite them, whether
     // they surface via Yahoo's news search or Firecrawl's open web search.
     const LOW_QUALITY_HOSTS = /(^|\.)(facebook|twitter|x|instagram|reddit|pinterest|linkedin|quora|tiktok|youtube)\.com$/i;
@@ -243,6 +250,7 @@ Deno.serve(async (req) => {
     const filteredNews = (newsJson?.news ?? []).filter((n: any) => {
       const t = `${n.title ?? ""} ${n.summary ?? ""}`.toLowerCase();
       if (!needles.some((n) => t.includes(n))) return false;
+      if (HOLDINGS_NOISE.test(String(n.title ?? ""))) return false;
       const url = (n.link as string) ?? (n.url as string) ?? "";
       return !isLowQualityUrl(url);
     });
@@ -360,6 +368,9 @@ No disclaimers, no markdown, no jargon.`;
       num(q.regularMarketChangePercent) && `Change today: ${num(q.regularMarketChangePercent)}%`,
       num(q.regularMarketDayLow) && num(q.regularMarketDayHigh) && `Day range: ${num(q.regularMarketDayLow)}-${num(q.regularMarketDayHigh)}`,
       num(q.fiftyTwoWeekLow) && num(q.fiftyTwoWeekHigh) && `52-week range: ${num(q.fiftyTwoWeekLow)}-${num(q.fiftyTwoWeekHigh)}`,
+      // Worked out here: the model misjudged it ("lower half" for a price near the high).
+      typeof q.regularMarketPrice === "number" && q.fiftyTwoWeekHigh > q.fiftyTwoWeekLow &&
+        `Where the price sits in that range: ${Math.round(((q.regularMarketPrice - q.fiftyTwoWeekLow) / (q.fiftyTwoWeekHigh - q.fiftyTwoWeekLow)) * 100)}% of the way from the 52-week low to the high, ${Math.abs(((q.regularMarketPrice / q.fiftyTwoWeekHigh) - 1) * 100).toFixed(1)}% below the high`,
       big(q.marketCap) && `Market cap: ${big(q.marketCap)}`,
       num(q.trailingPE, 1) && `Trailing P/E: ${num(q.trailingPE, 1)}`,
       num(q.forwardPE, 1) && `Forward P/E: ${num(q.forwardPE, 1)}`,
@@ -369,7 +380,13 @@ No disclaimers, no markdown, no jargon.`;
       typeof earningsTs === "number" && earningsTs > 0 &&
         `${earningsTs * 1000 > Date.now() ? "Next" : "Last"} earnings report: ${new Date(earningsTs * 1000).toISOString().slice(0, 10)}`,
     ].filter(Boolean);
-    const fundamentalLines = await fundamentalsPromise;
+    const fundamentals = await fundamentalsPromise;
+    const fundamentalLines = fundamentals.lines;
+    // Funds, coins and indexes have no revenue, margins or balance sheet of their own.
+    const isCompany = String(q.quoteType ?? "EQUITY").toUpperCase() === "EQUITY";
+    // Built without the company's figures because the SEC couldn't be reached
+    // (or, before yahoo-proxy reported a status, simply came back empty).
+    const missingFigures = isCompany && !fundamentalLines.length && (fundamentals.status === "unavailable" || fundamentals.status === undefined);
     const quoteBlock = `${quoteLines.join("\n")}
 ${fundamentalLines.length ? `\nRESULTS FROM ${companyName.toUpperCase()}'S SEC FILINGS:\n${fundamentalLines.map((l) => `- ${l}`).join("\n")}\n` : ""}
 These are the ONLY figures available about ${companyName}. Never state, estimate or imply any other figure about it (for example analyst price targets or ratings, beta, institutional ownership, or margins and debt that aren't listed). If a point would need one, make the point without the number or leave it out.`;
@@ -429,23 +446,38 @@ Return strict JSON with shape:
     // "extended" — the deep-dive fields rendered further down in collapsed rows.
     // No citations required here, so this mode skips Firecrawl entirely (see
     // needsWebResearch above) — it only needs the structural quote data.
-    const extendedPrompt = `${quoteBlock}
+    const kindLabel = ({ ETF: "an exchange-traded fund (ETF)", MUTUALFUND: "a mutual fund", CRYPTOCURRENCY: "a cryptocurrency", INDEX: "a stock market index", CURRENCY: "a currency pair", FUTURE: "a futures contract" } as Record<string, string>)[String(q.quoteType ?? "").toUpperCase()] ?? "not a company";
+    const extendedPrompt = isCompany
+      ? `${quoteBlock}
 
 ${headlinesBlock}
 ${scopeGuard}
 
-Produce a DETAILED, in-depth analyst-grade summary. Be specific and quantitative — cite the actual numbers above (% change, P/E, EPS, revenue growth, margins, cash and debt). Plain English, no disclaimers.
+Write the deep-dive section of a stock report on ${companyName}, the way a research analyst would: specific and quantitative, in plain English, no disclaimers. Work from the figures above (they come from the company's own SEC filings) and say what each trend means for an investor, not just what the number is. Never answer that data is missing: if the figure a field asks for isn't listed, write it from the closest figures that are (the fiscal year when there's no quarter, net income when there's no EPS). Return "" for a field only when none of its figures are listed at all.
 
 Return strict JSON with shape:
 {
-  "predictedRevenue": string,      // a CONCRETE estimated next-fiscal-year TOTAL revenue figure as a dollar amount (e.g. "~$412B" or "~$8.5B"), then one short clause on how you got it. Base it on the SEC filing results above (latest fiscal year revenue and the latest quarter's growth). If no revenue figure is listed above, say "Not enough reported data to estimate" instead of guessing.
-  "revenueGrowth": string,         // 2-3 sentences on historical + expected revenue growth trajectory, cite YoY % if known
-  "earningsGrowth": string,        // 2-3 sentences on EPS trend, beat/miss history, forward growth expectations
-  "margins": string,               // 2-3 sentences on gross/operating/net margin quality vs peers
-  "balanceSheet": string,          // 2-3 sentences on debt, cash and leverage using the balance sheet figures above. If none are listed, say the filings data isn't available rather than guessing.
-  "moat": string,                  // 2-3 sentences on competitive edge: brand, scale, network effects, switching costs, IP
-  "earnings": string,              // 2-3 sentences on most recent + upcoming earnings event
+  "predictedRevenue": string,      // An estimate of total revenue for the next 12 months as an amount in the reporting currency (e.g. "~$480B" or "~TWD 3.4T"), then one short clause on how you got it: start from revenue over the last 12 months (or the latest fiscal year) and apply the recent growth rate from the quarters or years above.
+  "revenueGrowth": string,         // 2-3 sentences: the multi-year trend (revenue by fiscal year and its average yearly growth), whether recent quarters are speeding up or slowing down, and what is driving it if the headlines say.
+  "earningsGrowth": string,        // 2-3 sentences: how EPS or net income has grown over the years and in the latest quarter versus a year earlier, and what that implies (profits growing faster than revenue means margins are widening). Mention buybacks if the share count fell.
+  "margins": string,               // 2-3 sentences: gross, operating and net margins now and how they've moved over the years, and what that says about pricing power or costs. Compare to its industry only in general terms, never with made-up peer numbers.
+  "balanceSheet": string,          // 2-3 sentences: cash and short-term investments against debt, debt-to-equity, free cash flow and what was returned to shareholders, and whether it could ride out a downturn.
+  "moat": string,                  // 2-3 sentences on competitive edge: brand, scale, network effects, switching costs, IP. Back it with a figure above where one fits (margins, R&D spending, growth).
+  "earnings": string,              // 2-3 sentences: what the latest reported quarter showed (from the figures and headlines above) and when the next report is, and what to watch in it.
   "forecast": string               // 3-4 sentences: 12-month business outlook and the key catalysts to watch, from the figures and headlines above. Never claim an analyst consensus or price target; none is given.
+}`
+      : `${quoteBlock}
+
+${headlinesBlock}
+${scopeGuard}
+
+${companyName} (${sym}) is ${kindLabel}, so it has no revenue, profit margins, earnings reports or balance sheet of its own. Write for a beginner, specific and plain, no disclaimers.
+
+Return strict JSON with shape:
+{
+  "predictedRevenue": "", "revenueGrowth": "", "earningsGrowth": "", "margins": "", "balanceSheet": "", "earnings": "",
+  "moat": string,                  // 2-3 sentences: what it holds or tracks, and why investors use it (diversification, low cost, easy to trade).
+  "forecast": string               // 3-4 sentences: what will drive it over the next 12 months, from the headlines and figures above. Never claim a price target.
 }`;
 
     // Legacy "full" — all 13 fields in one call, unchanged. Kept for any caller
@@ -681,6 +713,11 @@ Return strict JSON with shape:
 
     if (!isBeginner) {
       const fallback = `No specific data available for ${companyName}. This may apply more to individual operating companies than to indices, ETFs, or funds.`;
+      // Fields the deep dive leaves empty on purpose (a fund has no margins) stay
+      // empty, and the page hides them, instead of showing filler.
+      const mayBeEmpty = new Set(
+        isExtended ? (isCompany ? ["predictedRevenue"] : ["predictedRevenue", "revenueGrowth", "earningsGrowth", "margins", "balanceSheet", "earnings"]) : [],
+      );
       const stringFields = isPriority
         ? ["whyMoved", "whatItDoes", "outlook"]
         : isExtended
@@ -689,6 +726,10 @@ Return strict JSON with shape:
       let fellBack = 0;
       for (const f of stringFields) {
         if (!parsed[f] || typeof parsed[f] !== "string" || !parsed[f].trim()) {
+          if (mayBeEmpty.has(f)) {
+            parsed[f] = "";
+            continue;
+          }
           parsed[f] = fallback;
           fellBack++;
         }
@@ -732,7 +773,9 @@ Return strict JSON with shape:
       // Short memory-only hold so a burst of requests doesn't re-run a failing generation.
       cache.set(key, { body, exp: Date.now() + 5 * 60 * 1000 });
     } else {
-      const exp = expiryFor(modeKey);
+      // Written without the company's figures (the SEC couldn't be reached): kept
+      // only briefly, so the next visitor after it's back gets the real numbers.
+      const exp = missingFigures && !isBeginner ? Math.min(expiryFor(modeKey), Date.now() + 20 * 60 * 1000) : expiryFor(modeKey);
       cache.set(key, { body, exp });
       await writeStored(sym, modeKey, parsed, exp);
     }

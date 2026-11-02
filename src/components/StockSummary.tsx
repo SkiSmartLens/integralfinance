@@ -5,6 +5,7 @@ import {
   fetchStockSummary,
   getCachedBullBear,
   getCachedSummary,
+  hasInsight,
   researchedFrom,
   type BullBearCase,
   type StockSummaryData,
@@ -171,53 +172,57 @@ export const StockSummary = ({ symbol }: { symbol: string }) => {
           <CollapsibleRow icon={<BarChart3 className="w-4 h-4 text-primary" />} title="Bull & bear case">
             <BullBear data={data} bullBear={bullBear} failed={bullBearFailed} company={companyName || symbol} />
           </CollapsibleRow>
-          {data.predictedRevenue && (
+          {hasInsight(data.predictedRevenue) && (
             <CollapsibleRow icon={<DollarSign className="w-4 h-4 text-primary" />} title="Predicted revenue (estimate)">
               <p className="text-2xl font-extrabold text-primary">{data.predictedRevenue}</p>
               <p className="text-xs text-muted-foreground mt-1">Estimated next-year total revenue · AI approximation, not a guarantee.</p>
             </CollapsibleRow>
           )}
-          {data.revenueGrowth && (
+          {hasInsight(data.revenueGrowth) && (
             <CollapsibleRow icon={<BarChart3 className="w-4 h-4 text-primary" />} title="Revenue growth">
               <p className="text-sm">{data.revenueGrowth}</p>
             </CollapsibleRow>
           )}
-          {data.earningsGrowth && (
+          {hasInsight(data.earningsGrowth) && (
             <CollapsibleRow icon={<DollarSign className="w-4 h-4 text-primary" />} title="Earnings growth">
               <p className="text-sm">{data.earningsGrowth}</p>
             </CollapsibleRow>
           )}
-          {data.margins && (
+          {hasInsight(data.margins) && (
             <CollapsibleRow icon={<Percent className="w-4 h-4 text-primary" />} title="Profit margins">
               <p className="text-sm">{data.margins}</p>
             </CollapsibleRow>
           )}
-          {data.balanceSheet && (
+          {hasInsight(data.balanceSheet) && (
             <CollapsibleRow icon={<Landmark className="w-4 h-4 text-primary" />} title="Balance sheet & debt">
               <p className="text-sm">{data.balanceSheet}</p>
             </CollapsibleRow>
           )}
-          {data.moat && (
+          {hasInsight(data.moat) && (
             <CollapsibleRow icon={<Shield className="w-4 h-4 text-primary" />} title="Competitive edge / moat">
               <p className="text-sm">{data.moat}</p>
             </CollapsibleRow>
           )}
-          <CollapsibleRow icon={<Calendar className="w-4 h-4 text-primary" />} title="Earnings">
-            {nextEarnings && (
-              <p className="text-xs font-bold mb-1">
-                Next report: <span className="text-primary">{nextEarnings}</span>
-              </p>
-            )}
-            <p className="text-sm">{data.earnings}</p>
-          </CollapsibleRow>
-          {data.forecast && (
+          {(hasInsight(data.earnings) || nextEarnings) && (
+            <CollapsibleRow icon={<Calendar className="w-4 h-4 text-primary" />} title="Earnings">
+              {nextEarnings && (
+                <p className="text-xs font-bold mb-1">
+                  Next report: <span className="text-primary">{nextEarnings}</span>
+                </p>
+              )}
+              {hasInsight(data.earnings) && <p className="text-sm">{data.earnings}</p>}
+            </CollapsibleRow>
+          )}
+          {hasInsight(data.forecast) && (
             <CollapsibleRow icon={<LineChart className="w-4 h-4 text-primary" />} title="12-month forecast">
               <p className="text-sm">{data.forecast}</p>
             </CollapsibleRow>
           )}
-          <CollapsibleRow icon={<Eye className="w-4 h-4 text-primary" />} title="Outlook">
-            <p className="text-sm">{data.outlook}</p>
-          </CollapsibleRow>
+          {hasInsight(data.outlook) && (
+            <CollapsibleRow icon={<Eye className="w-4 h-4 text-primary" />} title="Outlook">
+              <p className="text-sm">{data.outlook}</p>
+            </CollapsibleRow>
+          )}
           {(sources.length > 0 || coverage.length > 0) && (
             <CollapsibleRow
               icon={<Newspaper className="w-4 h-4 text-primary" />}
