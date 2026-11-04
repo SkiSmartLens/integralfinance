@@ -20,6 +20,7 @@ export type Database = {
           game_id: string
           id: string
           joined_at: string
+          left_at: string | null
           user_id: string
         }
         Insert: {
@@ -27,6 +28,7 @@ export type Database = {
           game_id: string
           id?: string
           joined_at?: string
+          left_at?: string | null
           user_id: string
         }
         Update: {
@@ -34,6 +36,7 @@ export type Database = {
           game_id?: string
           id?: string
           joined_at?: string
+          left_at?: string | null
           user_id?: string
         }
         Relationships: [
@@ -61,6 +64,7 @@ export type Database = {
           max_position_pct: number | null
           min_price: number | null
           name: string
+          prizes: Json
           show_holdings: boolean
           starting_cash: number
         }
@@ -78,6 +82,7 @@ export type Database = {
           max_position_pct?: number | null
           min_price?: number | null
           name: string
+          prizes?: Json
           show_holdings?: boolean
           starting_cash?: number
         }
@@ -95,6 +100,7 @@ export type Database = {
           max_position_pct?: number | null
           min_price?: number | null
           name?: string
+          prizes?: Json
           show_holdings?: boolean
           starting_cash?: number
         }

@@ -64,6 +64,13 @@
       "when": 1793407754021,
       "tag": "0008_sim_leverage_borrows_against_net_worth",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793801112281,
+      "tag": "0009_sim_rejoin_keeps_account_and_prizes",
+      "breakpoints": true
     }
   ]
 }
