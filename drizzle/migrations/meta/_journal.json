@@ -71,6 +71,13 @@
       "when": 1793801112281,
       "tag": "0009_sim_rejoin_keeps_account_and_prizes",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793802782226,
+      "tag": "0010_sim_prize_photos",
+      "breakpoints": true
     }
   ]
 }

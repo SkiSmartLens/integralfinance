@@ -496,6 +496,7 @@ export type Database = {
         }[]
       }
       sim_ledger_cash: { Args: { _member_id: string }; Returns: number }
+      sim_prizes_valid: { Args: { _prizes: Json }; Returns: boolean }
       sim_record_cash_adjustment: {
         Args: { _amount: number; _member_id: string }
         Returns: undefined
