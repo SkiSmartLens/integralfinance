@@ -3,7 +3,7 @@
 // by the public home page, and the generated client throws before React mounts when
 // a published build is missing Vite env vars, leaving users on the static loader.
 
-import { fetchFeedNews, pickStories } from "@/lib/news";
+import { dedupeStories, fetchFeedNews, isMarketQuery, mixPublishers, pickStories } from "@/lib/news";
 
 const env = import.meta.env as Record<string, string | undefined>;
 const normalizeUrl = (value?: string) => {
@@ -198,14 +198,51 @@ export interface NewsItem {
  * News for one query, or several merged: market-wide queries ("S&P 500",
  * "^GSPC") get every story, a ticker or company name gets the stories that
  * mention it. Stories come from publishers' RSS feeds (see lib/news.ts) whose
- * articles the AI summarizer can read; Yahoo's search is only used if none of
- * them can be reached.
+ * articles the AI summarizer can read. Those rarely mention smaller companies,
+ * so for a stock ([ticker, company name], as stock pages ask) Yahoo Finance's
+ * stories about it are added. Yahoo's search is the last resort if no feed can
+ * be reached.
  */
 export async function fetchNews(query: string | string[] = "stock market"): Promise<NewsItem[]> {
   const queries = Array.isArray(query) ? query : [query];
-  const feeds = await fetchFeedNews(proxyFeed).catch(() => []);
-  if (feeds.length) return pickStories(feeds, queries);
-  return fetchYahooNews(queries);
+  const [feeds, own] = await Promise.all([fetchFeedNews(proxyFeed).catch(() => []), stockStories(queries)]);
+  if (!feeds.length && !own.length) return fetchYahooNews(queries);
+  const picked = pickStories(feeds, queries);
+  return own.length ? mixPublishers(dedupeStories([...picked, ...own])) : picked;
+}
+
+const TICKER = /^[A-Z0-9][A-Z0-9.=-]{0,11}$/;
+const STORIES_TTL_MS = 3 * 60 * 1000;
+const storiesCache = new Map<string, { at: number; promise: Promise<NewsItem[]> }>();
+
+/**
+ * Yahoo Finance's stories about the first ticker among `queries` (the proxy
+ * also uses the company name there to check stories only its feed has). Until
+ * the proxy has kind=stocknews, its news search, kept the same way: tagged
+ * with that ticker, and naming the company unless tagged with only a few.
+ */
+function stockStories(queries: string[]): Promise<NewsItem[]> {
+  const symbol = queries.find((q) => TICKER.test(q) && !isMarketQuery(q));
+  if (!symbol) return Promise.resolve([]);
+  const name = queries.find((q) => q !== symbol && !TICKER.test(q)) ?? "";
+  const key = `${symbol}|${name}`;
+  const hit = storiesCache.get(key);
+  if (hit && Date.now() - hit.at < STORIES_TTL_MS) return hit.promise;
+  const promise = callProxy({ kind: "stocknews", symbol, name })
+    .then((d) => (d?.news ?? []) as NewsItem[])
+    .catch(() =>
+      callProxy({ kind: "search", q: symbol, newsCount: "20", quotesCount: "0" }).then((d) => {
+        const tagged = ((d?.news ?? []) as NewsItem[]).filter((n) => n.relatedTickers?.includes(symbol));
+        const named = new Set(pickStories(tagged, [symbol, name]));
+        return tagged.filter((n) => named.has(n) || n.relatedTickers!.length <= 4);
+      }),
+    )
+    .catch(() => {
+      storiesCache.delete(key); // don't keep a failed load
+      return [] as NewsItem[];
+    });
+  storiesCache.set(key, { at: Date.now(), promise });
+  return promise;
 }
 
 /** Yahoo news search, merged + deduped across queries. */
@@ -246,6 +283,20 @@ export async function fetchSearchQuotes(query: string, count = 8): Promise<Searc
     quotesCount: String(count),
   });
   return (data?.quotes ?? []) as SearchQuote[];
+}
+
+/**
+ * The symbol a search box opens when Enter is pressed without picking from its
+ * suggestions: the top suggestion `keep` allows, as if it had been clicked
+ * ("sandisk" → SNDK). Text nothing matches is used as is only if it could be a
+ * ticker; otherwise null.
+ */
+export async function topSearchMatch(query: string, keep: (q: SearchQuote) => boolean = () => true): Promise<string | null> {
+  const q = query.trim();
+  if (!q) return null;
+  const top = (await fetchSearchQuotes(q, 8).catch(() => [])).find((r) => r.symbol && keep(r));
+  if (top) return top.symbol.toUpperCase();
+  return /^[A-Z0-9^][A-Z0-9.=^-]{0,11}$/i.test(q) ? q.toUpperCase() : null;
 }
 
 export interface ScreenerQuote {

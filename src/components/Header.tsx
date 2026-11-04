@@ -1,7 +1,7 @@
 import { ChevronDown, Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
-import { fetchSearchQuotes, fetchQuotes, formatNumber, SearchQuote } from "@/lib/yahoo";
+import { fetchSearchQuotes, fetchQuotes, formatNumber, SearchQuote, topSearchMatch } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -129,6 +129,9 @@ interface Props {
 export const Header = ({ onSearch }: Props) => {
   const [q, setQ] = useState("");
   const [results, setResults] = useState<EnrichedResult[]>([]);
+  // What was typed when `results` came back, and the last search nothing matched.
+  const [resultsFor, setResultsFor] = useState("");
+  const [noMatch, setNoMatch] = useState("");
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
   const nav = useNavigate();
@@ -139,6 +142,7 @@ export const Header = ({ onSearch }: Props) => {
     const term = q.trim();
     if (!term) {
       setResults([]);
+      setResultsFor("");
       return;
     }
     let alive = true;
@@ -148,6 +152,7 @@ export const Header = ({ onSearch }: Props) => {
         const base = r.filter((x) => x.symbol);
         if (!alive) return;
         setResults(base);
+        setResultsFor(term);
         setHighlight(0);
         // Enrich with live quotes so users see % moves in the dropdown.
         const syms = base.map((b) => b.symbol);
@@ -186,6 +191,7 @@ export const Header = ({ onSearch }: Props) => {
     setQ("");
     setOpen(false);
     setResults([]);
+    setResultsFor("");
     if (onSearch) onSearch(s);
     else nav(`/stocks/${encodeURIComponent(s.toLowerCase())}`);
   };
@@ -199,11 +205,17 @@ export const Header = ({ onSearch }: Props) => {
         </Link>
         <div ref={boxRef} className="flex-1 max-w-xl relative">
           <form
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
-              if (open && results[highlight]) return pick(results[highlight].symbol);
-              const sym = q.trim().toUpperCase();
-              if (sym) pick(sym);
+              const term = q.trim();
+              if (!term) return;
+              // Enter without picking a suggestion opens the top one (or the one
+              // arrowed to), fetching them first if they're not in for this text yet.
+              if (resultsFor === term && results.length) return pick((results[highlight] ?? results[0]).symbol);
+              const sym = await topSearchMatch(term);
+              if (sym) return pick(sym);
+              setNoMatch(term);
+              setOpen(true);
             }}
             className="relative"
           >
@@ -229,6 +241,11 @@ export const Header = ({ onSearch }: Props) => {
               className="w-full pl-9 pr-4 py-2 bg-background border-2 border-primary/40 hover:border-primary/70 focus:border-primary focus:ring-4 focus:ring-primary/15 rounded-lg text-sm outline-none transition-all placeholder:text-muted-foreground"
             />
           </form>
+          {open && !results.length && noMatch && noMatch === q.trim() && (
+            <div className="absolute left-0 right-0 top-full mt-1 bg-popover border rounded-md shadow-lg z-50 px-3 py-2 text-sm text-muted-foreground">
+              No stock or fund matches “{noMatch}”.
+            </div>
+          )}
           {open && results.length > 0 && (
             <div className="absolute left-0 right-0 top-full mt-1 bg-popover border rounded-md shadow-lg z-50 max-h-80 overflow-y-auto">
               {results.map((r, i) => {

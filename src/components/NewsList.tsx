@@ -9,9 +9,7 @@ interface Props {
   query: string | string[];
   /** Optional related-blog link shown under the news grid. */
   blogLinkLabel?: string;
-  /** Shown instead, with a note, when nothing matches `query`. */
-  fallbackQuery?: string | string[];
-  /** What `query` is about, for that note (e.g. "NVDA"). */
+  /** What `query` is about, for the note when nothing matches (e.g. "NVDA"). */
   subject?: string;
 }
 
@@ -89,28 +87,29 @@ const NewsCard = ({ n, featured = false }: { n: NewsItem; featured?: boolean }) 
 // Broaden the window a bit: keep stories from ~5 minutes ago up to ~2 days old.
 const MIN_AGE_SEC = 60 * 5;
 const MAX_AGE_SEC = 60 * 60 * 48;
+const PAGE = 9;
 
-export const NewsList = ({ query, blogLinkLabel = "Read the blog", fallbackQuery, subject }: Props) => {
-  const main = useLiveNews(query);
-  const fallback = useLiveNews(fallbackQuery ?? []);
-  const [visible, setVisible] = useState(9);
-  const usingFallback = !main.loading && !main.news.length && fallback.news.length > 0;
-  const news = usingFallback ? fallback.news : main.news;
-  const loading = main.loading || (!main.news.length && fallback.loading);
+export const NewsList = ({ query, blogLinkLabel = "Read the blog", subject }: Props) => {
+  const { news, loading } = useLiveNews(query);
+  const [visible, setVisible] = useState(PAGE);
 
   const nowSec = Math.floor(Date.now() / 1000);
   const filtered = news.filter((n) => {
     const age = nowSec - (n.providerPublishTime ?? nowSec);
     return age >= MIN_AGE_SEC && age <= MAX_AGE_SEC;
   });
-  // Fallback: if the freshness window is empty, show whatever we have.
-  const list = filtered.length ? filtered : news;
+  // Too few fresh ones (a smaller company's news): show its older stories too.
+  const list = filtered.length >= PAGE ? filtered : news;
 
   if (loading && !list.length) {
     return <div className="text-muted-foreground py-8 text-center">Loading stories…</div>;
   }
   if (!list.length) {
-    return <div className="text-muted-foreground py-8 text-center">No stories found.</div>;
+    return (
+      <div className="text-muted-foreground py-8 text-center">
+        {subject ? `No recent stories about ${subject}.` : "No stories found."}
+      </div>
+    );
   }
   const shown = list.slice(0, visible);
   const [hero, ...rest] = shown;
@@ -118,11 +117,6 @@ export const NewsList = ({ query, blogLinkLabel = "Read the blog", fallbackQuery
 
   return (
     <div className="space-y-6">
-      {usingFallback && (
-        <p className="text-sm text-muted-foreground rounded-lg border bg-muted/40 px-4 py-3">
-          No recent stories mention {subject ?? "this"}. Here's the latest market news instead.
-        </p>
-      )}
       <NewsCard n={hero} featured />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {rest.map((n) => (
@@ -132,7 +126,7 @@ export const NewsList = ({ query, blogLinkLabel = "Read the blog", fallbackQuery
       {hasMore && (
         <div className="flex justify-center pt-2">
           <button
-            onClick={() => setVisible((v) => v + 9)}
+            onClick={() => setVisible((v) => v + PAGE)}
             className="inline-flex items-center gap-2 px-6 py-3 rounded-full border-2 border-primary text-primary font-extrabold hover:bg-primary hover:text-primary-foreground transition-colors"
           >
             Show more stories <ArrowRight className="w-4 h-4" />

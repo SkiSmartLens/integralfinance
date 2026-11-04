@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Search, Loader2 } from "lucide-react";
-import { fetchSearchQuotes, fetchQuotes, formatNumber, SearchQuote } from "@/lib/yahoo";
+import { fetchSearchQuotes, fetchQuotes, formatNumber, SearchQuote, topSearchMatch } from "@/lib/yahoo";
 import { cn } from "@/lib/utils";
 
 interface Row extends SearchQuote {
@@ -21,6 +21,9 @@ const POPULAR = [
 
 const STEPS = ["Search for a company", "Choose how many shares", "Press the green Buy button"];
 
+// Stocks and funds; not indexes, futures or currencies.
+const tradable = (r: SearchQuote) => r.quoteType === "EQUITY" || r.quoteType === "ETF" || !r.quoteType;
+
 /**
  * The simulator's stock search: the first thing on the page, in a
  * highlighted panel, with popular picks. New players also get the three
@@ -39,6 +42,9 @@ export const SimSearch = ({
 }) => {
   const [query, setQuery] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
+  // What was typed when `rows` came back, and the last search nothing matched.
+  const [rowsFor, setRowsFor] = useState("");
+  const [noMatch, setNoMatch] = useState("");
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [active, setActive] = useState(0);
@@ -58,6 +64,7 @@ export const SimSearch = ({
     const q = query.trim();
     if (!q) {
       setRows([]);
+      setRowsFor("");
       setLoading(false);
       return;
     }
@@ -65,11 +72,10 @@ export const SimSearch = ({
     setLoading(true);
     const handle = setTimeout(async () => {
       try {
-        const results = (await fetchSearchQuotes(q, 8)).filter(
-          (r) => r.quoteType === "EQUITY" || r.quoteType === "ETF" || !r.quoteType
-        );
+        const results = (await fetchSearchQuotes(q, 8)).filter(tradable);
         if (!alive) return;
         setRows(results);
+        setRowsFor(q);
         setActive(0);
         setOpen(true);
         // Enrich with live price + daily change.
@@ -99,26 +105,33 @@ export const SimSearch = ({
     onSelect(symbol.toUpperCase());
     setQuery("");
     setRows([]);
+    setRowsFor("");
     setOpen(false);
   };
 
-  const onKey = (e: React.KeyboardEvent) => {
-    if (!open || !rows.length) {
-      if (e.key === "Enter" && query.trim()) choose(query.trim());
-      return;
+  const onKey = async (e: React.KeyboardEvent) => {
+    if (open && rows.length) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setActive((a) => Math.min(rows.length - 1, a + 1));
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setActive((a) => Math.max(0, a - 1));
+      } else if (e.key === "Escape") {
+        setOpen(false);
+      }
     }
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setActive((a) => Math.min(rows.length - 1, a + 1));
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setActive((a) => Math.max(0, a - 1));
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      choose(rows[active]?.symbol ?? query.trim());
-    } else if (e.key === "Escape") {
-      setOpen(false);
-    }
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const q = query.trim();
+    if (!q) return;
+    // Enter without clicking a result opens the top one (or the one arrowed
+    // to), looking them up first if they're not in for this text yet.
+    if (rowsFor === q && rows.length) return choose((rows[active] ?? rows[0]).symbol);
+    const symbol = await topSearchMatch(q, tradable);
+    if (symbol) return choose(symbol);
+    setNoMatch(q);
+    setOpen(true);
   };
 
   return (
@@ -151,6 +164,11 @@ export const SimSearch = ({
           className="w-full h-14 pl-12 pr-12 rounded-2xl bg-card border-2 border-primary/60 shadow-sm text-base font-semibold placeholder:font-normal placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/15 outline-none transition-shadow"
         />
         {loading && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary animate-spin" />}
+        {open && !rows.length && noMatch && noMatch === query.trim() && (
+          <div className="absolute z-30 left-0 right-0 top-full mt-2 rounded-xl border bg-card shadow-lg px-3.5 py-2.5 text-sm text-muted-foreground">
+            No stock or fund matches “{noMatch}”.
+          </div>
+        )}
         {open && rows.length > 0 && (
           <div className="absolute z-30 left-0 right-0 top-full mt-2 rounded-xl border bg-card shadow-lg overflow-hidden animate-fade-in">
             <ul className="max-h-80 overflow-y-auto py-1">

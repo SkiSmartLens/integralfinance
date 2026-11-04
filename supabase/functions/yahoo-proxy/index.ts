@@ -248,13 +248,23 @@ Deno.serve(async (req) => {
     }
 
     // For the AI features (stock-summary, ai-chat): recent stories about a
-    // company from every news feed, with article text where the feed has it.
+    // company from every news feed, with article text where the feed has it,
+    // and Yahoo Finance's stories about it.
     if (kind === "news") {
       const q = url.searchParams.get("q") ?? "";
       const name = url.searchParams.get("name") ?? "";
       if (!q && !name) return json({ error: "q or name required" }, 400);
       const limit = Math.min(12, Math.max(1, Number(url.searchParams.get("limit") ?? "8") || 8));
       return json({ stories: await newsAbout(q, name, limit) });
+    }
+
+    // For a stock's News tab: Yahoo Finance's stories about that one stock
+    // (src/lib/yahoo.ts merges in the matching stories from the site's feeds).
+    if (kind === "stocknews") {
+      const symbol = (url.searchParams.get("symbol") ?? "").toUpperCase();
+      if (!STOCK_SYMBOL.test(symbol)) return json({ error: "symbol required" }, 400);
+      const name = (url.searchParams.get("name") ?? "").slice(0, 120);
+      return json({ news: await stockStories(symbol, name) });
     }
 
     // For the AI features: revenue, profit, margins, debt and cash from the
@@ -426,6 +436,8 @@ interface Story {
   summary: string;
   /** The full article when the feed carries it, else "". */
   text: string;
+  /** The feed's ID for the story (for Yahoo's, the ID its translator lookup uses). */
+  guid?: string;
 }
 
 function parseFeed(xml: string, publisher: string): Story[] {
@@ -443,6 +455,7 @@ function parseFeed(xml: string, publisher: string): Story[] {
       published: Number.isFinite(published) ? Math.floor(published / 1000) : 0,
       summary: stripFeedBoilerplate(htmlToText(tagValue(item, "description"))).slice(0, 600),
       text: text.length >= 400 ? text.slice(0, 4000) : "",
+      guid: tagValue(item, "guid") || undefined,
     });
   }
   return out;
@@ -491,16 +504,104 @@ function storyPatterns(ticker: string, name: string): RegExp[] {
   return pats;
 }
 
+const STOCK_SYMBOL = /^[A-Z0-9^][A-Z0-9.\-=^]{0,11}$/;
+// A story tagged with at most this many tickers is about them; more is a roundup.
+const FOCUSED_TICKERS = 4;
+
+/** A story in the shape the site's news cards use (NewsItem in src/lib/yahoo.ts). */
+interface NewsItem {
+  uuid: string;
+  title: string;
+  summary: string;
+  publisher: string;
+  link: string;
+  providerPublishTime: number;
+  type: string;
+  thumbnail?: { resolutions: { url: string; width: number; height: number }[] };
+  relatedTickers?: string[];
+}
+
+/**
+ * Yahoo Finance's stories about one stock, newest first, so a small company the
+ * general feeds never mention still has news. Its news search gives each
+ * story's publisher, picture and tickers; its per-stock headline feed gives a
+ * summary, which "AI Summarize" falls back on since Yahoo's pages can't be read
+ * from the server. The feed is looser (Bitcoin's has XRP stories), so a story
+ * only in the feed must name the company, as must a roundup. Cached a few minutes.
+ */
+async function stockStories(symbol: string, name: string): Promise<NewsItem[]> {
+  const key = `stories:${symbol}:${name}`;
+  const hit = getCache(key);
+  if (hit) return JSON.parse(hit);
+  const s = encodeURIComponent(symbol);
+  const [search, feed] = await Promise.all([
+    yahooFetch(`https://query1.finance.yahoo.com/v1/finance/search?q=${s}&newsCount=20&quotesCount=0`)
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null),
+    feedXml(`https://feeds.finance.yahoo.com/rss/2.0/headline?s=${s}&region=US&lang=en-US`),
+  ]);
+  const pats = storyPatterns(symbol, name);
+  const names = (...texts: string[]) => texts.some((t) => pats.some((p) => p.test(t)));
+  // The feed's guid is the search's story ID (the two give some stories different links).
+  const fromFeed = new Map(parseFeed(feed, "Yahoo Finance").map((st) => [st.guid ?? st.url, st]));
+  const out: NewsItem[] = [];
+  for (const n of (search?.news ?? []) as NewsItem[]) {
+    if (!n?.title || !n.link || !n.relatedTickers?.includes(symbol)) continue;
+    const summary = fromFeed.get(n.uuid)?.summary ?? "";
+    fromFeed.delete(n.uuid);
+    // Market roundups are tagged with a dozen tickers: those must name the company.
+    if (n.relatedTickers.length > FOCUSED_TICKERS && !names(n.title, summary)) continue;
+    out.push({
+      uuid: n.uuid,
+      title: n.title,
+      summary,
+      publisher: n.publisher || "Yahoo Finance",
+      link: n.link,
+      providerPublishTime: n.providerPublishTime,
+      type: "STORY",
+      ...(n.thumbnail ? { thumbnail: n.thumbnail } : {}),
+      relatedTickers: n.relatedTickers,
+    });
+  }
+  for (const st of fromFeed.values()) {
+    if (!names(st.title, st.summary)) continue;
+    out.push({
+      uuid: st.guid ?? st.url,
+      title: st.title,
+      summary: st.summary,
+      publisher: st.publisher,
+      link: st.url.replace(/\?\.tsrc=rss$/, ""),
+      providerPublishTime: st.published,
+      type: "STORY",
+    });
+  }
+  out.sort((a, b) => b.providerPublishTime - a.providerPublishTime);
+  if (out.length) setCache(key, JSON.stringify(out), 3 * 60 * 1000);
+  return out;
+}
+
 /** Stories from the last 10 days whose headline or summary names the company, newest first. */
 async function newsAbout(ticker: string, name: string, limit: number): Promise<Story[]> {
   const pats = storyPatterns(ticker, name);
   if (!pats.length) return [];
-  const feeds = await Promise.all(NEWS_FEEDS.map(async (f) => parseFeed(await feedXml(f.url), f.publisher)));
+  const symbol = ticker.trim().toUpperCase();
+  const [feeds, yahoo] = await Promise.all([
+    Promise.all(NEWS_FEEDS.map(async (f) => parseFeed(await feedXml(f.url), f.publisher))),
+    STOCK_SYMBOL.test(symbol) ? stockStories(symbol, name).catch(() => []) : [],
+  ]);
+  // Yahoo's are all about this company, so they need no name check.
+  const fromYahoo: Story[] = yahoo.map((n) => ({
+    title: n.title,
+    publisher: n.publisher,
+    url: n.link,
+    published: n.providerPublishTime,
+    summary: n.summary,
+    text: "",
+  }));
   const cutoff = Date.now() / 1000 - 10 * 86400;
   const seen = new Set<string>();
-  return feeds
-    .flat()
-    .filter((s) => s.published >= cutoff && pats.some((p) => p.test(s.title) || p.test(s.summary)))
+  return [...feeds.flat().filter((s) => pats.some((p) => p.test(s.title) || p.test(s.summary))), ...fromYahoo]
+    .filter((s) => s.published >= cutoff)
     .sort((a, b) => b.published - a.published)
     .filter((s) => {
       const keys = [s.url.replace(/[?#].*$/, ""), s.title.toLowerCase()];

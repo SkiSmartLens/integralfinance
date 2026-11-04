@@ -134,6 +134,17 @@ export function mixPublishers(items: NewsItem[], penaltySec = 2 * 60 * 60): News
   return out;
 }
 
+/** The first copy of each story: the same wire story can come from several feeds or outlets. */
+export function dedupeStories(items: NewsItem[]): NewsItem[] {
+  const seen = new Set<string>();
+  return items.filter((n) => {
+    const keys = [n.link.replace(/[?#].*$/, ""), n.title.toLowerCase()];
+    if (keys.some((k) => seen.has(k))) return false;
+    keys.forEach((k) => seen.add(k));
+    return true;
+  });
+}
+
 const TTL_MS = 3 * 60 * 1000;
 let cache: { at: number; promise: Promise<NewsItem[]> } | null = null;
 
@@ -146,17 +157,7 @@ export function fetchFeedNews(proxyFeed: (id: string) => Promise<string>): Promi
   const direct = DIRECT_FEEDS.map((f) => getText(f.url).then((x) => parseRss(x, f.publisher)));
   const proxied = PROXIED_FEEDS.map((f) => proxyFeed(f.id).then((x) => parseRss(x, f.publisher)));
   const promise = Promise.all([...direct, ...proxied].map((p) => p.catch(() => [] as NewsItem[]))).then((feeds) => {
-    const seen = new Set<string>();
-    const all = feeds
-      .flat()
-      .filter((n) => {
-        // The same wire story can come from several feeds or outlets.
-        const keys = [n.link.replace(/[?#].*$/, ""), n.title.toLowerCase()];
-        if (keys.some((k) => seen.has(k))) return false;
-        keys.forEach((k) => seen.add(k));
-        return true;
-      })
-      .sort((a, b) => b.providerPublishTime - a.providerPublishTime);
+    const all = dedupeStories(feeds.flat()).sort((a, b) => b.providerPublishTime - a.providerPublishTime);
     if (!all.length) cache = null; // don't keep a failed load
     return mixPublishers(all);
   });
