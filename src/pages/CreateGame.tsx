@@ -238,15 +238,14 @@ const CreateGame = () => {
             )}
           </Field>
 
-          {/* Prizes (games with friends) */}
-          {isFriends && (
-            <Field label="Prizes (optional)" icon={<Trophy className="w-4 h-4" />}>
-              <PrizeEditor prizes={prizes} onChange={setPrizes} />
-              <p className="text-xs text-muted-foreground mt-2">
-                What the top players win. They're shown at the top of the simulator for everyone in the game.
-              </p>
-            </Field>
-          )}
+          {/* Prizes */}
+          <Field label="Prizes (optional)" icon={<Trophy className="w-4 h-4" />}>
+            <PrizeEditor prizes={prizes} onChange={setPrizes} />
+            <p className="text-xs text-muted-foreground mt-2">
+              What the top players win. They're shown at the top of the simulator for everyone in the game, and you can
+              add or change them there later.
+            </p>
+          </Field>
 
           {/* Leverage */}
           <Field label="Leverage" icon={<Zap className="w-4 h-4" />}>
