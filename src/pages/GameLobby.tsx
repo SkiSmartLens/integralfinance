@@ -27,6 +27,7 @@ import { formatNumber } from "@/lib/yahoo";
 import { AdminHoldingsDialog } from "@/components/sim/AdminHoldingsDialog";
 import { estimatedNetWorth, ledgerCash, type LedgerPosition, type LedgerTrade } from "@/lib/simLedger";
 import { simAdmin, useCashSynced } from "@/lib/simAdmin";
+import { prizeList } from "@/lib/prizes";
 
 interface Game {
   id: string;
@@ -42,12 +43,16 @@ interface Game {
   min_price: number | null;
   max_position_pct: number | null;
   show_holdings?: boolean;
+  /** What each place wins, 1st first. Missing until the database has the column. */
+  prizes?: unknown;
 }
 interface Member {
   id: string;
   game_id: string;
   user_id: string;
   cash: number;
+  /** Set when the player left. They keep their account and get it back by joining again. */
+  left_at?: string | null;
 }
 
 const setActiveGame = (id: string) => {
@@ -103,7 +108,7 @@ const loadOwnLedger = async (memberIds: string[]): Promise<Map<string, OwnLedger
 };
 
 interface AdminPosition { symbol: string; shares: number; avgCost: number }
-interface AdminPlayer { member_id: string; user_id: string; cash: number; name: string; positions: AdminPosition[] }
+interface AdminPlayer { member_id: string; user_id: string; cash: number; name: string; positions: AdminPosition[]; left: boolean }
 interface AdminGame extends Game {
   players: AdminPlayer[];
 }
@@ -138,12 +143,14 @@ const GameLobby = () => {
 
   const refresh = async (uid: string) => {
     setLoading(true);
+    // "*" rather than naming left_at, which older databases don't have.
     const { data: mems } = await supabase
       .from("game_members")
-      .select("id, game_id, user_id, cash, games:games(*)")
+      .select("*, games:games(*)")
       .eq("user_id", uid);
+    // Games you left aren't yours any more (until you join again).
     const memberships =
-      (mems as any[])?.map((m) => ({ ...m, game: m.games as Game })).filter((m) => m.game) ?? [];
+      (mems as any[])?.map((m) => ({ ...m, game: m.games as Game })).filter((m) => m.game && !m.left_at) ?? [];
     setMyMemberships(memberships);
     setMyLedger(await loadOwnLedger(memberships.map((m) => m.id)));
 
@@ -171,7 +178,7 @@ const GameLobby = () => {
         .order("created_at", { ascending: false });
       const { data: allMembers } = await supabase
         .from("game_members")
-        .select("id, game_id, user_id, cash");
+        .select("*");
       const { data: profs } = await supabase.from("profiles").select("user_id, display_name");
       const { data: allPositions } = await supabase
         .from("positions")
@@ -192,6 +199,7 @@ const GameLobby = () => {
           cash: Number(m.cash),
           name: nameBy.get(m.user_id) ?? "Player",
           positions: posByMember.get(m.id) ?? [],
+          left: !!m.left_at,
         });
         byGame.set(m.game_id, list);
       });
@@ -340,8 +348,10 @@ const GameLobby = () => {
     enterGame(g.id);
   };
 
+  // The database keeps your account in the game: joining it again picks up
+  // where you left off, so leaving can't be used to start over.
   const leaveGame = async (memberId: string) => {
-    if (!confirm("Leave this game? Your positions and cash for this game will be discarded.")) return;
+    if (!confirm("Leave this game? It's removed from your games and the leaderboard. If you join it again, you pick up where you left off, with the same cash, stocks and rank.")) return;
     const gameId = myMemberships.find((m) => m.id === memberId)?.game_id;
     await supabase.from("game_members").delete().eq("id", memberId);
     // If that was the last player, the game goes too.
@@ -452,8 +462,8 @@ const GameLobby = () => {
                     <div className="min-w-0">
                       <div className="font-extrabold truncate">{g.name}</div>
                       <div className="text-xs text-muted-foreground mt-1">
-                        {g.is_public ? "Public" : "Private"} · {g.players.length} player
-                        {g.players.length === 1 ? "" : "s"} · ${formatNumber(Number(g.starting_cash))} start
+                        {g.is_public ? "Public" : "Private"} · {g.players.filter((p) => !p.left).length} player
+                        {g.players.filter((p) => !p.left).length === 1 ? "" : "s"} · ${formatNumber(Number(g.starting_cash))} start
                       </div>
                     </div>
                     <CopyCode code={g.join_code} />
@@ -464,7 +474,10 @@ const GameLobby = () => {
                       return (
                         <li key={p.user_id} className="bg-muted/40 rounded-lg px-2.5 py-1.5 text-xs">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="truncate font-bold">{p.name}</span>
+                            <span className="truncate font-bold">
+                              {p.name}
+                              {p.left && <span className="ml-1.5 font-semibold text-muted-foreground">(left)</span>}
+                            </span>
                             <span className="tabular-nums font-extrabold shrink-0">${formatNumber(total)}</span>
                           </div>
                           <div className="flex items-center justify-between gap-2 mt-0.5 text-muted-foreground">
@@ -622,6 +635,11 @@ const GameLobby = () => {
                     {g.min_price != null && <span>· Min ${Number(g.min_price)}/share</span>}
                     {g.max_position_pct != null && <span>· Max {Number(g.max_position_pct)}% per stock</span>}
                     {g.show_holdings === false && <span>· Players' stocks hidden</span>}
+                    {prizeList(g.prizes).length > 0 && (
+                      <span className="inline-flex items-center gap-1 font-bold text-amber-700 dark:text-amber-300">
+                        · <Trophy className="w-3 h-3" /> Prizes: {prizeList(g.prizes)[0]} for 1st
+                      </span>
+                    )}
                   </div>
                   <button
                     onClick={() => joinPublic(g)}

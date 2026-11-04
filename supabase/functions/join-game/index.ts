@@ -76,14 +76,16 @@ Deno.serve(async (req) => {
 
 /**
  * Deletes games nobody is in. Any signed-in visitor can trigger it — it only
- * ever removes games with zero players, so there's nothing to abuse.
+ * ever removes games with zero players, so there's nothing to abuse. Players
+ * who left (left_at) don't count: they keep their account only while the game
+ * is still going.
  *
  * - With a game_id (someone just left it): removed straight away if empty.
  * - Otherwise: every empty game older than an hour.
  * The minimum age covers the gap between creating a game and its creator's
  * membership row being added, so a brand-new game is never caught mid-setup.
  *
- * game_members cascades on game delete, but an empty game has none anyway.
+ * game_members cascades on game delete, taking the players who left with it.
  */
 async function removeEmptyGames(admin: any, gameId: string | null): Promise<number> {
   let candidates: string[];
@@ -106,11 +108,12 @@ async function removeEmptyGames(admin: any, gameId: string | null): Promise<numb
       from += data.length;
     }
     for (let from = 0; ; ) {
+      // "*" rather than naming left_at, which older databases don't have.
       const { data, error } = await admin
-        .from("game_members").select("game_id").order("id").range(from, from + 999);
+        .from("game_members").select("*").order("id").range(from, from + 999);
       if (error) return logFail("game_members", error);
       if (!data?.length) break;
-      data.forEach((m: { game_id: string }) => memberGames.add(m.game_id));
+      data.forEach((m: Seat) => playing(m) && memberGames.add(m.game_id));
       from += data.length;
     }
     candidates = games.filter((id) => !memberGames.has(id));
@@ -122,9 +125,9 @@ async function removeEmptyGames(admin: any, gameId: string | null): Promise<numb
     // Re-check right before deleting, so a player who joined a moment ago
     // doesn't lose their game.
     const { data: live, error: liveErr } = await admin
-      .from("game_members").select("game_id").in("game_id", chunk);
+      .from("game_members").select("*").in("game_id", chunk);
     if (liveErr) return logFail("recheck", liveErr, removed);
-    const occupied = new Set((live ?? []).map((m: { game_id: string }) => m.game_id));
+    const occupied = new Set((live ?? []).filter(playing).map((m: Seat) => m.game_id));
     const empty = chunk.filter((id) => !occupied.has(id));
     if (!empty.length) continue;
     const { data: gone, error } = await admin.from("games").delete().in("id", empty).select("id");
@@ -133,6 +136,9 @@ async function removeEmptyGames(admin: any, gameId: string | null): Promise<numb
   }
   return removed;
 }
+
+interface Seat { game_id: string; left_at?: string | null }
+const playing = (m: Seat) => !m.left_at;
 
 function logFail(step: string, error: unknown, removed = 0): number {
   console.error(`removeEmptyGames: ${step} failed`, error);

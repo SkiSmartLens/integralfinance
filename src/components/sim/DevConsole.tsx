@@ -11,6 +11,8 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { AdminHoldingsDialog } from "./AdminHoldingsDialog";
+import { PrizeEditor } from "./Prizes";
+import { cleanPrizes, prizeList } from "@/lib/prizes";
 
 /** Must match BUILD in the place-order and join-game edge functions. */
 const EXPECTED_BUILD = "2026-10-16-dev";
@@ -30,11 +32,15 @@ interface GameRow {
   join_code: string;
   /** Missing until the database has the column; every game showed stocks before it. */
   show_holdings?: boolean;
+  /** What each place wins, 1st first. Missing until the database has the column. */
+  prizes?: unknown;
 }
 
 interface PlayerRow {
   member_id: string;
   name: string;
+  /** Left the game: off the leaderboard, back as they were if they join again. */
+  left: boolean;
   cash: number;
   net_worth: number;
   positions: { symbol: string; shares: number; avg_cost: number; last: number }[];
@@ -102,11 +108,12 @@ export const DevConsole = ({
   // Admins can read every player's stored cash and holdings. Once the
   // database keeps stored cash in sync with the trade history, these figures
   // are exact; before that, other players' net worth is an estimate.
-  const [members, setMembers] = useState<{ member_id: string; name: string; cash: number; positions: { symbol: string; shares: number; avg_cost: number }[] }[]>([]);
+  const [members, setMembers] = useState<{ member_id: string; name: string; cash: number; left: boolean; positions: { symbol: string; shares: number; avg_cost: number }[] }[]>([]);
   const loadPlayers = useCallback(async () => {
     if (!gameId) return;
     setLoading(true);
-    const { data: ms } = await supabase.from("game_members").select("id, user_id, cash").eq("game_id", gameId);
+    // "*" rather than naming left_at, which older databases don't have.
+    const { data: ms } = await supabase.from("game_members").select("*").eq("game_id", gameId);
     const ids = (ms ?? []).map((m) => m.id);
     const [{ data: pos }, { data: profs }] = await Promise.all([
       ids.length
@@ -120,6 +127,7 @@ export const DevConsole = ({
         member_id: m.id,
         name: names.get(m.user_id) ?? "Player",
         cash: Number(m.cash),
+        left: !!(m as { left_at?: string | null }).left_at,
         positions: (pos ?? [])
           .filter((p) => p.member_id === m.id)
           .map((p) => ({ symbol: p.symbol, shares: Number(p.shares), avg_cost: Number(p.avg_cost) })),
@@ -154,7 +162,7 @@ export const DevConsole = ({
           synced,
         );
         const holdings = priced.reduce((s, x) => s + x.last * x.shares, 0);
-        return { member_id: p.member_id, name: p.name, cash: netWorth - holdings, net_worth: netWorth, positions: priced };
+        return { member_id: p.member_id, name: p.name, left: p.left, cash: netWorth - holdings, net_worth: netWorth, positions: priced };
       }),
     [members, quoteMap, startingCash, synced],
   );
@@ -252,7 +260,10 @@ export const DevConsole = ({
                 <div key={p.member_id} className="rounded-2xl border bg-card p-3.5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="font-extrabold truncate">{p.name}</div>
+                      <div className="font-extrabold truncate">
+                        {p.name}
+                        {p.left && <span className="ml-1.5 text-xs font-semibold text-muted-foreground">left the game</span>}
+                      </div>
                       <div className="text-xs text-muted-foreground mt-0.5 truncate">
                         {money(p.cash)} cash ·{" "}
                         {p.positions.length
@@ -457,11 +468,15 @@ const GameSettings = ({
   };
   const [form, setForm] = useState(initial);
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }));
+  // A list, so compared on its own. Only once the database has the column.
+  const hasPrizes = game.prizes !== undefined;
+  const [prizes, setPrizes] = useState(() => prizeList(game.prizes));
 
   const changes: Record<string, unknown> = {};
   (Object.keys(form) as (keyof typeof form)[]).forEach((k) => {
     if (form[k] !== initial[k]) changes[k] = k === "ends_at" && form[k] ? `${form[k]}T23:59:59Z` : form[k];
   });
+  if (hasPrizes && JSON.stringify(cleanPrizes(prizes)) !== JSON.stringify(prizeList(game.prizes))) changes.prizes = cleanPrizes(prizes);
   const dirty = Object.keys(changes).length > 0;
 
   return (
@@ -492,6 +507,17 @@ const GameSettings = ({
       <Field label="End date" hint="Blank = never ends">
         <input type="date" value={form.ends_at} onChange={(e) => set("ends_at", e.target.value)} className={inputCls} />
       </Field>
+      <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+        Prizes
+        <div className="mt-1 normal-case tracking-normal font-normal text-foreground">
+          {hasPrizes ? (
+            <PrizeEditor prizes={prizes} onChange={setPrizes} />
+          ) : (
+            <p className="text-xs text-muted-foreground">Prizes need the latest simulator SQL installed through Lovable.</p>
+          )}
+        </div>
+        <span className="block mt-1 normal-case tracking-normal font-normal">Shown at the top of the simulator for everyone in this game</span>
+      </div>
       <div className="flex flex-wrap gap-x-6 gap-y-2 pt-1">
         <label className="flex items-center gap-2 text-sm font-semibold">
           <Switch checked={form.allow_short} onCheckedChange={(v) => set("allow_short", v)} /> Allow shorting
@@ -512,7 +538,14 @@ const GameSettings = ({
           {busy === "game" && <Loader2 className="w-4 h-4 animate-spin" />} Save settings
         </button>
         {dirty && (
-          <button type="button" onClick={() => setForm(initial)} className="h-10 px-3 text-sm font-bold text-muted-foreground">
+          <button
+            type="button"
+            onClick={() => {
+              setForm(initial);
+              setPrizes(prizeList(game.prizes));
+            }}
+            className="h-10 px-3 text-sm font-bold text-muted-foreground"
+          >
             Undo
           </button>
         )}

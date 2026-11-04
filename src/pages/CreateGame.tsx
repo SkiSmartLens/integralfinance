@@ -6,8 +6,10 @@ import { Header } from "@/components/Header";
 import { SEO } from "@/components/SEO";
 import { SiteFooter } from "@/components/SiteFooter";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Loader2, Globe, Lock, TrendingDown, Zap, Clock, Wallet, ShieldAlert, PieChart, Eye } from "lucide-react";
+import { ArrowLeft, Loader2, Globe, Lock, TrendingDown, Zap, Clock, Wallet, ShieldAlert, PieChart, Eye, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { cleanPrizes } from "@/lib/prizes";
+import { PrizeEditor } from "@/components/sim/Prizes";
 
 const DURATIONS = [
   { label: "Unlimited", days: null },
@@ -51,6 +53,7 @@ const CreateGame = () => {
   const [customMinPrice, setCustomMinPrice] = useState(false);
   const [maxPositionPct, setMaxPositionPct] = useState<number | null>(null);
   const [customMaxPosition, setCustomMaxPosition] = useState(false);
+  const [prizes, setPrizes] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   const create = async () => {
@@ -77,20 +80,29 @@ const CreateGame = () => {
       max_position_pct: maxPositionPct,
       created_by: uid,
     };
-    const insert = (values: typeof row & { show_holdings?: boolean }) =>
+    const insert = (values: Record<string, unknown>) =>
       supabase.from("games").insert(values as any).select().single();
-    let { data: g, error } = await insert({ ...row, show_holdings: showHoldings });
-    // Until the database has the show_holdings column, every game shows
-    // players' stocks, so that choice still works without it.
-    const noColumn = !!error && /show_holdings/.test(error.message);
-    if (noColumn && showHoldings) ({ data: g, error } = await insert(row));
+    // Settings newer than some databases. Without the column, a game can still
+    // be made if the setting is left as every game was before it existed.
+    const extras: Record<string, unknown> = { show_holdings: showHoldings, prizes: cleanPrizes(prizes) };
+    const asBefore: Record<string, boolean> = { show_holdings: showHoldings, prizes: !cleanPrizes(prizes).length };
+    const NOT_YET: Record<string, string> = {
+      show_holdings: "Hiding players' stocks isn't available yet. Turn that option back on to create the game.",
+      prizes: "Prizes aren't available yet (the database update hasn't been installed). Remove the prizes to create the game.",
+    };
+    let { data: g, error } = await insert({ ...row, ...extras });
+    let notYet = "";
+    for (let col; error && (col = Object.keys(extras).find((k) => error!.message.includes(k))); ) {
+      if (!asBefore[col]) {
+        notYet = NOT_YET[col];
+        break;
+      }
+      delete extras[col];
+      ({ data: g, error } = await insert({ ...row, ...extras }));
+    }
     if (error || !g) {
       setSaving(false);
-      return toast({
-        title: "Couldn't create game",
-        description: noColumn ? "Hiding players' stocks isn't available yet. Turn that option back on to create the game." : error?.message,
-        variant: "destructive",
-      });
+      return toast({ title: "Couldn't create game", description: notYet || error?.message, variant: "destructive" });
     }
     await supabase
       .from("game_members")
@@ -225,6 +237,16 @@ const CreateGame = () => {
               </div>
             )}
           </Field>
+
+          {/* Prizes (games with friends) */}
+          {isFriends && (
+            <Field label="Prizes (optional)" icon={<Trophy className="w-4 h-4" />}>
+              <PrizeEditor prizes={prizes} onChange={setPrizes} />
+              <p className="text-xs text-muted-foreground mt-2">
+                What the top players win. They're shown at the top of the simulator for everyone in the game.
+              </p>
+            </Field>
+          )}
 
           {/* Leverage */}
           <Field label="Leverage" icon={<Zap className="w-4 h-4" />}>

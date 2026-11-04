@@ -24,6 +24,8 @@ import { SimWalkthrough, hasSeenSimWalkthrough } from "@/components/sim/SimWalkt
 import { PostTradeCard } from "@/components/sim/PostTradeCard";
 import { PortfolioBar } from "@/components/sim/PortfolioBar";
 import { DevConsole } from "@/components/sim/DevConsole";
+import { PrizeBanner } from "@/components/sim/Prizes";
+import { prizeList } from "@/lib/prizes";
 import { isUsMarketOpen, nextOpenLabel } from "@/lib/marketHours";
 import { gameEndLabel } from "@/lib/gameEnd";
 import { ledgerCash, dayPnl, buyLimit, CASH_ADJUSTMENT_SYMBOL, type DayTrade } from "@/lib/simLedger";
@@ -53,7 +55,15 @@ const loadTrades = async (memberId: string): Promise<DayTrade[] | null> => {
   }
 };
 
-interface Member { id: string; game_id: string; user_id: string; cash: number; joined_at: string }
+interface Member {
+  id: string;
+  game_id: string;
+  user_id: string;
+  cash: number;
+  joined_at: string;
+  /** Set when the player left the game (they get the same account back by joining again). */
+  left_at?: string | null;
+}
 interface Position { id: string; symbol: string; shares: number; avg_cost: number }
 interface Game {
   id: string;
@@ -68,6 +78,8 @@ interface Game {
   created_by: string;
   /** Whether players see each other's stocks. Missing until the database has the column. */
   show_holdings?: boolean;
+  /** What each place wins, 1st first. Missing until the database has the column. */
+  prizes?: unknown;
 }
 
 const usePriceFlash = (value?: number) => {
@@ -178,7 +190,7 @@ const Sim = () => {
     let alive = true;
     (async () => {
       const { data: ms } = await supabase.from("game_members").select("*").eq("user_id", userId);
-      const list = (ms ?? []) as Member[];
+      const list = ((ms ?? []) as Member[]).filter((m) => !m.left_at);
       if (!list.length) {
         // First-time user: send them to the lobby to choose solo vs. friends.
         nav("/sim/lobby");
@@ -538,6 +550,7 @@ const Sim = () => {
             </div>
           </div>
         )}
+        {game && <PrizeBanner prizes={prizeList(game.prizes)} over={gameEnd?.over} />}
         {/* Finding a stock comes first, so nobody has to hunt for it. */}
         <SimSearch onSelect={setSelected} selected={selected} newPlayer={dataReady && !myTraded} />
 

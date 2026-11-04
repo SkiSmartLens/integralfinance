@@ -70,11 +70,10 @@ async function loadRows(gameId: string, meUserId: string): Promise<Row[] | null>
     return null;
   }
 
-  const { data: members, error: mErr } = await supabase
-    .from("game_members")
-    .select("id, user_id, cash")
-    .eq("game_id", gameId);
+  const { data: rows, error: mErr } = await supabase.from("game_members").select("*").eq("game_id", gameId);
   if (mErr) return null;
+  // Not players who left.
+  const members = (rows ?? []).filter((m) => !(m as { left_at?: string | null }).left_at);
   const memberIds = (members ?? []).map((m) => m.id);
   const [{ data: positions }, { data: profs }] = await Promise.all([
     memberIds.length

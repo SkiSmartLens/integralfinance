@@ -52,7 +52,8 @@ const Trade = () => {
     if (!userId) return;
     (async () => {
       const { data: ms } = await supabase.from("game_members").select("*").eq("user_id", userId);
-      const list = (ms ?? []) as Member[];
+      // Not games you've left.
+      const list = ((ms ?? []) as (Member & { left_at?: string | null })[]).filter((m) => !m.left_at);
       setMembers(list);
       if (list.length) {
         const { data: gs } = await supabase.from("games").select("*").in("id", list.map((m) => m.game_id));
