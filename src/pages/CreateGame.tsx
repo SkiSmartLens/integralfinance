@@ -8,7 +8,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Loader2, Globe, Lock, TrendingDown, Zap, Clock, Wallet, ShieldAlert, PieChart, Eye, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { cleanPrizes } from "@/lib/prizes";
+import { cleanPrizes, prizeSaveError, storedPrizes, type Prize } from "@/lib/prizes";
 import { PrizeEditor } from "@/components/sim/Prizes";
 
 const DURATIONS = [
@@ -53,7 +53,7 @@ const CreateGame = () => {
   const [customMinPrice, setCustomMinPrice] = useState(false);
   const [maxPositionPct, setMaxPositionPct] = useState<number | null>(null);
   const [customMaxPosition, setCustomMaxPosition] = useState(false);
-  const [prizes, setPrizes] = useState<string[]>([]);
+  const [prizes, setPrizes] = useState<Prize[]>([]);
   const [saving, setSaving] = useState(false);
 
   const create = async () => {
@@ -84,15 +84,16 @@ const CreateGame = () => {
       supabase.from("games").insert(values as any).select().single();
     // Settings newer than some databases. Without the column, a game can still
     // be made if the setting is left as every game was before it existed.
-    const extras: Record<string, unknown> = { show_holdings: showHoldings, prizes: cleanPrizes(prizes) };
-    const asBefore: Record<string, boolean> = { show_holdings: showHoldings, prizes: !cleanPrizes(prizes).length };
+    const prizeRows = cleanPrizes(prizes);
+    const extras: Record<string, unknown> = { show_holdings: showHoldings, prizes: storedPrizes(prizeRows) };
+    const asBefore: Record<string, boolean> = { show_holdings: showHoldings, prizes: !prizeRows.length };
     const NOT_YET: Record<string, string> = {
       show_holdings: "Hiding players' stocks isn't available yet. Turn that option back on to create the game.",
       prizes: "Prizes aren't available yet (the database update hasn't been installed). Remove the prizes to create the game.",
     };
     let { data: g, error } = await insert({ ...row, ...extras });
     let notYet = "";
-    for (let col; error && (col = Object.keys(extras).find((k) => error!.message.includes(k))); ) {
+    for (let col; error && (col = Object.keys(extras).find((k) => error!.message.includes(`'${k}' column`))); ) {
       if (!asBefore[col]) {
         notYet = NOT_YET[col];
         break;
@@ -102,7 +103,11 @@ const CreateGame = () => {
     }
     if (error || !g) {
       setSaving(false);
-      return toast({ title: "Couldn't create game", description: notYet || error?.message, variant: "destructive" });
+      return toast({
+        title: "Couldn't create game",
+        description: notYet || (error ? prizeSaveError(error.message, prizeRows) : undefined),
+        variant: "destructive",
+      });
     }
     await supabase
       .from("game_members")

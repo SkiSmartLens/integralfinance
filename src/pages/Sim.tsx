@@ -25,7 +25,7 @@ import { PostTradeCard } from "@/components/sim/PostTradeCard";
 import { PortfolioBar } from "@/components/sim/PortfolioBar";
 import { DevConsole } from "@/components/sim/DevConsole";
 import { PrizeBanner } from "@/components/sim/Prizes";
-import { prizeList } from "@/lib/prizes";
+import { prizeList, prizeSaveError, storedPrizes, type Prize } from "@/lib/prizes";
 import { simAdmin } from "@/lib/simAdmin";
 import { isUsMarketOpen, nextOpenLabel } from "@/lib/marketHours";
 import { gameEndLabel } from "@/lib/gameEnd";
@@ -176,17 +176,18 @@ const Sim = () => {
   // The game's creator (through their own edit rights on the game) and admins
   // (through admin_update_game, for any game) can add and change its prizes.
   const canEditPrizes = !!game && !!userId && (game.created_by === userId || isAdmin);
-  const savePrizes = async (prizes: string[]) => {
+  const savePrizes = async (prizes: Prize[]) => {
     if (!game) return false;
+    const stored = storedPrizes(prizes);
     let error: string | undefined;
     if (isAdmin) {
-      error = (await simAdmin.updateGame(game.id, { prizes })).error;
+      error = (await simAdmin.updateGame(game.id, { prizes: stored })).error;
     } else {
-      const res = await supabase.from("games").update({ prizes }).eq("id", game.id).select("id");
+      const res = await supabase.from("games").update({ prizes: stored }).eq("id", game.id).select("id");
       error = res.error?.message ?? (res.data?.length ? undefined : "Only the game's creator can change its prizes.");
     }
     if (error) {
-      toast({ title: "Couldn't save the prizes", description: error, variant: "destructive" });
+      toast({ title: "Couldn't save the prizes", description: prizeSaveError(error, prizes), variant: "destructive" });
       return false;
     }
     toast({ title: prizes.length ? "Prizes saved" : "Prizes removed", description: prizes.length ? "Everyone in this game sees them at the top." : undefined });

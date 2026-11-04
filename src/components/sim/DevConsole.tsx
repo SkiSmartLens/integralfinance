@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { AdminHoldingsDialog } from "./AdminHoldingsDialog";
 import { PrizeEditor } from "./Prizes";
-import { cleanPrizes, prizeList } from "@/lib/prizes";
+import { cleanPrizes, prizeList, prizeSaveError, storedPrizes } from "@/lib/prizes";
 
 /** Must match BUILD in the place-order and join-game edge functions. */
 const EXPECTED_BUILD = "2026-10-16-dev";
@@ -368,7 +368,9 @@ export const DevConsole = ({
                 game={game}
                 busy={busy}
                 onSave={async (changes) => {
-                  const ok = await run("game", () => simAdmin.updateGame(game.id, changes), "Game settings saved");
+                  const save = () =>
+                    simAdmin.updateGame(game.id, changes).then((r) => (r.error ? { error: prizeSaveError(r.error, prizeList(changes.prizes)) } : r));
+                  const ok = await run("game", save, "Game settings saved");
                   if (ok) await loadGames();
                 }}
                 onDelete={async () => {
@@ -476,7 +478,8 @@ const GameSettings = ({
   (Object.keys(form) as (keyof typeof form)[]).forEach((k) => {
     if (form[k] !== initial[k]) changes[k] = k === "ends_at" && form[k] ? `${form[k]}T23:59:59Z` : form[k];
   });
-  if (hasPrizes && JSON.stringify(cleanPrizes(prizes)) !== JSON.stringify(prizeList(game.prizes))) changes.prizes = cleanPrizes(prizes);
+  const newPrizes = storedPrizes(cleanPrizes(prizes));
+  if (hasPrizes && JSON.stringify(newPrizes) !== JSON.stringify(storedPrizes(prizeList(game.prizes)))) changes.prizes = newPrizes;
   const dirty = Object.keys(changes).length > 0;
 
   return (

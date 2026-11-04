@@ -637,7 +637,7 @@ const GameLobby = () => {
                     {g.show_holdings === false && <span>· Players' stocks hidden</span>}
                     {prizeList(g.prizes).length > 0 && (
                       <span className="inline-flex items-center gap-1 font-bold text-amber-700 dark:text-amber-300">
-                        · <Trophy className="w-3 h-3" /> Prizes: {prizeList(g.prizes)[0]} for 1st
+                        · <Trophy className="w-3 h-3" /> {prizeList(g.prizes)[0].text ? `Prizes: ${prizeList(g.prizes)[0].text} for 1st` : "Prizes"}
                       </span>
                     )}
                   </div>
